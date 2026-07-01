@@ -1,0 +1,90 @@
+import type { ProfileKey, Property, Scores } from "@/lib/types";
+
+export const PROFILE_LABEL: Record<ProfileKey, string> = {
+  airbnb: "Airbnb",
+  flip: "Reforma e revenda",
+  student: "Aluguel estudantil",
+  family: "Moradia familiar",
+  high_liquidity: "Venda rápida",
+  commercial: "Comercial",
+};
+
+export const PROFILE_SHORT: Record<ProfileKey, string> = {
+  airbnb: "Airbnb",
+  flip: "Flip",
+  student: "Estudantil",
+  family: "Familiar",
+  high_liquidity: "Liquidez",
+  commercial: "Comercial",
+};
+
+export const PROFILE_EXPLAIN: Record<ProfileKey, string> = {
+  airbnb:
+    "Avalia a procura por aluguel de curta temporada, a localização e o giro de hóspedes na região.",
+  flip: "Avalia o desconto, o custo de reforma estimado e o preço de revenda no bairro.",
+  student: "Avalia a proximidade de universidades e a estabilidade do aluguel para estudantes.",
+  family: "Avalia tamanho, número de quartos, escolas e serviços próximos para moradia familiar.",
+  high_liquidity: "Avalia a facilidade e a rapidez para revender o imóvel no mercado local.",
+  commercial:
+    "Avalia o potencial comercial, o fluxo de pessoas e a densidade de serviços no entorno.",
+};
+
+const SCORE_FIELD: Record<ProfileKey, keyof Scores> = {
+  airbnb: "airbnb",
+  flip: "flip",
+  student: "student",
+  family: "family",
+  high_liquidity: "liquidity",
+  commercial: "commercial",
+};
+
+export function profileScore(p: Property): number | null {
+  if (!p.perfil) return null;
+  return p.scores[SCORE_FIELD[p.perfil]];
+}
+
+export function scoreForProfile(p: Property, profile: ProfileKey): number | null {
+  return p.scores[SCORE_FIELD[profile]];
+}
+
+export function money(n: number | null | undefined): string {
+  if (n == null) return "—";
+  return "R$ " + Math.round(n).toLocaleString("pt-BR");
+}
+
+export function moneyShort(n: number | null | undefined): string {
+  if (n == null) return "—";
+  if (n >= 1_000_000)
+    return "R$ " + (n / 1_000_000).toLocaleString("pt-BR", { maximumFractionDigits: 1 }) + " mi";
+  return "R$ " + Math.round(n / 1000) + " mil";
+}
+
+export function titleCase(s: string): string {
+  return s
+    .toLowerCase()
+    .split(" ")
+    .map((w) => (w.length > 2 ? w[0].toUpperCase() + w.slice(1) : w))
+    .join(" ");
+}
+
+export function fmtDist(meters: number | null | undefined): string {
+  if (meters == null) return "—";
+  if (meters < 1000) return Math.round(meters) + " m";
+  return (meters / 1000).toFixed(1).replace(".", ",") + " km";
+}
+
+export function fmtDate(iso: string | null | undefined): string | null {
+  if (!iso) return null;
+  const d = new Date(iso);
+  if (isNaN(d.getTime())) return null;
+  return d.toLocaleDateString("pt-BR", { day: "2-digit", month: "short" });
+}
+
+export function deriveTitle(tipo: string, quartos: number | null, bairro: string): string {
+  const t = tipo || "Imóvel";
+  if (quartos && quartos > 0) {
+    return `${t} ${quartos} dormitório${quartos > 1 ? "s" : ""}`;
+  }
+  if (bairro) return `${t} em ${bairro}`;
+  return t;
+}
