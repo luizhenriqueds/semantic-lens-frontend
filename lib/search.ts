@@ -49,7 +49,7 @@ export function searchProperties(all: Property[], query: string): SearchResult {
   let items = all;
   if (locTokens.length) {
     const matched = all.filter((p) => {
-      const hay = `${p.titulo} ${p.bairro} ${p.cidade} ${p.uf} ${p.tipo}`.toLowerCase();
+      const hay = `${p.title} ${p.neighborhood} ${p.city} ${p.uf} ${p.propertyType}`.toLowerCase();
       return locTokens.some((t) => hay.includes(t));
     });
     if (matched.length) items = matched;

@@ -1,12 +1,10 @@
 import type { Metadata } from "next";
 import "@/app/globals.css";
-import Sidebar from "@/components/layout/Sidebar";
-import Topbar from "@/components/layout/Topbar";
 
 export const metadata: Metadata = {
-  title: "Matrícula — Painel de leilões",
+  title: "Lavra — Leilões inteligentes",
   description:
-    "Compare milhares de imóveis de leilão e encontre a melhor oportunidade para o seu objetivo.",
+    "A primeira busca semântica e geográfica de leilões de imóveis do Brasil. Descreva o que procura e compare milhares de editais.",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
@@ -16,19 +14,11 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="" />
         <link
-          href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap"
+          href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap"
           rel="stylesheet"
         />
       </head>
-      <body>
-        <div className="app">
-          <Sidebar />
-          <div className="main">
-            <Topbar />
-            <div className="content">{children}</div>
-          </div>
-        </div>
-      </body>
+      <body>{children}</body>
     </html>
   );
 }

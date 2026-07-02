@@ -9,7 +9,7 @@ import {
 } from "@/lib/icons";
 
 export const NAV = [
-  { href: "/", label: "Início", Icon: IconHome },
+  { href: "/dashboard", label: "Início", Icon: IconHome },
   { href: "/search", label: "Buscar imóveis", Icon: IconSearch },
   { href: "/properties", label: "Imóveis", Icon: IconBuilding },
   { href: "/groups", label: "Grupos", Icon: IconGroups },

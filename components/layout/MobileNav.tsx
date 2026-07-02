@@ -3,13 +3,15 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
+import LavraLogo from "@/components/brand/LavraLogo";
 import { NAV } from "@/components/layout/navItems";
 import { IconClose, IconMenu } from "@/lib/icons";
 
 export default function MobileNav() {
   const [open, setOpen] = useState(false);
   const path = usePathname();
-  const isActive = (href: string) => (href === "/" ? path === "/" : path.startsWith(href));
+  const isActive = (href: string) =>
+    href === "/dashboard" ? path === "/dashboard" : path.startsWith(href);
 
   useEffect(() => setOpen(false), [path]);
   useEffect(() => {
@@ -32,10 +34,12 @@ export default function MobileNav() {
       />
       <aside className={`drawer${open ? " open" : ""}`} aria-hidden={!open}>
         <div className="drawer-head">
-          <Link href="/" className="brand" onClick={() => setOpen(false)}>
-            <div className="mark">M</div>
+          <Link href="/dashboard" className="brand" onClick={() => setOpen(false)}>
+            <div className="mark">
+              <LavraLogo size={26} />
+            </div>
             <div>
-              <b>Matrícula</b>
+              <b>Lavra</b>
               <small>Leilões inteligentes</small>
             </div>
           </Link>
@@ -52,9 +56,9 @@ export default function MobileNav() {
           ))}
         </nav>
         <div className="acct">
-          <div className="av">LQ</div>
+          <div className="av">LH</div>
           <div>
-            <div className="nm">Luiz Quevedo</div>
+            <div className="nm">Luiz H.</div>
             <div className="pl">Plano investidor</div>
           </div>
         </div>

@@ -2,18 +2,22 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import LavraLogo from "@/components/brand/LavraLogo";
 import { NAV } from "@/components/layout/navItems";
 
 export default function Sidebar() {
   const path = usePathname();
-  const isActive = (href: string) => (href === "/" ? path === "/" : path.startsWith(href));
+  const isActive = (href: string) =>
+    href === "/dashboard" ? path === "/dashboard" : path.startsWith(href);
 
   return (
     <aside className="sidebar">
-      <Link href="/" className="brand">
-        <div className="mark">M</div>
+      <Link href="/dashboard" className="brand">
+        <div className="mark">
+          <LavraLogo size={26} />
+        </div>
         <div>
-          <b>Matrícula</b>
+          <b>Lavra</b>
           <small>Leilões inteligentes</small>
         </div>
       </Link>
@@ -29,9 +33,9 @@ export default function Sidebar() {
       <div className="spacer" />
 
       <div className="acct">
-        <div className="av">LQ</div>
+        <div className="av">LH</div>
         <div>
-          <div className="nm">Luiz Quevedo</div>
+          <div className="nm">Luiz H.</div>
           <div className="pl">Plano investidor</div>
         </div>
       </div>

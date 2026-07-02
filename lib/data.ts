@@ -1,7 +1,7 @@
 import { unstable_cache } from "next/cache";
 import { supabase } from "@/lib/supabase";
 import { deriveTitle, titleCase } from "@/lib/format";
-import type { Cluster, ProfileKey, Property, Region } from "@/lib/types";
+import type { Cluster, MarketStats, ProfileKey, Property, Region } from "@/lib/types";
 
 const CLUSTER_RUN = "property-v1";
 const REVALIDATE = 120;
@@ -30,18 +30,27 @@ function pickImage(p: {
   return null;
 }
 
+function pickDeed(p: {
+  deed_source_url?: string | null;
+  deed_path?: string | null;
+}): string | null {
+  if (p.deed_source_url) return p.deed_source_url; // CAIXA-hosted matrícula PDF
+  if (p.deed_path && p.deed_path.startsWith("http")) return p.deed_path;
+  return null;
+}
+
 async function loadProperties(): Promise<Property[]> {
   const [propsRes, listingsRes, scoresRes, profilesRes, pclRes, clustersRes] = await Promise.all([
     supabase
       .from("properties")
       .select(
-        "property_id,tipo,uf,cidade,bairro,area_m2,quartos,vagas,situacao,canonical_description,h3_r8,image_path,image_source_url",
+        "property_id,property_type,uf,city,neighborhood,area_m2,bedrooms,parking_spots,occupancy_status,canonical_description,h3_r8,image_path,image_source_url,deed_path,deed_source_url,lat,lon",
       )
       .eq("is_active", true),
     supabase
       .from("listings")
       .select(
-        "property_id,valor_avaliacao,valor_venda,desconto,modalidade,data_leilao,link,snapshot_date",
+        "property_id,appraised_value,sale_value,discount,modality,auction_date,link,snapshot_date",
       ),
     supabase
       .from("property_scores")
@@ -81,25 +90,26 @@ async function loadProperties(): Promise<Property[]> {
     const prof = profileMap.get(p.property_id);
     const cid = pclMap.get(p.property_id);
     const cl = cid != null && cid !== -1 ? clusterMap.get(cid) : undefined;
-    const cidade = titleCase(p.cidade ?? "");
+    const city = titleCase(p.city ?? "");
     return {
       id: p.property_id,
-      tipo: p.tipo ?? "Imóvel",
+      propertyType: p.property_type ?? "Imóvel",
       uf: p.uf ?? "",
-      cidade,
-      bairro: p.bairro ?? "",
+      city,
+      neighborhood: p.neighborhood ?? "",
       area: num(p.area_m2),
-      quartos: num(p.quartos),
-      vagas: num(p.vagas),
-      situacao: p.situacao || null,
-      titulo: deriveTitle(p.tipo ?? "Imóvel", num(p.quartos), p.bairro ?? ""),
-      descricao: p.canonical_description || null,
+      bedrooms: num(p.bedrooms),
+      parkingSpots: num(p.parking_spots),
+      occupancyStatus: p.occupancy_status || null,
+      title: deriveTitle(p.property_type ?? "Imóvel", num(p.bedrooms), p.neighborhood ?? ""),
+      description: p.canonical_description || null,
       image: pickImage(p),
-      aval: num(l?.valor_avaliacao),
-      lance: num(l?.valor_venda),
-      desc: num(l?.desconto),
-      modalidade: l?.modalidade || null,
-      dataLeilao: l?.data_leilao || null,
+      deed: pickDeed(p),
+      appraisedValue: num(l?.appraised_value),
+      saleValue: num(l?.sale_value),
+      discount: num(l?.discount),
+      modality: l?.modality || null,
+      auctionDate: l?.auction_date || null,
       link: l?.link || null,
       scores: {
         flip: num(s?.flip),
@@ -111,13 +121,36 @@ async function loadProperties(): Promise<Property[]> {
         convenience: num(s?.convenience),
         investment: num(s?.investment),
       },
-      perfil: (prof?.profile as ProfileKey) ?? null,
-      perfilScore: num(prof?.score),
+      profile: (prof?.profile as ProfileKey) ?? null,
+      profileScore: num(prof?.score),
       clusterId: cid != null && cid !== -1 ? cid : null,
       clusterLabel: cl?.label ?? null,
       h3: p.h3_r8 || null,
+      lat: num(p.lat),
+      lon: num(p.lon),
     };
   });
+}
+
+async function loadMarketStats(): Promise<MarketStats[]> {
+  const res = await supabase
+    .from("market_address_stats")
+    .select(
+      "address_key,uf,city,neighborhood,property_type,sample_size,price_median,area_median,price_m2_median,price_m2_p25,price_m2_p75",
+    );
+  return rows<any>("market_address_stats", res).map((r) => ({
+    addressKey: r.address_key,
+    uf: r.uf ?? null,
+    city: r.city ?? null,
+    neighborhood: r.neighborhood ?? null,
+    propertyType: r.property_type ?? null,
+    sampleSize: num(r.sample_size),
+    priceMedian: num(r.price_median),
+    areaMedian: num(r.area_median),
+    priceM2Median: num(r.price_m2_median),
+    priceM2P25: num(r.price_m2_p25),
+    priceM2P75: num(r.price_m2_p75),
+  }));
 }
 
 async function loadClusters(): Promise<Cluster[]> {
@@ -139,7 +172,7 @@ async function loadClusters(): Promise<Cluster[]> {
 
 async function loadRegions(): Promise<Region[]> {
   const [cellsRes, scoresRes, dnaRes, featuresRes, neighborsRes] = await Promise.all([
-    supabase.from("region_cells").select("h3,cidade,bairro_label,num_properties"),
+    supabase.from("region_cells").select("h3,city,neighborhood_label,num_properties"),
     supabase
       .from("region_scores")
       .select("h3,convenience,walkability,commercial,airbnb,student,family")
@@ -163,8 +196,8 @@ async function loadRegions(): Promise<Region[]> {
   const nameOf = (h3: string) => {
     const c = cellMap.get(h3);
     return {
-      nome: c?.bairro_label ?? "Região",
-      cidade: titleCase(c?.cidade ?? ""),
+      name: c?.neighborhood_label ?? "Região",
+      city: titleCase(c?.city ?? ""),
     };
   };
 
@@ -183,8 +216,8 @@ async function loadRegions(): Promise<Region[]> {
         .map((n) => ({ h3: n.neighbor_h3, similarity: n.similarity, ...nameOf(n.neighbor_h3) }));
       return {
         h3: c.h3,
-        nome: c.bairro_label ?? "Região",
-        cidade: titleCase(c.cidade ?? ""),
+        name: c.neighborhood_label ?? "Região",
+        city: titleCase(c.city ?? ""),
         numProps: c.num_properties ?? 0,
         scores: {
           convenience: num(s?.convenience),
@@ -196,7 +229,7 @@ async function loadRegions(): Promise<Region[]> {
         },
         dna: (d?.dna as Region["dna"]) ?? null,
         topTags: (d?.top_tags as string[]) ?? [],
-        resumo: d?.summary_text ?? null,
+        summary: d?.summary_text ?? null,
         counts: feat.counts ?? {},
         nearest: feat.nearest_m ?? {},
         neighbors: nb,
@@ -211,6 +244,9 @@ export const getClusters = unstable_cache(loadClusters, ["clusters"], {
   revalidate: REVALIDATE,
 });
 export const getRegions = unstable_cache(loadRegions, ["regions"], {
+  revalidate: REVALIDATE,
+});
+export const getMarketStats = unstable_cache(loadMarketStats, ["market-stats"], {
   revalidate: REVALIDATE,
 });
 

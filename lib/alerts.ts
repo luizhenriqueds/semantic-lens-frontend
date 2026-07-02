@@ -5,7 +5,7 @@ import type { AlertFilters } from "@/lib/types";
 
 export type Alert = {
   id: string;
-  nome: string;
+  name: string;
   freq: string;
   on: boolean;
   filters?: AlertFilters;
@@ -47,19 +47,23 @@ export function useAlerts() {
     };
   }, []);
 
-  const add = useCallback((nome: string, freq: string, filters?: AlertFilters) => {
+  const add = useCallback((name: string, freq: string, filters?: AlertFilters) => {
     const cur = read();
     const id = `${Date.now().toString(36)}-${cur.length}`;
-    write([{ id, nome, freq, on: true, filters }, ...cur]);
+    write([{ id, name, freq, on: true, filters }, ...cur]);
   }, []);
 
   const toggle = useCallback((id: string) => {
     write(read().map((a) => (a.id === id ? { ...a, on: !a.on } : a)));
   }, []);
 
+  const update = useCallback((id: string, patch: Partial<Omit<Alert, "id">>) => {
+    write(read().map((a) => (a.id === id ? { ...a, ...patch } : a)));
+  }, []);
+
   const remove = useCallback((id: string) => {
     write(read().filter((a) => a.id !== id));
   }, []);
 
-  return { alerts, add, toggle, remove };
+  return { alerts, add, toggle, update, remove };
 }

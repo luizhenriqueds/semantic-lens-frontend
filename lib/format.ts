@@ -29,6 +29,28 @@ export const PROFILE_EXPLAIN: Record<ProfileKey, string> = {
     "Avalia o potencial comercial, o fluxo de pessoas e a densidade de serviços no entorno.",
 };
 
+export const SCORE_LABEL: Record<keyof Scores, string> = {
+  flip: "Flip",
+  liquidity: "Liquidez",
+  airbnb: "Airbnb",
+  student: "Estudantil",
+  family: "Familiar",
+  commercial: "Comercial",
+  convenience: "Conveniência",
+  investment: "Investimento",
+};
+
+export const SCORE_DIMS: (keyof Scores)[] = [
+  "airbnb",
+  "flip",
+  "student",
+  "family",
+  "liquidity",
+  "commercial",
+  "convenience",
+  "investment",
+];
+
 const SCORE_FIELD: Record<ProfileKey, keyof Scores> = {
   airbnb: "airbnb",
   flip: "flip",
@@ -39,12 +61,21 @@ const SCORE_FIELD: Record<ProfileKey, keyof Scores> = {
 };
 
 export function profileScore(p: Property): number | null {
-  if (!p.perfil) return null;
-  return p.scores[SCORE_FIELD[p.perfil]];
+  if (!p.profile) return null;
+  return p.scores[SCORE_FIELD[p.profile]];
 }
 
 export function scoreForProfile(p: Property, profile: ProfileKey): number | null {
   return p.scores[SCORE_FIELD[profile]];
+}
+
+export function isFirstAuction(modalidade: string | null | undefined): boolean {
+  if (!modalidade) return false;
+  return /\b1\s*[ºoª]?\s*(leil|pra[cç])/i.test(modalidade);
+}
+
+export function showDiscount(p: Property): boolean {
+  return p.discount != null && p.discount > 0 && !isFirstAuction(p.modality);
 }
 
 export function money(n: number | null | undefined): string {

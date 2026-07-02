@@ -13,39 +13,56 @@ export type Scores = {
 
 export type Property = {
   id: string;
-  tipo: string;
+  propertyType: string;
   uf: string;
-  cidade: string;
-  bairro: string;
+  city: string;
+  neighborhood: string;
   area: number | null;
-  quartos: number | null;
-  vagas: number | null;
-  situacao: string | null;
-  titulo: string;
-  descricao: string | null;
+  bedrooms: number | null;
+  parkingSpots: number | null;
+  occupancyStatus: string | null;
+  title: string;
+  description: string | null;
   image: string | null;
-  aval: number | null;
-  lance: number | null;
-  desc: number | null;
-  modalidade: string | null;
-  dataLeilao: string | null;
+  deed: string | null;
+  appraisedValue: number | null;
+  saleValue: number | null;
+  discount: number | null;
+  modality: string | null;
+  auctionDate: string | null;
   link: string | null;
   scores: Scores;
-  perfil: ProfileKey | null;
-  perfilScore: number | null;
+  profile: ProfileKey | null;
+  profileScore: number | null;
   clusterId: number | null;
   clusterLabel: string | null;
   h3: string | null;
+  lat: number | null;
+  lon: number | null;
 };
 
 export type AlertFilters = {
-  profile?: ProfileKey;
+  scoreKey?: keyof Scores;
   minScore?: number;
   uf?: string;
-  cidade?: string;
-  tipo?: string;
-  minDesconto?: number;
-  maxPreco?: number;
+  city?: string;
+  propertyType?: string;
+  minDiscount?: number;
+  maxPrice?: number;
+};
+
+export type MarketStats = {
+  addressKey: string;
+  uf: string | null;
+  city: string | null;
+  neighborhood: string | null;
+  propertyType: string | null;
+  sampleSize: number | null;
+  priceMedian: number | null;
+  areaMedian: number | null;
+  priceM2Median: number | null;
+  priceM2P25: number | null;
+  priceM2P75: number | null;
 };
 
 export type Cluster = {
@@ -68,8 +85,8 @@ export type RegionDna = {
 
 export type Region = {
   h3: string;
-  nome: string;
-  cidade: string;
+  name: string;
+  city: string;
   numProps: number;
   scores: {
     convenience: number | null;
@@ -81,8 +98,8 @@ export type Region = {
   };
   dna: RegionDna | null;
   topTags: string[];
-  resumo: string | null;
+  summary: string | null;
   counts: Record<string, number>;
   nearest: Record<string, number>;
-  neighbors: { h3: string; similarity: number; nome: string; cidade: string }[];
+  neighbors: { h3: string; similarity: number; name: string; city: string }[];
 };

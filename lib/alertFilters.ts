@@ -1,16 +1,18 @@
-import { moneyShort, PROFILE_SHORT, scoreForProfile } from "@/lib/format";
+import { moneyShort, SCORE_LABEL } from "@/lib/format";
 import type { AlertFilters, Property } from "@/lib/types";
 
 export function matchesFilters(p: Property, f: AlertFilters): boolean {
   if (f.uf && p.uf !== f.uf) return false;
-  if (f.cidade && p.cidade !== f.cidade) return false;
-  if (f.tipo && p.tipo !== f.tipo) return false;
-  if (f.minDesconto != null && (p.desc ?? 0) < f.minDesconto) return false;
-  if (f.maxPreco != null && (p.lance ?? Infinity) > f.maxPreco) return false;
-  if (f.profile) {
-    const s = scoreForProfile(p, f.profile);
-    if (s == null) return false;
-    if (f.minScore != null && s < f.minScore) return false;
+  if (f.city && p.city !== f.city) return false;
+  if (f.propertyType && p.propertyType !== f.propertyType) return false;
+  if (f.minDiscount != null && (p.discount ?? 0) < f.minDiscount) return false;
+  if (f.maxPrice != null && (p.saleValue ?? Infinity) > f.maxPrice) return false;
+  if (f.minScore != null) {
+    // A minimum score applies to the chosen objetivo, or to Investimento when none is set.
+    const s = p.scores[f.scoreKey ?? "investment"];
+    if (s == null || s < f.minScore) return false;
+  } else if (f.scoreKey && p.scores[f.scoreKey] == null) {
+    return false;
   }
   return true;
 }
@@ -21,25 +23,32 @@ export function countMatches(properties: Property[], f: AlertFilters): number {
 
 export function hasAnyFilter(f: AlertFilters): boolean {
   return (
-    f.profile != null ||
+    f.scoreKey != null ||
     f.minScore != null ||
     f.uf != null ||
-    f.cidade != null ||
-    f.tipo != null ||
-    f.minDesconto != null ||
-    f.maxPreco != null
+    f.city != null ||
+    f.propertyType != null ||
+    f.minDiscount != null ||
+    f.maxPrice != null
   );
+}
+
+function scoreLabel(f: AlertFilters): string | null {
+  if (f.scoreKey) return SCORE_LABEL[f.scoreKey];
+  if (f.minScore != null) return SCORE_LABEL.investment;
+  return null;
 }
 
 export function describeFilters(f: AlertFilters): string {
   const parts: string[] = [];
-  if (f.profile) parts.push(PROFILE_SHORT[f.profile]);
+  const label = scoreLabel(f);
+  if (label) parts.push(label);
   if (f.minScore != null) parts.push(`nota ≥ ${f.minScore}`);
-  if (f.tipo) parts.push(f.tipo);
-  const loc = f.cidade ? `${f.cidade}${f.uf ? `/${f.uf}` : ""}` : f.uf;
+  if (f.propertyType) parts.push(f.propertyType);
+  const loc = f.city ? `${f.city}${f.uf ? `/${f.uf}` : ""}` : f.uf;
   if (loc) parts.push(`em ${loc}`);
-  if (f.minDesconto != null) parts.push(`desconto ≥ ${f.minDesconto}%`);
-  if (f.maxPreco != null) parts.push(`até ${moneyShort(f.maxPreco)}`);
+  if (f.minDiscount != null) parts.push(`desconto ≥ ${f.minDiscount}%`);
+  if (f.maxPrice != null) parts.push(`até ${moneyShort(f.maxPrice)}`);
   if (!parts.length) return "Novos imóveis";
   const s = parts.join(" · ");
   return s.charAt(0).toUpperCase() + s.slice(1);
@@ -47,12 +56,13 @@ export function describeFilters(f: AlertFilters): string {
 
 export function filterChips(f: AlertFilters): string[] {
   const chips: string[] = [];
-  if (f.profile) chips.push(PROFILE_SHORT[f.profile]);
+  const label = scoreLabel(f);
+  if (label) chips.push(label);
   if (f.minScore != null) chips.push(`Nota ≥ ${f.minScore}`);
-  if (f.tipo) chips.push(f.tipo);
-  if (f.cidade) chips.push(f.cidade);
+  if (f.propertyType) chips.push(f.propertyType);
+  if (f.city) chips.push(f.city);
   else if (f.uf) chips.push(f.uf);
-  if (f.minDesconto != null) chips.push(`Desconto ≥ ${f.minDesconto}%`);
-  if (f.maxPreco != null) chips.push(`Até ${moneyShort(f.maxPreco)}`);
+  if (f.minDiscount != null) chips.push(`Desconto ≥ ${f.minDiscount}%`);
+  if (f.maxPrice != null) chips.push(`Até ${moneyShort(f.maxPrice)}`);
   return chips;
 }

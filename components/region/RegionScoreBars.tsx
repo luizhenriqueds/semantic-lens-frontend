@@ -10,9 +10,12 @@ const ROWS: { field: keyof Region["scores"]; label: string }[] = [
 ];
 
 export default function RegionScoreBars({ region }: { region: Region }) {
+  const rows = [...ROWS].sort(
+    (a, b) => (region.scores[b.field] ?? -1) - (region.scores[a.field] ?? -1),
+  );
   return (
     <div className="scorebars">
-      {ROWS.map(({ field, label }) => {
+      {rows.map(({ field, label }) => {
         const v = region.scores[field];
         const dim = v == null || v < 55;
         return (

@@ -16,8 +16,8 @@ const SECTION: Record<string, string> = {
 };
 
 function trail(path: string): Crumb[] {
-  const home: Crumb = { label: "Início", href: "/" };
-  if (path === "/") return [{ label: "Início" }];
+  const home: Crumb = { label: "Início", href: "/dashboard" };
+  if (path === "/dashboard") return [{ label: "Início" }];
 
   const [, first] = path.split("/");
   if (first === "property") {

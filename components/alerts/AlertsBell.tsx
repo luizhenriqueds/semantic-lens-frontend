@@ -61,7 +61,7 @@ export default function AlertsBell() {
                     <IconBell width={18} height={18} strokeWidth={1.7} />
                   </span>
                   <span className="notif-body">
-                    <span className="notif-name">{a.nome}</span>
+                    <span className="notif-name">{a.name}</span>
                     <span className="notif-freq">{a.freq}</span>
                   </span>
                   <span className={`notif-status${a.on ? " on" : ""}`}>
