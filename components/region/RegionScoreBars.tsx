@@ -5,7 +5,7 @@ const ROWS: { field: keyof Region["scores"]; label: string }[] = [
   { field: "family", label: "Familiar" },
   { field: "student", label: "Estudantil" },
   { field: "commercial", label: "Comercial" },
-  { field: "airbnb", label: "Airbnb" },
+  { field: "airbnb", label: "Temporada" },
   { field: "walkability", label: "Caminhabilidade" },
 ];
 

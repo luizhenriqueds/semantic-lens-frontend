@@ -46,6 +46,13 @@ export const IconBell = (p: P) => (
     <path d="M10 20a2 2 0 0 0 4 0" />
   </svg>
 );
+export const IconInfo = (p: P) => (
+  <svg {...base(p)}>
+    <circle cx="12" cy="12" r="9" />
+    <path d="M12 11v5" />
+    <path d="M12 8h.01" />
+  </svg>
+);
 export const IconStar = (p: P) => (
   <svg {...base(p)}>
     <path d="m12 4 2 4 4.5.6-3.2 3.1.8 4.5L12 14.7 7.9 16.3l.8-4.5L5.5 8.6 10 8z" />

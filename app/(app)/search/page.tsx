@@ -1,53 +1,54 @@
-import PagedCards from "./_components/PagedCards";
-import EmptyState from "@/components/ui/EmptyState";
+import { Suspense } from "react";
+import Link from "next/link";
 import SearchHero from "@/components/search/SearchHero";
-import { getProperties } from "@/lib/data";
-import { PROFILE_LABEL } from "@/lib/format";
-import { IconSearch } from "@/lib/icons";
-import { searchProperties } from "@/lib/search";
+import SearchResults from "./_components/SearchResults";
+import SearchSkeleton from "./_components/SearchSkeleton";
+import { isDeedQuery } from "@/lib/facets";
+
+export const dynamic = "force-dynamic";
 
 export default async function SearchPage({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string }>;
+  searchParams: Promise<{ q?: string; scope?: string }>;
 }) {
-  const [all, sp] = await Promise.all([getProperties(), searchParams]);
+  const sp = await searchParams;
   const query = (sp.q ?? "").trim();
-  const { profile, items } = query
-    ? searchProperties(all, query)
-    : { profile: null, items: all.slice().sort((a, b) => (b.discount ?? 0) - (a.discount ?? 0)) };
+  const scope = sp.scope === "matriculas" ? "matriculas" : "imoveis";
+  const showTabs = !!query && (scope === "matriculas" || isDeedQuery(query));
 
   return (
     <section className="view">
       <div className="pagehead">
         <h1>Buscar imóveis</h1>
         <p>
-          Escreva o que procura. Nós comparamos os imóveis e ordenamos pelos que mais combinam com o
-          seu objetivo.
+          Escreva o que procura com suas palavras. A busca semântica entende o objetivo e ordena os
+          resultados pelos que mais combinam.
         </p>
       </div>
 
-      <SearchHero label="" sub="" initial={query} showExamples={false} />
+      <SearchHero label="" sub="" initial={query} scope={scope} showExamples={false} />
 
-      <div className="sectitle">
-        <h2>
-          {items.length} {items.length === 1 ? "imóvel encontrado" : "imóveis encontrados"}
-          {profile && (
-            <span style={{ color: "var(--ink-soft)", fontWeight: 500, fontSize: "15px" }}>
-              {" "}
-              · objetivo {PROFILE_LABEL[profile]}
-            </span>
-          )}
-        </h2>
-      </div>
-
-      {items.length ? (
-        <PagedCards items={items} resetKey={query} />
-      ) : (
-        <EmptyState icon={<IconSearch />} title={`Nenhum imóvel encontrado para “${query}”`}>
-          Tente descrever de outro jeito ou remover parte da busca.
-        </EmptyState>
+      {showTabs && (
+        <div className="scopetabs">
+          <Link
+            className={scope === "imoveis" ? "on" : ""}
+            href={`/search?q=${encodeURIComponent(query)}`}
+          >
+            Imóveis
+          </Link>
+          <Link
+            className={scope === "matriculas" ? "on" : ""}
+            href={`/search?q=${encodeURIComponent(query)}&scope=matriculas`}
+          >
+            Matrículas
+          </Link>
+        </div>
       )}
+
+      <Suspense key={`${scope}:${query}`} fallback={<SearchSkeleton scope={scope} />}>
+        <SearchResults query={query} scope={scope} />
+      </Suspense>
     </section>
   );
 }

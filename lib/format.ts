@@ -1,7 +1,7 @@
 import type { ProfileKey, Property, Scores } from "@/lib/types";
 
 export const PROFILE_LABEL: Record<ProfileKey, string> = {
-  airbnb: "Airbnb",
+  airbnb: "Aluguel por temporada",
   flip: "Reforma e revenda",
   student: "Aluguel estudantil",
   family: "Moradia familiar",
@@ -10,7 +10,7 @@ export const PROFILE_LABEL: Record<ProfileKey, string> = {
 };
 
 export const PROFILE_SHORT: Record<ProfileKey, string> = {
-  airbnb: "Airbnb",
+  airbnb: "Temporada",
   flip: "Flip",
   student: "Estudantil",
   family: "Familiar",
@@ -32,7 +32,7 @@ export const PROFILE_EXPLAIN: Record<ProfileKey, string> = {
 export const SCORE_LABEL: Record<keyof Scores, string> = {
   flip: "Flip",
   liquidity: "Liquidez",
-  airbnb: "Airbnb",
+  airbnb: "Aluguel por temporada",
   student: "Estudantil",
   family: "Familiar",
   commercial: "Comercial",
@@ -65,6 +65,13 @@ export function profileScore(p: Property): number | null {
   return p.scores[SCORE_FIELD[p.profile]];
 }
 
+// Overall investment score — a weighted index computed from all the other
+// feature scores. Present for every scored property, so it doubles as the
+// property's headline "nota".
+export function investmentScore(p: Property): number | null {
+  return p.scores.investment;
+}
+
 export function scoreForProfile(p: Property, profile: ProfileKey): number | null {
   return p.scores[SCORE_FIELD[profile]];
 }
@@ -76,6 +83,14 @@ export function isFirstAuction(modalidade: string | null | undefined): boolean {
 
 export function showDiscount(p: Property): boolean {
   return p.discount != null && p.discount > 0 && !isFirstAuction(p.modality);
+}
+
+export function discountPercentile(all: Property[], p: Property): number | null {
+  if (p.discount == null) return null;
+  const others = all.filter((x) => x.id !== p.id && x.discount != null);
+  if (others.length < 5) return null;
+  const below = others.filter((x) => x.discount! < p.discount!).length;
+  return Math.round((below / others.length) * 100);
 }
 
 export function money(n: number | null | undefined): string {
@@ -109,6 +124,13 @@ export function fmtDate(iso: string | null | undefined): string | null {
   const d = new Date(iso);
   if (isNaN(d.getTime())) return null;
   return d.toLocaleDateString("pt-BR", { day: "2-digit", month: "short" });
+}
+
+export function fmtDay(iso: string | null | undefined): string | null {
+  if (!iso) return null;
+  const d = new Date(iso);
+  if (isNaN(d.getTime())) return null;
+  return d.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric" });
 }
 
 export function deriveTitle(tipo: string, quartos: number | null, bairro: string): string {

@@ -1,6 +1,13 @@
 import Link from "next/link";
 import type { Property } from "@/lib/types";
-import { fmtDate, money, PROFILE_LABEL, profileScore, showDiscount } from "@/lib/format";
+import {
+  fmtDate,
+  investmentScore,
+  money,
+  PROFILE_LABEL,
+  profileScore,
+  showDiscount,
+} from "@/lib/format";
 import PropertyPhoto from "@/components/property/PropertyPhoto";
 import Ring from "@/components/ui/Ring";
 
@@ -8,11 +15,13 @@ export default function PropertyRow({ p }: { p: Property }) {
   const quartos = p.bedrooms ?? 0;
   const vagas = p.parkingSpots ?? 0;
   const data = fmtDate(p.auctionDate);
+  const nota = investmentScore(p);
   return (
     <Link className="wcard" href={`/property/${p.id}`}>
       <div className="wphoto">
         <PropertyPhoto src={p.image} alt={`Foto do imóvel: ${p.title}`} sizes="184px" />
         {showDiscount(p) && <span className="disc">−{Math.round(p.discount!)}%</span>}
+        {p.inactive && <span className="statuspill">Inativo</span>}
       </div>
       <div className="wmain">
         <span className="tag">{p.propertyType}</span>
@@ -50,12 +59,12 @@ export default function PropertyRow({ p }: { p: Property }) {
         <div className="colv">{p.modality ?? "—"}</div>
         {data && <div className="sub">{data}</div>}
       </div>
-      {p.profile && (
+      {(nota != null || p.profile) && (
         <div className="wscore">
-          <Ring value={profileScore(p)} size={46} />
+          <Ring value={nota ?? profileScore(p)} size={46} />
           <div>
-            <div className="colk">Melhor objetivo</div>
-            <div className="lab">{PROFILE_LABEL[p.profile]}</div>
+            <div className="colk">{nota != null ? "Nota de investimento" : "Melhor objetivo"}</div>
+            <div className="lab">{p.profile ? PROFILE_LABEL[p.profile] : "Investimento"}</div>
           </div>
         </div>
       )}

@@ -153,11 +153,425 @@
 .lp-hero h1 .lp-semantic {
   color: var(--primary);
 }
+.lp-hero h1 .lp-underline {
+  color: var(--primary);
+  position: relative;
+  white-space: nowrap;
+}
+.lp-hero h1 .lp-underline svg {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -0.14em;
+  width: 100%;
+  height: 0.42em;
+  fill: none;
+  stroke: var(--primary-soft);
+  stroke-width: 3;
+  overflow: visible;
+}
+.lp-hero h1 .lp-underline svg path {
+  stroke-linecap: round;
+  stroke-dasharray: 240;
+  stroke-dashoffset: 240;
+  animation: lp-underdraw 0.9s cubic-bezier(0.22, 1, 0.36, 1) 0.5s forwards;
+}
+@keyframes lp-underdraw {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .lp-hero h1 .lp-underline svg path {
+    animation: none;
+    stroke-dashoffset: 0;
+  }
+}
 .lp-lede {
   font-size: 18.5px;
   color: var(--ink-soft);
   max-width: 56ch;
   margin: 0 auto 34px;
+}
+
+/* natural-language search section — text + card on the left, region map on the right */
+.lp-searchzone {
+  position: relative;
+  overflow: hidden;
+  padding: 96px 0;
+}
+.lp-searchzone > .lp-hexfield {
+  opacity: 0.4;
+  mask-image: radial-gradient(90% 100% at 50% 50%, #000 15%, transparent 74%);
+  -webkit-mask-image: radial-gradient(90% 100% at 50% 50%, #000 15%, transparent 74%);
+}
+.lp-searchzone > .lp-wrap {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  grid-template-columns: minmax(0, 1.05fr) minmax(0, 0.95fr);
+  gap: 56px;
+  align-items: stretch;
+}
+.lp-searchzone-left {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 30px;
+}
+.lp-searchzone-head {
+  text-align: left;
+}
+.lp-searchzone-head h2 {
+  font-size: clamp(30px, 3.8vw, 46px);
+  font-weight: 800;
+  letter-spacing: -0.028em;
+  line-height: 1.08;
+  margin: 0 0 16px;
+}
+.lp-searchzone-head p {
+  color: var(--ink-soft);
+  font-size: 17.5px;
+  line-height: 1.55;
+  max-width: 46ch;
+  margin: 0;
+}
+
+/* animated search card */
+.lp-demo {
+  text-align: left;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  padding: 22px;
+  box-shadow: 0 22px 54px rgba(43, 46, 34, 0.1);
+}
+.lp-demo-field {
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  background: var(--surface-2);
+  border: 1.5px solid var(--line);
+  border-radius: 14px;
+  padding: 0 16px 0 20px;
+  height: 68px;
+}
+.lp-demo-field:focus-within {
+  border-color: var(--primary-soft);
+}
+
+/* region / property map card (right column) */
+.lp-mapcard {
+  position: relative;
+  overflow: hidden;
+  border-radius: 20px;
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  min-height: 460px;
+  box-shadow: 0 24px 60px rgba(43, 46, 34, 0.1);
+}
+.lp-map-terrain {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+.lp-map-grid-a path {
+  stroke: var(--line);
+  stroke-width: 2;
+}
+.lp-map-grid-b path {
+  stroke: var(--line);
+  stroke-width: 1.4;
+  opacity: 0.7;
+}
+.lp-map-hexes {
+  fill: var(--primary);
+}
+.lp-map-hexes polygon {
+  stroke: var(--primary);
+  stroke-opacity: 0.4;
+  stroke-width: 1.2;
+}
+.lp-map-marker-ring {
+  fill: var(--primary);
+  stroke: var(--surface);
+}
+.lp-map-marker-pin {
+  fill: var(--surface);
+}
+.lp-coord {
+  position: absolute;
+  font-family: "JetBrains Mono", ui-monospace, monospace;
+  font-size: 10.5px;
+  letter-spacing: 0.06em;
+  color: var(--ink-faint);
+  background: color-mix(in srgb, var(--surface) 80%, transparent);
+  border-radius: 5px;
+  padding: 2px 7px;
+}
+.lp-maptag {
+  position: absolute;
+  top: 16px;
+  left: 16px;
+  z-index: 3;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 100px;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--primary);
+  padding: 7px 14px;
+}
+.lp-maptag svg {
+  width: 14px;
+  height: 14px;
+  stroke-width: 2;
+}
+.lp-fcard {
+  position: absolute;
+  z-index: 4;
+  left: 20px;
+  right: 20px;
+  bottom: 20px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 14px 16px;
+  box-shadow: 0 14px 40px rgba(43, 46, 34, 0.14);
+  animation: lp-floaty 7s ease-in-out infinite;
+}
+@keyframes lp-floaty {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-7px);
+  }
+}
+/* the matched-property swap animates on each query change (keyed remount) */
+.lp-fcard-swap {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  animation: lp-fcard-swap-in 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+}
+@keyframes lp-fcard-swap-in {
+  0% {
+    opacity: 0;
+    transform: translateY(14px) scale(0.95);
+  }
+  55% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+.lp-map-ping {
+  stroke: var(--primary);
+  stroke-width: 2;
+  opacity: 0;
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: lp-ping 1s ease-out;
+}
+@keyframes lp-ping {
+  0% {
+    opacity: 0.55;
+    transform: scale(0.7);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(2.7);
+  }
+}
+.lp-fcard-info {
+  min-width: 0;
+}
+.lp-maptag-score,
+.lp-coord-a {
+  display: inline-block;
+  animation: lp-fade-in 0.5s ease;
+}
+@keyframes lp-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+.lp-fcard-ring {
+  flex-shrink: 0;
+}
+.lp-ring-fill {
+  transition: stroke-dasharray 0.5s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.lp-ring-track {
+  stroke: var(--primary-wash);
+}
+.lp-ring-fill {
+  stroke: var(--primary);
+}
+.lp-ring-text {
+  fill: var(--ink);
+  font-family: inherit;
+}
+.lp-fcard b {
+  display: block;
+  font-size: 15px;
+  letter-spacing: -0.01em;
+}
+.lp-fcard-loc {
+  font-size: 12.5px;
+  color: var(--ink-soft);
+}
+.lp-fcard-price {
+  margin-left: auto;
+  text-align: right;
+}
+.lp-fcard-now {
+  font-size: 17px;
+  font-weight: 700;
+  color: var(--primary);
+  letter-spacing: -0.01em;
+}
+.lp-fcard-was {
+  font-size: 11.5px;
+  color: var(--ink-faint);
+  text-decoration: line-through;
+}
+.lp-fcard-disc {
+  position: absolute;
+  top: -12px;
+  right: 14px;
+  background: var(--primary);
+  color: var(--surface);
+  font-size: 12px;
+  font-weight: 700;
+  border-radius: 8px;
+  padding: 4px 9px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+@media (prefers-reduced-motion: reduce) {
+  .lp-fcard,
+  .lp-fcard-swap,
+  .lp-maptag-score,
+  .lp-coord-a,
+  .lp-map-ping {
+    animation: none;
+  }
+  .lp-map-ping {
+    opacity: 0;
+  }
+}
+.lp-searchzone .lp-demo-typed,
+.lp-searchzone .lp-demo-input {
+  font-size: 18px;
+}
+.lp-demo-field > svg {
+  width: 22px;
+  height: 22px;
+  stroke: var(--primary-soft);
+  flex-shrink: 0;
+}
+.lp-demo-inputwrap {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+}
+.lp-demo-input {
+  flex: 1;
+  min-width: 0;
+  border: 0;
+  background: none;
+  outline: none;
+  font-size: 16.5px;
+  color: var(--ink);
+  font-family: inherit;
+}
+.lp-demo-typed {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  font-size: 16.5px;
+  color: var(--ink);
+  white-space: nowrap;
+  overflow: hidden;
+  pointer-events: none;
+  transition: opacity 0.15s ease;
+}
+.lp-demo-inputwrap:focus-within .lp-demo-typed,
+.lp-demo-input:not(:placeholder-shown) + .lp-demo-typed {
+  opacity: 0;
+}
+.lp-demo-caret {
+  display: inline-block;
+  width: 2px;
+  height: 21px;
+  margin-left: 2px;
+  flex-shrink: 0;
+  background: var(--primary);
+  animation: lp-blink 1s step-end infinite;
+}
+@keyframes lp-blink {
+  50% {
+    opacity: 0;
+  }
+}
+.lp-demo-go {
+  margin-left: auto;
+  flex-shrink: 0;
+  background: var(--primary);
+  color: var(--surface);
+  border: 0;
+  cursor: pointer;
+  border-radius: 10px;
+  font-size: 14.5px;
+  font-weight: 700;
+  padding: 11px 20px;
+  text-decoration: none;
+  transition: filter 0.15s ease;
+}
+.lp-demo-go:hover {
+  filter: brightness(1.08);
+}
+.lp-demo-hints {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 13px;
+}
+.lp-demo-hints span {
+  font-size: 13px;
+  color: var(--ink-soft);
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  border-radius: 100px;
+  padding: 7px 13px;
+}
+.lp-demo-note {
+  margin-top: 14px;
+  padding: 0 4px;
+  font-size: 12.5px;
+  color: var(--ink-faint);
+}
+.lp-demo-note .mono {
+  color: var(--primary-soft);
+}
+@media (prefers-reduced-motion: reduce) {
+  .lp-demo-caret {
+    animation: none;
+  }
 }
 .lp-actions {
   display: flex;
@@ -204,7 +618,7 @@
 
 /* ---------- stacked layers ---------- */
 .lp-stackzone {
-  padding: 40px 0 90px;
+  padding: 80px 0 100px;
 }
 .lp-stackhead {
   text-align: center;
@@ -659,7 +1073,7 @@
 
 /* ---------- versus ---------- */
 .lp-versus {
-  padding: 60px 0 90px;
+  padding: 80px 0 100px;
 }
 .lp-vsgrid {
   display: grid;
@@ -727,7 +1141,7 @@
 
 /* ---------- CTA ---------- */
 .lp-ctaband {
-  padding: 20px 0 110px;
+  padding: 60px 0 110px;
   text-align: center;
 }
 .lp-ctaband .lp-inner {
@@ -829,6 +1243,23 @@
   .lp-layer {
     position: static;
   }
+  .lp-searchzone > .lp-wrap {
+    grid-template-columns: 1fr;
+    gap: 34px;
+  }
+  .lp-searchzone-head {
+    text-align: center;
+  }
+  .lp-searchzone-head p {
+    margin: 0 auto;
+  }
+  .lp-mapcard {
+    max-width: 520px;
+    width: 100%;
+    margin: 0 auto;
+    min-height: 340px;
+    aspect-ratio: 10 / 9;
+  }
 }
 @media (max-width: 780px) {
   .lp-vsgrid {
@@ -838,6 +1269,21 @@
 @media (max-width: 640px) {
   .lp-wrap {
     padding: 0 20px;
+  }
+  .lp-demo {
+    padding: 14px;
+  }
+  .lp-demo-go {
+    padding: 10px 16px;
+  }
+  .lp-mapcard {
+    min-height: 300px;
+  }
+  .lp-fcard {
+    left: 14px;
+    right: 14px;
+    padding: 12px 14px;
+    gap: 12px;
   }
   .lp-nav .lp-wrap {
     gap: 10px;

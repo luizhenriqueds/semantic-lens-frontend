@@ -1,14 +1,37 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import PropertyCard from "@/components/property/PropertyCard";
 import PropertyPhoto from "@/components/property/PropertyPhoto";
 import SaveButton from "./_components/SaveButton";
 import ScoreBars from "./_components/ScoreBars";
-import PoiNearGrid from "@/components/region/PoiNearGrid";
-import RegionScoreBars from "@/components/region/RegionScoreBars";
+import PriceHistory from "./_components/PriceHistory";
+import ScoreBreakdown from "./_components/ScoreBreakdown";
+import VisualScore from "./_components/VisualScore";
+import PropertyRanks from "./_components/PropertyRanks";
+import RegionPanel from "@/components/region/RegionPanel";
 import PropertyMarket from "@/components/market/PropertyMarket";
-import { getMarketStats, getProperties, getProperty, getRegion } from "@/lib/data";
-import { fmtDate, money, PROFILE_EXPLAIN, PROFILE_LABEL, showDiscount } from "@/lib/format";
+import MarketHistory from "@/components/market/MarketHistory";
+import SimilarCarousel, { type RecItem } from "@/components/property/SimilarCarousel";
+import Ring from "@/components/ui/Ring";
+import {
+  getMarketHistory,
+  getMarketStats,
+  getPois,
+  getPriceHistory,
+  getProperties,
+  getProperty,
+  getRecommendations,
+  getRegion,
+} from "@/lib/data";
+import { addressKey } from "@/lib/market";
+import { nearbyPois } from "@/lib/pois";
+import {
+  discountPercentile,
+  fmtDate,
+  money,
+  PROFILE_EXPLAIN,
+  PROFILE_LABEL,
+  showDiscount,
+} from "@/lib/format";
 import { statsForProperty } from "@/lib/market";
 import { IconBack, IconDoc } from "@/lib/icons";
 
@@ -24,25 +47,34 @@ export default async function PropertyPage({ params }: { params: Promise<{ id: s
   const p = await getProperty(id);
   if (!p) notFound();
 
-  const [all, region, marketStats] = await Promise.all([
+  const [all, region, marketStats, priceHistory, pois, marketHistory, recs] = await Promise.all([
     getProperties(),
     p.h3 ? getRegion(p.h3) : Promise.resolve(null),
     getMarketStats(),
+    getPriceHistory(p.id),
+    p.lat != null && p.lon != null ? getPois() : Promise.resolve([]),
+    getMarketHistory(addressKey(p.uf, p.city, p.neighborhood, p.propertyType)),
+    getRecommendations(p.id),
   ]);
   const market = statsForProperty(marketStats, p);
+  const nearby =
+    p.lat != null && p.lon != null ? nearbyPois(pois, p.lat, p.lon, { radius: 2500 }) : [];
 
-  const same = all.filter(
-    (x) => p.clusterId != null && x.clusterId === p.clusterId && x.id !== p.id,
-  );
-  const rest = all
-    .filter((x) => x.id !== p.id && x.clusterId !== p.clusterId)
-    .sort(
-      (a, b) =>
-        Math.abs((a.saleValue ?? 0) - (p.saleValue ?? 0)) -
-        Math.abs((b.saleValue ?? 0) - (p.saleValue ?? 0)),
-    );
-  const similar = [...same, ...rest].slice(0, 5);
+  const propById = new Map(all.map((x) => [x.id, x]));
+  const toItems = (kind: "visual" | "similar"): RecItem[] =>
+    recs
+      .filter((r) => r.kind === kind)
+      .map((r) => {
+        const rp = propById.get(r.recId);
+        if (!rp) return null;
+        return { p: rp, match: Math.min(100, Math.round((r.similarity ?? 0) * 100)) };
+      })
+      .filter((x): x is RecItem => x !== null);
+  const recVisual = toItems("visual");
+  const recSemantic = toItems("similar");
+
   const data = fmtDate(p.auctionDate);
+  const discPct = showDiscount(p) ? discountPercentile(all, p) : null;
 
   return (
     <section className="view">
@@ -79,6 +111,8 @@ export default async function PropertyPage({ params }: { params: Promise<{ id: s
             <span className="badge">{p.propertyType}</span>
           </div>
 
+          <VisualScore p={p} />
+
           <div className="factgrid">
             <div className="f">
               <div className="k">Área útil</div>
@@ -100,8 +134,22 @@ export default async function PropertyPage({ params }: { params: Promise<{ id: s
             </div>
           </div>
 
+          <PropertyRanks p={p} />
+
           <div className="infoblock">
             <h3>Nota por objetivo de investimento</h3>
+            {p.scores.investment != null && (
+              <div className="investhead">
+                <Ring value={p.scores.investment} size={66} />
+                <div>
+                  <div className="ih-k">Nota geral de investimento</div>
+                  <div className="ih-s">
+                    Índice ponderado que combina as notas por objetivo, o desconto e o mercado do
+                    bairro em uma única nota de 0 a 100.
+                  </div>
+                </div>
+              </div>
+            )}
             <ScoreBars scores={p.scores} />
             {p.profile && (
               <div className="explain">
@@ -109,36 +157,38 @@ export default async function PropertyPage({ params }: { params: Promise<{ id: s
                 100 e são calculadas a partir dos dados do imóvel e do bairro.
               </div>
             )}
+            <ScoreBreakdown p={p} />
           </div>
 
           {region && (
-            <div className="rpanel">
-              <div className="rp-top">
-                <div>
-                  <h3>A região: {region.name}</h3>
-                  <div className="where">
-                    {region.city} · {region.numProps} imóveis analisados
-                  </div>
-                </div>
-                <Link className="btn ghost" href={`/regions/${region.h3}`}>
-                  Ver página da região ›
-                </Link>
-              </div>
-              <RegionScoreBars region={region} />
-              <PoiNearGrid region={region} />
-              <div className="rnote">Calculado a partir de dados de mapa (OpenStreetMap).</div>
-            </div>
+            <RegionPanel
+              region={region}
+              pois={nearby}
+              lat={p.lat}
+              lon={p.lon}
+              title={`${p.title} — ${p.neighborhood}`}
+            />
           )}
         </div>
 
         <div>
           <div className="infoblock pricecard">
+            {p.inactive && (
+              <div className="inactive-note">
+                Anúncio inativo — este imóvel não aparece mais na oferta atual da Caixa.
+              </div>
+            )}
             <div className="now">{money(p.saleValue)}</div>
             {p.appraisedValue != null && (
               <div className="was">Valor de avaliação: {money(p.appraisedValue)}</div>
             )}
             {showDiscount(p) && (
               <div className="discrow">−{Math.round(p.discount!)}% de desconto</div>
+            )}
+            {discPct != null && discPct >= 50 && (
+              <div className="disc-rank">
+                Desconto maior que o de <b>{discPct}%</b> dos imóveis acompanhados
+              </div>
             )}
             <div className="when">
               {p.modality && <b>{p.modality}</b>}
@@ -166,17 +216,32 @@ export default async function PropertyPage({ params }: { params: Promise<{ id: s
             </div>
           </div>
 
-          {market && <PropertyMarket stats={market} lance={p.saleValue} area={p.area} />}
+          <PriceHistory points={priceHistory} />
+
+          {market && (
+            <PropertyMarket
+              stats={market}
+              lance={p.saleValue}
+              area={p.area}
+              appraised={p.appraisedValue}
+            />
+          )}
+
+          <MarketHistory points={marketHistory} />
 
           <div className="infoblock">
             <h3>Sobre o imóvel</h3>
             <p style={{ margin: 0, color: "var(--ink-soft)", fontSize: "14.5px", lineHeight: 1.6 }}>
               {p.description ??
                 `Imóvel de leilão da Caixa em ${p.neighborhood}, ${p.city}/${p.uf}.`}
-              {p.clusterLabel && (
+              {p.clusterLabel && p.clusterId != null && (
                 <>
                   {" "}
-                  Faz parte do grupo <b style={{ color: "var(--ink)" }}>“{p.clusterLabel}”</b>.
+                  Faz parte do grupo{" "}
+                  <Link className="inlinelink" href={`/properties?cluster=${p.clusterId}`}>
+                    “{p.clusterLabel}”
+                  </Link>
+                  .
                 </>
               )}
             </p>
@@ -184,18 +249,16 @@ export default async function PropertyPage({ params }: { params: Promise<{ id: s
         </div>
       </div>
 
-      {similar.length > 0 && (
-        <>
-          <div className="sectitle" style={{ marginTop: "26px" }}>
-            <h2>Imóveis similares</h2>
-          </div>
-          <div className="pgrid compact">
-            {similar.map((s) => (
-              <PropertyCard key={s.id} p={s} />
-            ))}
-          </div>
-        </>
-      )}
+      <SimilarCarousel
+        title="Mais semelhantes visualmente"
+        subtitle="Imóveis com aparência parecida com este."
+        items={recVisual}
+      />
+      <SimilarCarousel
+        title="Quem viu este também considerou"
+        subtitle="Outras oportunidades parecidas em perfil e preço."
+        items={recSemantic}
+      />
     </section>
   );
 }

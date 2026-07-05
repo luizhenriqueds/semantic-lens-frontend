@@ -1,10 +1,12 @@
 import Link from "next/link";
 import CollectionCard from "@/components/groups/CollectionCard";
 import SearchHero from "@/components/search/SearchHero";
-import { getClusters } from "@/lib/data";
+import { clusterStats } from "@/lib/clusterStats";
+import { getClusters, getProperties } from "@/lib/data";
 
 export default async function HomePage() {
-  const clusters = await getClusters();
+  const [clusters, properties] = await Promise.all([getClusters(), getProperties()]);
+  const activeProperties = properties.filter((p) => !p.inactive);
 
   return (
     <section className="view">
@@ -53,7 +55,11 @@ export default async function HomePage() {
       </p>
       <div className="plgrid">
         {clusters.slice(0, 3).map((c) => (
-          <CollectionCard key={c.clusterId} c={c} />
+          <CollectionCard
+            key={c.clusterId}
+            c={c}
+            stats={clusterStats(activeProperties, c.clusterId)}
+          />
         ))}
       </div>
     </section>

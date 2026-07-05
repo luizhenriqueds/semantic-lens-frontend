@@ -3,7 +3,7 @@ import type { Region, RegionDna } from "@/lib/types";
 export const DNA_ROWS: { key: keyof RegionDna; label: string }[] = [
   { key: "conveniencia", label: "Conveniência" },
   { key: "densidadeComercial", label: "Densidade comercial" },
-  { key: "potencialAirbnb", label: "Potencial Airbnb" },
+  { key: "potencialAirbnb", label: "Potencial de aluguel por temporada" },
   { key: "demandaEstudantil", label: "Demanda estudantil" },
   { key: "perfilFamiliar", label: "Perfil familiar" },
   { key: "caminhabilidade", label: "Caminhabilidade" },
@@ -12,7 +12,7 @@ export const DNA_ROWS: { key: keyof RegionDna; label: string }[] = [
 const TAG_LABEL: Record<keyof RegionDna, string> = {
   conveniencia: "Conveniência",
   densidadeComercial: "Comercial",
-  potencialAirbnb: "Airbnb",
+  potencialAirbnb: "Temporada",
   demandaEstudantil: "Estudantil",
   perfilFamiliar: "Familiar",
   caminhabilidade: "Caminhável",

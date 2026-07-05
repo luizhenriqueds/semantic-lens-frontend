@@ -1,5 +1,6 @@
 import Link from "next/link";
 import LandingEffects from "@/app/(marketing)/_components/LandingEffects";
+import HeroSearchScene from "@/app/(marketing)/_components/HeroSearchScene";
 import LavraLogo from "@/components/brand/LavraLogo";
 
 function CheckIcon() {
@@ -93,9 +94,14 @@ export default function LandingPage() {
             do Brasil
           </span>
           <h1>
-            Milhares de editais.
-            <br />
-            <span className="lp-semantic">Uma pergunta.</span>
+            Descreva o imóvel.
+            <br />A gente encontra{" "}
+            <span className="lp-underline">
+              o leilão.
+              <svg viewBox="0 0 200 10" preserveAspectRatio="none" aria-hidden="true">
+                <path d="M2 7 Q 50 2, 100 6 T 198 4" />
+              </svg>
+            </span>
           </h1>
           <p className="lp-lede">
             Descreva o imóvel que procura como descreveria a um corretor. A Lavra cruza linguagem
@@ -124,6 +130,13 @@ export default function LandingPage() {
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
             <path d="M12 5v14m0 0-5-5m5 5 5-5" />
           </svg>
+        </div>
+      </section>
+
+      <section className="lp-searchzone">
+        <HexField />
+        <div className="lp-wrap">
+          <HeroSearchScene />
         </div>
       </section>
 

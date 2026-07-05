@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Sidebar from "@/components/layout/Sidebar";
 import Topbar from "@/components/layout/Topbar";
+import ToastProvider from "@/components/ui/Toaster";
 
 export const metadata: Metadata = {
   title: "Lavra — Painel de leilões",
@@ -10,12 +11,14 @@ export const metadata: Metadata = {
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   return (
-    <div className="app">
-      <Sidebar />
-      <div className="main">
-        <Topbar />
-        <div className="content">{children}</div>
+    <ToastProvider>
+      <div className="app">
+        <Sidebar />
+        <div className="main">
+          <Topbar />
+          <div className="content">{children}</div>
+        </div>
       </div>
-    </div>
+    </ToastProvider>
   );
 }

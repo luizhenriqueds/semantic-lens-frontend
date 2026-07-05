@@ -1,8 +1,15 @@
-import { money } from "@/lib/format";
+import { fmtDay, money } from "@/lib/format";
 import { moneyM2 } from "@/lib/market";
 import type { MarketStats } from "@/lib/types";
 
 export default function RegionMarket({ stats }: { stats: MarketStats[] }) {
+  const collected = fmtDay(
+    stats
+      .map((s) => s.computedAt)
+      .filter((v): v is string => !!v)
+      .sort()
+      .at(-1),
+  );
   return (
     <div className="mkt">
       {stats.map((s) => {
@@ -46,6 +53,7 @@ export default function RegionMarket({ stats }: { stats: MarketStats[] }) {
       })}
       <div className="rnote">
         Valores medianos de anúncios de venda na região (fonte: portais de imóveis).
+        {collected && <> Dados coletados em {collected}.</>}
       </div>
     </div>
   );

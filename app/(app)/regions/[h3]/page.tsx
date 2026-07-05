@@ -3,12 +3,12 @@ import { notFound } from "next/navigation";
 import DnaStars from "./_components/DnaStars";
 import InfraGrid from "./_components/InfraGrid";
 import PoiNearGrid from "@/components/region/PoiNearGrid";
-import RegionHeatmap from "./_components/RegionHeatmap";
-import RegionMap from "./_components/RegionMap";
+import RegionMapTabs from "@/components/region/RegionMapTabs";
 import RegionScoreBars from "@/components/region/RegionScoreBars";
 import RegionMarket from "@/components/market/RegionMarket";
-import { getMarketStats, getProperties, getRegion, getRegions } from "@/lib/data";
-import { statsForRegion } from "@/lib/market";
+import { getMarketStats, getPois, getProperties, getRegion, getRegions } from "@/lib/data";
+import { hasReliableMarket, statsForRegion } from "@/lib/market";
+import { nearbyPois } from "@/lib/pois";
 import { IconBack, IconPin } from "@/lib/icons";
 import { regionTags } from "@/lib/region";
 import type { Property } from "@/lib/types";
@@ -16,7 +16,7 @@ import type { Property } from "@/lib/types";
 const MEDIA_ROWS: { field: keyof Property["scores"]; label: string }[] = [
   { field: "liquidity", label: "Liquidez média" },
   { field: "flip", label: "Flip médio" },
-  { field: "airbnb", label: "Airbnb médio" },
+  { field: "airbnb", label: "Temporada (média)" },
   { field: "student", label: "Estudantil médio" },
   { field: "family", label: "Familiar médio" },
 ];
@@ -36,16 +36,29 @@ export async function generateStaticParams() {
 
 export default async function RegionPage({ params }: { params: Promise<{ h3: string }> }) {
   const { h3 } = await params;
-  const [region, all, marketStats] = await Promise.all([
+  const [region, all, marketStats, pois] = await Promise.all([
     getRegion(h3),
     getProperties(),
     getMarketStats(),
+    getPois(),
   ]);
   if (!region) notFound();
 
   const here = all.filter((p) => p.h3 === h3);
   const tags = regionTags(region);
-  const market = statsForRegion(marketStats, region);
+  const market = statsForRegion(marketStats, region).filter(hasReliableMarket);
+
+  const geo = here.filter((p) => p.lat != null && p.lon != null);
+  const center =
+    geo.length > 0
+      ? {
+          lat: geo.reduce((s, p) => s + p.lat!, 0) / geo.length,
+          lon: geo.reduce((s, p) => s + p.lon!, 0) / geo.length,
+        }
+      : null;
+  const nearby = center
+    ? nearbyPois(pois, center.lat, center.lon, { radius: 3000, limit: 80 })
+    : [];
 
   return (
     <section className="view">
@@ -80,7 +93,7 @@ export default async function RegionPage({ params }: { params: Promise<{ h3: str
         </div>
       </div>
 
-      <div className="rgrid with-map">
+      <div className="rgrid">
         <div className="rcard">
           <h3>1. Perfil da região</h3>
           <div className="rcbody">
@@ -100,22 +113,18 @@ export default async function RegionPage({ params }: { params: Promise<{ h3: str
             <DnaStars region={region} />
           </div>
         </div>
-        <div className="rcard">
-          <h3>4. Mapa da região</h3>
-          <div className="rcbody">
-            <RegionMap region={region} />
-          </div>
-        </div>
       </div>
 
-      <div style={{ marginBottom: 18 }}>
-        <div className="rcard">
-          <h3>Mapa de calor — onde está a procura</h3>
-          <div className="rcbody">
-            <RegionHeatmap region={region} />
+      {center && geo.length > 0 && (
+        <div style={{ marginBottom: 18 }}>
+          <div className="rcard">
+            <h3>Mapa da região</h3>
+            <div className="rcbody">
+              <RegionMapTabs center={center} properties={geo} pois={nearby} />
+            </div>
           </div>
         </div>
-      </div>
+      )}
 
       {market.length > 0 && (
         <div style={{ marginBottom: 18 }}>

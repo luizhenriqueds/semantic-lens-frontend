@@ -15,7 +15,10 @@
     "*.{ts,tsx,js,jsx,mjs,css,json,md}": "prettier --write"
   },
   "dependencies": {
+    "@ai-sdk/deepinfra": "^3.0.5",
     "@supabase/supabase-js": "^2.45.4",
+    "@upstash/vector": "^1.2.3",
+    "ai": "^7.0.15",
     "leaflet": "^1.9.4",
     "next": "15.5.20",
     "react": "19.0.0",

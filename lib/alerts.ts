@@ -47,18 +47,27 @@ export function useAlerts() {
     };
   }, []);
 
-  const add = useCallback((name: string, freq: string, filters?: AlertFilters) => {
+  const add = useCallback((name: string, freq: string, filters?: AlertFilters): boolean => {
     const cur = read();
+    const key = name.trim().toLowerCase();
+    if (cur.some((a) => a.name.trim().toLowerCase() === key)) return false;
     const id = `${Date.now().toString(36)}-${cur.length}`;
     write([{ id, name, freq, on: true, filters }, ...cur]);
+    return true;
   }, []);
 
   const toggle = useCallback((id: string) => {
     write(read().map((a) => (a.id === id ? { ...a, on: !a.on } : a)));
   }, []);
 
-  const update = useCallback((id: string, patch: Partial<Omit<Alert, "id">>) => {
-    write(read().map((a) => (a.id === id ? { ...a, ...patch } : a)));
+  const update = useCallback((id: string, patch: Partial<Omit<Alert, "id">>): boolean => {
+    const cur = read();
+    if (patch.name != null) {
+      const key = patch.name.trim().toLowerCase();
+      if (cur.some((a) => a.id !== id && a.name.trim().toLowerCase() === key)) return false;
+    }
+    write(cur.map((a) => (a.id === id ? { ...a, ...patch } : a)));
+    return true;
   }, []);
 
   const remove = useCallback((id: string) => {

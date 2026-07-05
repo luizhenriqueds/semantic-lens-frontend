@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import ConfirmDialog from "@/components/ui/ConfirmDialog";
 import EmptyState from "@/components/ui/EmptyState";
+import { useToast } from "@/components/ui/Toaster";
 import { type Alert, useAlerts } from "@/lib/alerts";
 import { countMatches, describeFilters, filterChips, hasAnyFilter } from "@/lib/alertFilters";
 import { SCORE_DIMS, SCORE_LABEL } from "@/lib/format";
@@ -28,6 +29,7 @@ type Mode = "filtros" | "descricao";
 
 export default function AlertsClient({ properties }: { properties: Property[] }) {
   const { alerts, add, toggle, update, remove } = useAlerts();
+  const toast = useToast();
   const [creating, setCreating] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [confirm, setConfirm] = useState<Confirm | null>(null);
@@ -94,6 +96,7 @@ export default function AlertsClient({ properties }: { properties: Property[] })
     if (a.filters) {
       const f = a.filters;
       setMode("filtros");
+      setNome(a.name === describeFilters(f) ? "" : a.name);
       setScoreKey(f.scoreKey ?? "");
       setMinScore(f.minScore != null ? String(f.minScore) : "");
       setUf(f.uf ?? "");
@@ -108,14 +111,28 @@ export default function AlertsClient({ properties }: { properties: Property[] })
   }
 
   function commit() {
-    if (mode === "descricao") {
-      if (editingId) update(editingId, { name: nome.trim(), freq, filters: undefined });
-      else add(nome.trim(), freq);
-    } else {
-      const label = describeFilters(draft);
-      if (editingId) update(editingId, { name: label, freq, filters: draft });
-      else add(label, freq, draft);
+    if (editingId) {
+      const name = mode === "descricao" ? nome.trim() : nome.trim() || describeFilters(draft);
+      const ok = update(editingId, {
+        name,
+        freq,
+        filters: mode === "descricao" ? undefined : draft,
+      });
+      if (!ok) {
+        toast("Você já tem um alerta com esse nome");
+        return;
+      }
+      toast("Alterações salvas");
+      reset();
+      return;
     }
+    const name = mode === "descricao" ? nome.trim() : nome.trim() || describeFilters(draft);
+    const ok = mode === "descricao" ? add(name, freq) : add(name, freq, draft);
+    if (!ok) {
+      toast("Você já tem um alerta com esse nome");
+      return;
+    }
+    toast("Alerta criado");
     reset();
   }
 
@@ -141,7 +158,10 @@ export default function AlertsClient({ properties }: { properties: Property[] })
       message: `O alerta “${a.name}” será removido e você deixará de receber avisos sobre ele.`,
       label: "Excluir",
       danger: true,
-      action: () => remove(a.id),
+      action: () => {
+        remove(a.id);
+        toast("Alerta excluído");
+      },
     });
   }
 
@@ -182,6 +202,15 @@ export default function AlertsClient({ properties }: { properties: Property[] })
                 Monte um filtro e receba avisos quando surgirem imóveis assim.
               </div>
               <div className="afilters">
+                <label className="afield" style={{ gridColumn: "1 / -1" }}>
+                  <span>Nome do alerta (opcional)</span>
+                  <input
+                    className="selectish"
+                    value={nome}
+                    onChange={(e) => setNome(e.target.value)}
+                    placeholder="Ex.: Oportunidades em Campo Grande"
+                  />
+                </label>
                 <label className="afield">
                   <span>Objetivo</span>
                   <select

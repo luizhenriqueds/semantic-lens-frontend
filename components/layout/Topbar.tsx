@@ -9,11 +9,15 @@ export default function Topbar() {
     <div className="topbar">
       <MobileNav />
       <Breadcrumb />
-      <div className="topsearch is-soon" aria-disabled>
+      <form className="topsearch" action="/search" method="get">
         <IconSearch width={18} height={18} strokeWidth={1.7} />
-        <input disabled aria-disabled placeholder="Busca inteligente — em breve" />
-        <span className="soon soon-sm">Em breve</span>
-      </div>
+        <input
+          name="q"
+          placeholder="Buscar imóveis — descreva o que procura"
+          aria-label="Buscar imóveis"
+          autoComplete="off"
+        />
+      </form>
       <ThemeToggle />
       <AlertsBell />
     </div>

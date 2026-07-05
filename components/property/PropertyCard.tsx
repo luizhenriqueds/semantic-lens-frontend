@@ -1,17 +1,19 @@
 import Link from "next/link";
 import type { Property } from "@/lib/types";
-import { money, PROFILE_LABEL, profileScore, showDiscount } from "@/lib/format";
+import { investmentScore, money, PROFILE_LABEL, profileScore, showDiscount } from "@/lib/format";
 import PropertyPhoto from "@/components/property/PropertyPhoto";
 import Ring from "@/components/ui/Ring";
 
 export default function PropertyCard({ p }: { p: Property }) {
   const quartos = p.bedrooms ?? 0;
+  const nota = investmentScore(p);
   return (
     <Link className="pcard" href={`/property/${p.id}`}>
       <div className="pphoto">
         <PropertyPhoto src={p.image} alt={`Foto do imóvel: ${p.title}`} />
         <span className="tag">{p.propertyType}</span>
         {showDiscount(p) && <span className="disc">−{Math.round(p.discount!)}%</span>}
+        {p.inactive && <span className="statuspill">Inativo</span>}
       </div>
       <div className="pbody">
         <h3>{p.title}</h3>
@@ -39,12 +41,12 @@ export default function PropertyCard({ p }: { p: Property }) {
             )}
           </div>
         </div>
-        {p.profile && (
+        {(nota != null || p.profile) && (
           <div className="scorepill">
-            <Ring value={profileScore(p)} />
+            <Ring value={nota ?? profileScore(p)} />
             <div className="meta">
-              <div className="k">Melhor para</div>
-              <div className="v">{PROFILE_LABEL[p.profile]}</div>
+              <div className="k">{nota != null ? "Nota de investimento" : "Melhor para"}</div>
+              <div className="v">{p.profile ? PROFILE_LABEL[p.profile] : "Investimento geral"}</div>
             </div>
           </div>
         )}

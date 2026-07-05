@@ -1,5 +1,11 @@
 import type { MarketStats, Property, Region } from "@/lib/types";
 
+export const MIN_COMPARABLES = 5;
+
+export function hasReliableMarket(stats: MarketStats | null | undefined): boolean {
+  return stats != null && (stats.sampleSize ?? 0) >= MIN_COMPARABLES;
+}
+
 export function normKey(s: string | null | undefined): string {
   return (s ?? "").normalize("NFD").replace(/[̀-ͯ]/g, "").trim().toLowerCase();
 }

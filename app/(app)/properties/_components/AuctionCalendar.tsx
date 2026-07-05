@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import EmptyState from "@/components/ui/EmptyState";
 import PropertyRow from "@/components/property/PropertyRow";
 import type { Property } from "@/lib/types";
@@ -32,7 +32,13 @@ function parseAuctionDate(iso: string): Date | null {
 const keyOf = (d: Date) =>
   `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 
-export default function AuctionCalendar({ items }: { items: Property[] }) {
+export default function AuctionCalendar({
+  items,
+  onDayOpen,
+}: {
+  items: Property[];
+  onDayOpen?: (open: boolean) => void;
+}) {
   const today = useMemo(() => {
     const d = new Date();
     return new Date(d.getFullYear(), d.getMonth(), d.getDate());
@@ -80,6 +86,11 @@ export default function AuctionCalendar({ items }: { items: Property[] }) {
   ];
 
   const selectedItems = selected ? (byDay.get(selected) ?? []) : [];
+
+  useEffect(() => {
+    onDayOpen?.(selectedItems.length > 0);
+    return () => onDayOpen?.(false);
+  }, [selectedItems.length, onDayOpen]);
 
   return (
     <div className="calwrap">

@@ -9,44 +9,103 @@ import type { Region } from "@/lib/types";
 type SortKey = "commercial" | "convenience" | "airbnb" | "numProps";
 
 const SORTS: { key: SortKey; label: string }[] = [
+  { key: "numProps", label: "Mais imóveis" },
   { key: "commercial", label: "Comercial" },
   { key: "convenience", label: "Conveniência" },
-  { key: "airbnb", label: "Airbnb" },
-  { key: "numProps", label: "Mais imóveis" },
+  { key: "airbnb", label: "Temporada" },
 ];
-
-const val = (r: Region, k: SortKey) => (k === "numProps" ? r.numProps : (r.scores[k] ?? 0));
 
 function maxBy(regions: Region[], fn: (r: Region) => number): Region | null {
   return regions.reduce<Region | null>((best, r) => (!best || fn(r) > fn(best) ? r : best), null);
 }
 
 function Spark({ seed }: { seed: number }) {
-  const base = [28, 24, 25, 18, 21, 12, 14, 6];
-  const pts = base
-    .map((y, i) => `${(i * 14.3).toFixed(0)},${y + ((seed * 5 + i * 3) % 5) - 2}`)
-    .join(" ");
+  const base = [10, 16, 13, 22, 18, 27, 24, 30];
+  const bars = base.map((h, i) => Math.max(4, h + ((seed * 5 + i * 3) % 6) - 3));
+  const w = 100 / bars.length;
   return (
-    <svg className="spark" viewBox="0 0 100 32" fill="none" preserveAspectRatio="none">
-      <polyline
-        points={pts}
-        stroke="var(--primary)"
-        strokeWidth="2.2"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
+    <svg className="spark" viewBox="0 0 100 32" preserveAspectRatio="none">
+      {bars.map((h, i) => (
+        <rect
+          key={i}
+          x={i * w + 1.5}
+          y={32 - h}
+          width={w - 3}
+          height={h}
+          rx="1.4"
+          fill="var(--primary)"
+          opacity={0.35 + (h / 30) * 0.65}
+        />
+      ))}
     </svg>
   );
 }
 
+function RegionStat({
+  Icon,
+  label,
+  value,
+  region,
+}: {
+  Icon: typeof IconStar;
+  label: string;
+  value: number | string;
+  region: Region | null;
+}) {
+  const inner = (
+    <>
+      <div className="ic">
+        <Icon />
+      </div>
+      <div className="l">{label}</div>
+      <div className="v">{value}</div>
+      <div className="s">{region?.name ?? ""}</div>
+    </>
+  );
+  return region ? (
+    <Link className="rstat linked" href={`/regions/${region.h3}`}>
+      {inner}
+    </Link>
+  ) : (
+    <div className="rstat">{inner}</div>
+  );
+}
+
 export default function RegionsClient({ regions }: { regions: Region[] }) {
-  const [sort, setSort] = useState<SortKey>("numProps");
+  // Selected criteria are blended: the ranking sorts by the average of the
+  // chosen metrics (each normalized to 0–1), so every selection visibly shapes
+  // the order. Clicking a pill toggles it in/out of the mix.
+  const [sortKeys, setSortKeys] = useState<SortKey[]>(["numProps"]);
   const ranked = useMemo(() => regions.filter((r) => r.numProps > 0), [regions]);
 
-  const rows = useMemo(
-    () => [...ranked].sort((a, b) => val(b, sort) - val(a, sort)).slice(0, 30),
-    [ranked, sort],
-  );
+  const toggleSort = (k: SortKey) =>
+    setSortKeys((prev) => (prev.includes(k) ? prev.filter((x) => x !== k) : [...prev, k]));
+
+  const rows = useMemo(() => {
+    const keys = sortKeys.length ? sortKeys : (["numProps"] as SortKey[]);
+    const valueOf = (r: Region, k: SortKey) => (k === "numProps" ? r.numProps : (r.scores[k] ?? 0));
+    const n = ranked.length;
+    // Rank each region by its percentile on every selected metric, so being the
+    // single top region on one metric no longer dominates the blend.
+    const pct = new Map<SortKey, Map<string, number>>();
+    for (const k of keys) {
+      const vals = ranked.map((r) => valueOf(r, k));
+      const m = new Map<string, number>();
+      for (const r of ranked) {
+        const v = valueOf(r, k);
+        const lower = vals.filter((x) => x < v).length;
+        m.set(r.h3, n > 1 ? lower / (n - 1) : 1);
+      }
+      pct.set(k, m);
+    }
+    const combined = (r: Region) =>
+      keys.reduce((s, k) => s + (pct.get(k)?.get(r.h3) ?? 0), 0) / keys.length;
+    return [...ranked]
+      .sort((a, b) => combined(b) - combined(a) || b.numProps - a.numProps)
+      .slice(0, 30);
+  }, [ranked, sortKeys]);
+
+  const isSorted = (k: SortKey) => sortKeys.includes(k);
 
   const totalProps = regions.reduce((s, r) => s + r.numProps, 0);
   const bestConv = maxBy(regions, (r) => r.scores.convenience ?? 0);
@@ -60,7 +119,13 @@ export default function RegionsClient({ regions }: { regions: Region[] }) {
     field: keyof Region["scores"];
     seed: number;
   }[] = [
-    { Icon: IconHouse, label: "Maior potencial Airbnb", region: bestAir, field: "airbnb", seed: 0 },
+    {
+      Icon: IconHouse,
+      label: "Maior potencial de temporada",
+      region: bestAir,
+      field: "airbnb",
+      seed: 0,
+    },
     {
       Icon: IconGroups,
       label: "Melhor para estudantes",
@@ -104,56 +169,65 @@ export default function RegionsClient({ regions }: { regions: Region[] }) {
           <div className="v">{totalProps.toLocaleString("pt-BR")}</div>
           <div className="s">nessas regiões</div>
         </div>
-        <div className="rstat">
-          <div className="ic">
-            <IconPin />
-          </div>
-          <div className="l">Maior conveniência</div>
-          <div className="v">{bestConv ? Math.round(bestConv.scores.convenience ?? 0) : "—"}</div>
-          <div className="s">{bestConv?.name ?? ""}</div>
-        </div>
-        <div className="rstat">
-          <div className="ic">
-            <IconBuilding />
-          </div>
-          <div className="l">Maior potencial comercial</div>
-          <div className="v">{bestComm ? Math.round(bestComm.scores.commercial ?? 0) : "—"}</div>
-          <div className="s">{bestComm?.name ?? ""}</div>
-        </div>
-        <div className="rstat">
-          <div className="ic">
-            <IconStar />
-          </div>
-          <div className="l">Maior potencial Airbnb</div>
-          <div className="v">{bestAir ? Math.round(bestAir.scores.airbnb ?? 0) : "—"}</div>
-          <div className="s">{bestAir?.name ?? ""}</div>
-        </div>
+        <RegionStat
+          Icon={IconPin}
+          label="Maior conveniência"
+          value={bestConv ? Math.round(bestConv.scores.convenience ?? 0) : "—"}
+          region={bestConv}
+        />
+        <RegionStat
+          Icon={IconBuilding}
+          label="Maior potencial comercial"
+          value={bestComm ? Math.round(bestComm.scores.commercial ?? 0) : "—"}
+          region={bestComm}
+        />
+        <RegionStat
+          Icon={IconStar}
+          label="Maior potencial de temporada"
+          value={bestAir ? Math.round(bestAir.scores.airbnb ?? 0) : "—"}
+          region={bestAir}
+        />
       </div>
 
       <div className="rcard">
         <h3 style={{ marginBottom: 4 }}>Ranking de regiões</h3>
         <p className="rabout" style={{ marginBottom: 14 }}>
-          Compare as regiões pelos principais indicadores. Toque numa linha para ver os detalhes.
+          Compare as regiões pelos principais indicadores. Selecione um ou mais critérios para
+          combiná-los no ranking. Toque numa linha para ver os detalhes.
         </p>
-        <div className="chiprow" style={{ marginBottom: 14 }}>
+        <div className="chiprow" style={{ marginBottom: sortKeys.length > 1 ? 8 : 14 }}>
           {SORTS.map((s) => (
             <button
               key={s.key}
-              className={`rchip${sort === s.key ? " on" : ""}`}
-              onClick={() => setSort(s.key)}
+              className={`rchip${isSorted(s.key) ? " on" : ""}`}
+              onClick={() => toggleSort(s.key)}
             >
               {s.label}
             </button>
           ))}
+          {sortKeys.length > 0 && (
+            <button className="rchip clear" onClick={() => setSortKeys([])}>
+              Limpar ordem
+            </button>
+          )}
         </div>
+        {sortKeys.length > 1 && (
+          <p className="sortsummary" style={{ marginBottom: 14 }}>
+            Combinando{" "}
+            {sortKeys
+              .map((k) => SORTS.find((s) => s.key === k)?.label)
+              .filter(Boolean)
+              .join(" + ")}
+          </p>
+        )}
         <div className="rtable">
           <div className="rthead">
             <span>Região</span>
             <span>Perfil predominante</span>
-            <span className={`num${sort === "commercial" ? " sorted" : ""}`}>Comercial</span>
-            <span className={`num${sort === "convenience" ? " sorted" : ""}`}>Conveniência</span>
-            <span className={`num${sort === "airbnb" ? " sorted" : ""}`}>Airbnb</span>
-            <span className={`num${sort === "numProps" ? " sorted" : ""}`}>Imóveis</span>
+            <span className={`num${isSorted("commercial") ? " sorted" : ""}`}>Comercial</span>
+            <span className={`num${isSorted("convenience") ? " sorted" : ""}`}>Conveniência</span>
+            <span className={`num${isSorted("airbnb") ? " sorted" : ""}`}>Temporada</span>
+            <span className={`num${isSorted("numProps") ? " sorted" : ""}`}>Imóveis</span>
           </div>
           {rows.map((r) => (
             <Link className="rtrow" href={`/regions/${r.h3}`} key={r.h3}>
@@ -168,16 +242,16 @@ export default function RegionsClient({ regions }: { regions: Region[] }) {
                   </span>
                 ))}
               </div>
-              <div className={`num hidem${sort === "commercial" ? " sorted" : ""}`}>
+              <div className={`num hidem${isSorted("commercial") ? " sorted" : ""}`}>
                 {Math.round(r.scores.commercial ?? 0)}
               </div>
-              <div className={`num hidem${sort === "convenience" ? " sorted" : ""}`}>
+              <div className={`num hidem${isSorted("convenience") ? " sorted" : ""}`}>
                 {Math.round(r.scores.convenience ?? 0)}
               </div>
-              <div className={`num hidem${sort === "airbnb" ? " sorted" : ""}`}>
+              <div className={`num hidem${isSorted("airbnb") ? " sorted" : ""}`}>
                 {Math.round(r.scores.airbnb ?? 0)}
               </div>
-              <div className={`num dim${sort === "numProps" ? " sorted" : ""}`}>{r.numProps}</div>
+              <div className={`num dim${isSorted("numProps") ? " sorted" : ""}`}>{r.numProps}</div>
             </Link>
           ))}
         </div>
