@@ -4,7 +4,8 @@ import { useEffect, useRef } from "react";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import { fmtDist, money } from "@/lib/format";
-import { catColor, homeIcon, poiIcon } from "@/lib/mapMarkers";
+import { groupByAddress } from "@/lib/geo";
+import { catColor, homeIcon, homeIconCount, poiIcon } from "@/lib/mapMarkers";
 import { POI_ICON } from "@/lib/icons";
 import { POI_LABEL, POI_ORDER } from "@/lib/pois";
 import type { NearbyPoi, Property } from "@/lib/types";
@@ -38,14 +39,21 @@ export default function RegionGeoMap({
 
     const pts: [number, number][] = [];
 
-    for (const p of properties) {
-      if (p.lat == null || p.lon == null) continue;
-      pts.push([p.lat, p.lon]);
-      L.marker([p.lat, p.lon], { icon: homeIcon() })
+    for (const group of groupByAddress(properties)) {
+      const [lat, lon] = [group[0].lat!, group[0].lon!];
+      pts.push([lat, lon]);
+      const popup =
+        group.length === 1
+          ? `<b>${group[0].title}</b><br>${group[0].neighborhood}<br><span class="pm-price">${money(group[0].saleValue)}</span><br><a href="/property/${group[0].id}">Ver imóvel ›</a>`
+          : `<b>${group.length} imóveis neste endereço</b><br><span class="pm-sub">${group[0].neighborhood}</span>${group
+              .map(
+                (p) =>
+                  `<a class="pm-multi" href="/property/${p.id}"><span>${p.title}</span><span class="pm-price">${money(p.saleValue)}</span></a>`,
+              )
+              .join("")}`;
+      L.marker([lat, lon], { icon: group.length > 1 ? homeIconCount(group.length) : homeIcon() })
         .addTo(map)
-        .bindPopup(
-          `<b>${p.title}</b><br>${p.neighborhood}<br><span class="pm-price">${money(p.saleValue)}</span><br><a href="/property/${p.id}">Ver imóvel ›</a>`,
-        );
+        .bindPopup(popup);
     }
 
     if (!heat) {

@@ -1,40 +1,26 @@
 import Link from "next/link";
 import PagedCards from "./PagedCards";
-import DeedResults from "./DeedResults";
 import SearchAlertButton from "./SearchAlertButton";
 import EmptyState from "@/components/ui/EmptyState";
-import { deedSearch, getProperties, hybridSearch, type DeedResult } from "@/lib/data";
+import { getProperties, hybridSearch } from "@/lib/data";
 import { IconSearch } from "@/lib/icons";
 import type { Property } from "@/lib/types";
 
-export default async function SearchResults({
-  query,
-  scope,
-}: {
-  query: string;
-  scope: "imoveis" | "matriculas";
-}) {
+export default async function SearchResults({ query }: { query: string }) {
   const all = await getProperties();
 
   let items: Property[] = [];
-  let deeds: (DeedResult & { property?: Property })[] = [];
   let failed = false;
+  let fallbackNote: string | null = null;
 
-  if (query && scope === "matriculas") {
+  if (query) {
     try {
-      const results = await deedSearch(query);
+      const result = await hybridSearch(query);
       const byId = new Map(all.map((p) => [p.id, p]));
-      deeds = results.map((r) => ({ ...r, property: byId.get(r.id) }));
-    } catch {
-      failed = true;
-    }
-  } else if (query) {
-    try {
-      const hits = await hybridSearch(query);
-      const byId = new Map(all.map((p) => [p.id, p]));
-      items = hits
+      items = result.hits
         .map((h) => byId.get(h.id))
         .filter((p): p is Property => p != null && !p.inactive);
+      if (result.fallback && items.length) fallbackNote = result.fallbackNote;
     } catch {
       failed = true;
     }
@@ -42,28 +28,23 @@ export default async function SearchResults({
     items = all.filter((p) => !p.inactive).sort((a, b) => (b.discount ?? 0) - (a.discount ?? 0));
   }
 
-  const count = scope === "matriculas" ? deeds.length : items.length;
-
   return (
     <>
       {query && !failed && (
         <div className="sectitle">
           <h2>
-            {count}{" "}
-            {scope === "matriculas"
-              ? count === 1
-                ? "matrícula encontrada"
-                : "matrículas encontradas"
-              : count === 1
-                ? "imóvel encontrado"
-                : "imóveis encontrados"}
-            <span style={{ color: "var(--ink-soft)", fontWeight: 500, fontSize: "15px" }}>
-              {scope === "matriculas"
-                ? " · análise jurídica do documento"
-                : " · ordenado por relevância"}
-            </span>
+            {fallbackNote
+              ? `${items.length} ${items.length === 1 ? "resultado aproximado" : "resultados aproximados"}`
+              : `${items.length} ${items.length === 1 ? "imóvel encontrado" : "imóveis encontrados"}`}
           </h2>
-          {scope !== "matriculas" && <SearchAlertButton query={query} />}
+          <SearchAlertButton query={query} />
+        </div>
+      )}
+
+      {fallbackNote && (
+        <div className="searchnote">
+          <IconSearch width={17} height={17} strokeWidth={1.8} />
+          <span>{fallbackNote}</span>
         </div>
       )}
 
@@ -71,23 +52,6 @@ export default async function SearchResults({
         <EmptyState icon={<IconSearch />} title="Busca indisponível no momento">
           Não foi possível processar a busca agora. Tente novamente em instantes.
         </EmptyState>
-      ) : scope === "matriculas" ? (
-        deeds.length ? (
-          <DeedResults results={deeds} />
-        ) : (
-          <EmptyState
-            icon={<IconSearch />}
-            title={`Nenhuma matrícula para “${query}”`}
-            action={
-              <Link className="btn ghost" href="/search">
-                Limpar busca
-              </Link>
-            }
-          >
-            Não encontramos documentos em que a condição descrita realmente se aplique ao imóvel —
-            preferimos não mostrar correspondências apenas pelo termo.
-          </EmptyState>
-        )
       ) : items.length ? (
         <PagedCards items={items} resetKey={query} />
       ) : query ? (

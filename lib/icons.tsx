@@ -58,6 +58,11 @@ export const IconStar = (p: P) => (
     <path d="m12 4 2 4 4.5.6-3.2 3.1.8 4.5L12 14.7 7.9 16.3l.8-4.5L5.5 8.6 10 8z" />
   </svg>
 );
+export const IconHeart = (p: P) => (
+  <svg {...base(p)}>
+    <path d="M12 20s-7-4.6-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.4-7 10-7 10Z" />
+  </svg>
+);
 export const IconPlus = (p: P) => (
   <svg {...base(p)}>
     <path d="M12 5v14M5 12h14" />
@@ -98,13 +103,6 @@ export const IconMenu = (p: P) => (
 export const IconClose = (p: P) => (
   <svg {...base(p)}>
     <path d="M6 6l12 12M18 6 6 18" />
-  </svg>
-);
-export const IconDoc = (p: P) => (
-  <svg {...base(p)}>
-    <path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8l-5-5Z" />
-    <path d="M14 3v5h5" />
-    <path d="M9 13h6M9 17h6" />
   </svg>
 );
 export const IconPencil = (p: P) => (

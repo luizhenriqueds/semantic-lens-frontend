@@ -2,18 +2,21 @@ import Link from "next/link";
 import type { Property } from "@/lib/types";
 import { investmentScore, money, PROFILE_LABEL, profileScore, showDiscount } from "@/lib/format";
 import PropertyPhoto from "@/components/property/PropertyPhoto";
+import FavoriteButton from "@/components/property/FavoriteButton";
 import Ring from "@/components/ui/Ring";
 
 export default function PropertyCard({ p }: { p: Property }) {
   const quartos = p.bedrooms ?? 0;
   const nota = investmentScore(p);
   return (
-    <Link className="pcard" href={`/property/${p.id}`}>
+    <div className="pcard">
+      <Link className="pcardlink" href={`/property/${p.id}`} aria-label={p.title} />
       <div className="pphoto">
         <PropertyPhoto src={p.image} alt={`Foto do imóvel: ${p.title}`} />
         <span className="tag">{p.propertyType}</span>
         {showDiscount(p) && <span className="disc">−{Math.round(p.discount!)}%</span>}
         {p.inactive && <span className="statuspill">Inativo</span>}
+        <FavoriteButton id={p.id} title={p.title} />
       </div>
       <div className="pbody">
         <h3>{p.title}</h3>
@@ -51,6 +54,6 @@ export default function PropertyCard({ p }: { p: Property }) {
           </div>
         )}
       </div>
-    </Link>
+    </div>
   );
 }

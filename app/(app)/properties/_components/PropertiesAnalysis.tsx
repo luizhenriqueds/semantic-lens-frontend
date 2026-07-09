@@ -3,7 +3,6 @@
 import { useMemo } from "react";
 import EmptyState from "@/components/ui/EmptyState";
 import { money, moneyShort, profileScore, SCORE_LABEL } from "@/lib/format";
-import { propertyAge } from "@/lib/clusterStats";
 import { moneyM2 } from "@/lib/market";
 import type { Property, Scores } from "@/lib/types";
 import { IconBuilding } from "@/lib/icons";
@@ -26,73 +25,60 @@ function mean(v: number[]): number | null {
   return v.length ? v.reduce((a, b) => a + b, 0) / v.length : null;
 }
 
-// ── Vertical histogram ──────────────────────────────────────────────
+// Histogram over fixed `edges` (length = bins + 1); last bucket open-ended when its edge is Infinity.
 function Histogram({
   values,
-  bins = 9,
+  edges,
   fmt,
+  tickFmt = fmt,
   unit = "imóveis",
-  perBarLabels = false,
 }: {
   values: number[];
-  bins?: number;
+  edges: number[];
   fmt: (v: number) => string;
+  tickFmt?: (v: number) => string;
   unit?: string;
-  perBarLabels?: boolean;
 }) {
   const { bars, max } = useMemo(() => {
-    if (!values.length) return { bars: [], max: 0 };
-    const lo = Math.min(...values);
-    const hi = Math.max(...values);
-    const width = (hi - lo) / bins || 1;
-    const counts = Array.from({ length: bins }, () => 0);
+    const nb = edges.length - 1;
+    const counts = Array.from({ length: nb }, () => 0);
     for (const v of values) {
-      let idx = Math.floor((v - lo) / width);
-      if (idx >= bins) idx = bins - 1;
-      if (idx < 0) idx = 0;
+      let idx = 0;
+      while (idx < nb - 1 && v >= edges[idx + 1]) idx++;
       counts[idx]++;
     }
     const max = Math.max(...counts, 1);
-    const bars = counts.map((c, i) => ({
-      c,
-      from: lo + i * width,
-      to: lo + (i + 1) * width,
-    }));
+    const bars = counts.map((c, i) => ({ c, from: edges[i], to: edges[i + 1] }));
     return { bars, max };
-  }, [values, bins]);
+  }, [values, edges]);
 
-  if (!bars.length) return <div className="anempty">Sem dados</div>;
   const H = 130;
+  const label = (b: { from: number; to: number }) =>
+    b.to === Infinity ? `${tickFmt(b.from)}+` : tickFmt(b.from);
+  const range = (b: { from: number; to: number }) =>
+    b.to === Infinity ? `${fmt(b.from)} ou mais` : `${fmt(b.from)} – ${fmt(b.to)}`;
 
   return (
     <div className="histo">
       <div className="histo-bars" style={{ height: H }}>
         {bars.map((b, i) => (
-          <div
-            key={i}
-            className="histo-bar"
-            title={`${fmt(b.from)} – ${fmt(b.to)}: ${b.c} ${unit}`}
-          >
+          <div key={i} className="histo-bar" title={`${range(b)}: ${b.c} ${unit}`}>
             <span className="hb-count">{b.c || ""}</span>
             <i style={{ height: `${(b.c / max) * 100}%` }} />
           </div>
         ))}
       </div>
-      {perBarLabels ? (
-        <div className="histo-ticks">
-          {bars.map((b, i) => (
-            <span key={i}>{fmt(b.from)}</span>
-          ))}
-        </div>
-      ) : (
-        <div className="histo-axis">
-          <span>{fmt(bars[0].from)}</span>
-          <span>{fmt(bars[bars.length - 1].to)}</span>
-        </div>
-      )}
+      <div className="histo-ticks">
+        {bars.map((b, i) => (
+          <span key={i}>{label(b)}</span>
+        ))}
+      </div>
     </div>
   );
 }
+
+const PRICE_EDGES = [0, 100_000, 200_000, 300_000, 400_000, 500_000, 750_000, 1_000_000, Infinity];
+const DISCOUNT_EDGES = [0, 10, 20, 30, 40, 50, 60, 70, Infinity];
 
 // ── Scatter: area × price, tinted by discount ───────────────────────
 function Scatter({ items }: { items: Property[] }) {
@@ -216,16 +202,12 @@ export default function PropertiesAnalysis({ items }: { items: Property[] }) {
       .filter((s) => s.avg != null)
       .sort((a, b) => (b.avg ?? 0) - (a.avg ?? 0));
 
-    const ages = nums(items.map((p) => propertyAge(p.yearBuilt)));
-
     return {
       count: items.length,
       prices,
       discounts,
       areas,
       m2,
-      ages,
-      medianAge: median(ages),
       medianPrice: median(prices),
       p25: quantile(prices, 0.25),
       p75: quantile(prices, 0.75),
@@ -290,36 +272,25 @@ export default function PropertiesAnalysis({ items }: { items: Property[] }) {
         <div className="ancard">
           <h3>Distribuição de preços</h3>
           <p className="ansub">Quantos imóveis em cada faixa de valor de venda.</p>
-          <Histogram values={stats.prices} fmt={moneyShort} bins={8} perBarLabels />
+          <Histogram
+            values={stats.prices}
+            edges={PRICE_EDGES}
+            fmt={moneyShort}
+            tickFmt={(v) =>
+              v >= 1_000_000 ? `R$${v / 1_000_000}mi` : `R$${Math.round(v / 1000)}k`
+            }
+          />
         </div>
         <div className="ancard">
           <h3>Distribuição de descontos</h3>
           <p className="ansub">Percentual de desconto sobre a avaliação.</p>
           <Histogram
             values={stats.discounts}
+            edges={DISCOUNT_EDGES}
             fmt={(v) => `${Math.round(v)}%`}
-            bins={8}
-            perBarLabels
           />
         </div>
       </div>
-
-      {stats.ages.length > 0 && (
-        <div className="ancard">
-          <h3>Distribuição de idade dos imóveis</h3>
-          <p className="ansub">
-            Idade estimada pelo ano de construção
-            {stats.medianAge != null ? ` · mediana de ${Math.round(stats.medianAge)} anos` : ""}.
-          </p>
-          <Histogram
-            values={stats.ages}
-            fmt={(v) => `${Math.round(v)}a`}
-            bins={8}
-            unit="imóveis"
-            perBarLabels
-          />
-        </div>
-      )}
 
       <div className="angrid">
         <div className="ancard">

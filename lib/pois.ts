@@ -38,11 +38,14 @@ export function haversine(lat1: number, lon1: number, lat2: number, lon2: number
   return 2 * R * Math.asin(Math.sqrt(a));
 }
 
+// Max distance for a POI to still count as "nearby" (fallback cap + grid cutoff).
+export const MAX_NEAR_M = 5000;
+
 // Returns POIs within `radius` metres of a point, sorted nearest-first and
 // capped at `limit`. Also guarantees the single nearest POI of each category is
 // kept even if it sits just beyond the radius (up to `fallbackRadius`), so the
 // map/legend always has context for amenities that exist in the wider area
-// without dragging in far-flung outliers hundreds of km away.
+// without dragging in far-flung outliers many kilometres away.
 export function nearbyPois(
   pois: Poi[],
   lat: number,
@@ -50,7 +53,7 @@ export function nearbyPois(
   {
     radius = 2500,
     limit = 60,
-    fallbackRadius = 15000,
+    fallbackRadius = MAX_NEAR_M,
   }: { radius?: number; limit?: number; fallbackRadius?: number } = {},
 ): NearbyPoi[] {
   const withDist = pois

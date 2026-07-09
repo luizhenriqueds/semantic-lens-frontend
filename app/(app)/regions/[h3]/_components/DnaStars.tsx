@@ -15,6 +15,10 @@ function Stars({ n }: { n: number }) {
 
 export default function DnaStars({ region }: { region: Region }) {
   const tags = regionTags(region);
+  // Show the strongest dimensions of the region first.
+  const rows = [...DNA_ROWS].sort(
+    (a, b) => (region.dna?.[b.key] ?? 0) - (region.dna?.[a.key] ?? 0),
+  );
   return (
     <>
       <div className="dnatags">
@@ -30,7 +34,7 @@ export default function DnaStars({ region }: { region: Region }) {
         )}
       </div>
       <div className="dnabody">
-        {DNA_ROWS.map(({ key, label }) => (
+        {rows.map(({ key, label }) => (
           <div className="starrow" key={key}>
             <span>{label}</span>
             <Stars n={region.dna?.[key] ?? 0} />

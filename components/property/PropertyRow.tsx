@@ -9,6 +9,7 @@ import {
   showDiscount,
 } from "@/lib/format";
 import PropertyPhoto from "@/components/property/PropertyPhoto";
+import FavoriteButton from "@/components/property/FavoriteButton";
 import Ring from "@/components/ui/Ring";
 
 export default function PropertyRow({ p }: { p: Property }) {
@@ -17,11 +18,13 @@ export default function PropertyRow({ p }: { p: Property }) {
   const data = fmtDate(p.auctionDate);
   const nota = investmentScore(p);
   return (
-    <Link className="wcard" href={`/property/${p.id}`}>
+    <div className="wcard">
+      <Link className="wcardlink" href={`/property/${p.id}`} aria-label={p.title} />
       <div className="wphoto">
         <PropertyPhoto src={p.image} alt={`Foto do imóvel: ${p.title}`} sizes="184px" />
         {showDiscount(p) && <span className="disc">−{Math.round(p.discount!)}%</span>}
         {p.inactive && <span className="statuspill">Inativo</span>}
+        <FavoriteButton id={p.id} title={p.title} />
       </div>
       <div className="wmain">
         <span className="tag">{p.propertyType}</span>
@@ -68,6 +71,6 @@ export default function PropertyRow({ p }: { p: Property }) {
           </div>
         </div>
       )}
-    </Link>
+    </div>
   );
 }

@@ -25,7 +25,6 @@ export type Property = {
   title: string;
   description: string | null;
   image: string | null;
-  deed: string | null;
   appraisedValue: number | null;
   saleValue: number | null;
   discount: number | null;
@@ -44,20 +43,13 @@ export type Property = {
   lat: number | null;
   lon: number | null;
   visualScore: number | null;
-  visualDetails: VisualDetails | null;
+  visualNote: string | null;
+  visualAge: VisualAge | null;
   priceRank: number | null;
   sizeRank: number | null;
 };
 
-export type VisualDetails = {
-  note: string | null;
-  facade: number | null;
-  standard: number | null;
-  condition: number | null;
-  surroundings: number | null;
-  needsRenovation: boolean;
-  isPropertyPhoto: boolean;
-};
+export type VisualAge = "novo" | "intermediario" | "antigo";
 
 export type AlertFilters = {
   scoreKey?: keyof Scores;

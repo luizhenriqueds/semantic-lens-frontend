@@ -1,13 +1,14 @@
 import { unstable_cache } from "next/cache";
 import { supabase } from "@/lib/supabase";
-import { analyzeDeeds, EMBEDDING_MODEL, embedQuery, rerank } from "@/lib/embed";
-import { parseFacets } from "@/lib/facets";
+import { EMBEDDING_MODEL, embedQuery, rerank } from "@/lib/embed";
+import { normalize, parseFacets, type GoalKey, type PoiQuery } from "@/lib/facets";
 import { semanticCached } from "@/lib/semanticCache";
 import { deriveTitle, titleCase } from "@/lib/format";
 import type {
   Cluster,
   MarketHistoryPoint,
   MarketStats,
+  NearbyPoi,
   Poi,
   PriceHistoryPoint,
   ProfileKey,
@@ -58,36 +59,13 @@ function pickImage(p: {
   return null;
 }
 
-function pickDeed(p: {
-  deed_source_url?: string | null;
-  deed_path?: string | null;
-}): string | null {
-  if (p.deed_source_url) return p.deed_source_url; // CAIXA-hosted matrícula PDF
-  if (p.deed_path && p.deed_path.startsWith("http")) return p.deed_path;
-  return null;
-}
-
-function parseVisualDetails(v: unknown): Property["visualDetails"] {
-  if (!v || typeof v !== "object") return null;
-  const d = v as Record<string, unknown>;
-  return {
-    note: typeof d.note === "string" ? d.note : null,
-    facade: num(d.facade),
-    standard: num(d.standard),
-    condition: num(d.condition),
-    surroundings: num(d.surroundings),
-    needsRenovation: d.needs_renovation === true,
-    isPropertyPhoto: d.is_property_photo === true,
-  };
-}
-
 async function loadProperties(): Promise<Property[]> {
   const [propsRes, listingsRes, scoresRes, profilesRes, pclRes, clustersRes] = await Promise.all([
     withRetry(() =>
       supabase
         .from("properties")
         .select(
-          "property_id,property_type,uf,city,neighborhood,area_m2,bedrooms,parking_spots,year_built,occupancy_status,canonical_description,h3_r8,image_path,image_source_url,deed_path,deed_source_url,lat,lon,is_active,visual_score,visual_details,price_rank,size_rank",
+          "property_id,property_type,uf,city,neighborhood,area_m2,bedrooms,parking_spots,year_built,occupancy_status,canonical_description,h3_r8,image_path,image_source_url,lat,lon,is_active,visual_score,visual_note,visual_age,price_rank,size_rank",
         ),
     ),
     withRetry(() =>
@@ -163,7 +141,6 @@ async function loadProperties(): Promise<Property[]> {
       title: deriveTitle(p.property_type ?? "Imóvel", num(p.bedrooms), p.neighborhood ?? ""),
       description: p.canonical_description || null,
       image: pickImage(p),
-      deed: pickDeed(p),
       appraisedValue: num(l?.appraised_value),
       saleValue: num(l?.sale_value),
       discount: num(l?.discount),
@@ -191,7 +168,10 @@ async function loadProperties(): Promise<Property[]> {
       lat: num(p.lat),
       lon: num(p.lon),
       visualScore: num(p.visual_score),
-      visualDetails: parseVisualDetails(p.visual_details),
+      visualNote: p.visual_note || null,
+      visualAge: (["novo", "intermediario", "antigo"].includes(p.visual_age)
+        ? p.visual_age
+        : null) as Property["visualAge"],
       priceRank: num(p.price_rank),
       sizeRank: num(p.size_rank),
     };
@@ -199,22 +179,31 @@ async function loadProperties(): Promise<Property[]> {
 }
 
 async function loadPois(): Promise<Poi[]> {
-  // ~3k rows for the whole coverage area — cheap to load once and filter by
-  // distance in JS when a property page needs its neighbours.
-  const res = await withRetry(() =>
-    supabase
-      .from("pois")
-      .select("id,category,name,lat,lon")
-      .not("lat", "is", null)
-      .not("lon", "is", null),
-  );
-  return rows<any>("pois", res).map((r) => ({
-    id: r.id,
-    category: r.category ?? "",
-    name: r.name || null,
-    lat: Number(r.lat),
-    lon: Number(r.lon),
-  }));
+  // ~3k rows for the whole coverage area — paginated past PostgREST's 1000-row
+  // cap so every POI is available for distance filtering.
+  const PAGE = 1000;
+  const out: Poi[] = [];
+  for (let from = 0; ; from += PAGE) {
+    const res = await withRetry(() =>
+      supabase
+        .from("pois")
+        .select("id,category,name,lat,lon")
+        .not("lat", "is", null)
+        .not("lon", "is", null)
+        .order("id", { ascending: true })
+        .range(from, from + PAGE - 1),
+    );
+    const batch = rows<any>("pois", res).map((r) => ({
+      id: r.id,
+      category: r.category ?? "",
+      name: r.name || null,
+      lat: Number(r.lat),
+      lon: Number(r.lon),
+    }));
+    out.push(...batch);
+    if (batch.length < PAGE) break;
+  }
+  return out;
 }
 
 async function loadMarketHistory(addressKey: string): Promise<MarketHistoryPoint[]> {
@@ -440,7 +429,34 @@ export function getRecommendations(id: string): Promise<Recommendation[]> {
   })();
 }
 
+// Precomputed nearest POIs for a property (property_poi.dist_m), resolved to the
+// full POI record and sorted nearest-first.
+async function loadPropertyPois(id: string): Promise<NearbyPoi[]> {
+  const [res, pois] = await Promise.all([
+    withRetry(() => supabase.from("property_poi").select("poi_id,dist_m").eq("property_id", id)),
+    getPois(),
+  ]);
+  const poiById = new Map(pois.map((p) => [p.id, p]));
+  return rows<any>("property_poi", res)
+    .map((r) => {
+      const poi = poiById.get(Number(r.poi_id));
+      return poi ? { ...poi, distance: Number(r.dist_m) } : null;
+    })
+    .filter((p): p is NearbyPoi => p !== null)
+    .sort((a, b) => a.distance - b.distance);
+}
+
+export function getPropertyPois(id: string): Promise<NearbyPoi[]> {
+  return unstable_cache(() => loadPropertyPois(id), ["property-poi", id], {
+    revalidate: REVALIDATE,
+  })();
+}
+
 export type SearchHit = { id: string; score: number };
+
+// Ranked hits plus a best-effort flag + message when part of the query (e.g. a
+// place we couldn't match nearby) wasn't honoured.
+export type SearchResult = { hits: SearchHit[]; fallback: boolean; fallbackNote: string | null };
 
 async function loadCities(): Promise<string[]> {
   const res = await withRetry(() =>
@@ -472,13 +488,18 @@ type Filters = {
 };
 type PoolRow = { id: string; docText: string };
 
-async function runHybrid(embedding: number[], normalized: string, f: Filters): Promise<PoolRow[]> {
+async function runHybrid(
+  embedding: number[],
+  normalized: string,
+  f: Filters,
+  matchCount = 60,
+): Promise<PoolRow[]> {
   const res = await withRetry(() =>
     supabase.rpc("hybrid_search", {
       query_text: normalized,
       query_embedding: embedding,
       model_name: EMBEDDING_MODEL,
-      match_count: 60,
+      match_count: matchCount,
       filter_type: f.type ?? undefined,
       filter_city: f.city ?? undefined,
       filter_bedrooms_min: f.bedroomsMin ?? undefined,
@@ -491,12 +512,147 @@ async function runHybrid(embedding: number[], normalized: string, f: Filters): P
   }));
 }
 
-async function runHybridSearch(query: string): Promise<SearchHit[]> {
+// Recall rank normalized to [0,1] (top of the pool = 1) — the semantic term of
+// the goal/POI blends.
+function rankNorm(i: number, n: number): number {
+  return n > 1 ? (n - 1 - i) / (n - 1) : 1;
+}
+
+// Re-rank by 0.4·recall + 0.6·(corpus percentile of the goal score).
+function goalRerank(pool: PoolRow[], props: Property[], goal: GoalKey): SearchHit[] {
+  const scoreOf = new Map(props.map((p) => [p.id, p.scores[goal]]));
+  const values = props
+    .map((p) => p.scores[goal])
+    .filter((v): v is number => v != null)
+    .sort((a, b) => a - b);
+  const percentile = (v: number | null | undefined): number => {
+    if (v == null || !values.length) return 0;
+    let lo = 0;
+    let hi = values.length;
+    while (lo < hi) {
+      const mid = (lo + hi) >> 1;
+      if (values[mid] <= v) lo = mid + 1;
+      else hi = mid;
+    }
+    return lo / values.length;
+  };
+
+  const n = pool.length;
+  return pool
+    .map((p, i) => ({
+      id: p.id,
+      score: 0.4 * rankNorm(i, n) + 0.6 * percentile(scoreOf.get(p.id)),
+    }))
+    .sort((a, b) => b.score - a.score)
+    .slice(0, 20);
+}
+
+// Acronyms whose POIs are stored spelled out (a substring match on "ufms" misses
+// "Universidade Federal de Mato Grosso do Sul"). A name matches if it contains
+// every token of any one set.
+const POI_ALIASES: Record<string, string[][]> = {
+  ufms: [["universidade federal", "mato grosso do sul"]],
+  ufgd: [["universidade federal", "grande dourados"]],
+  uems: [["universidade estadual", "mato grosso do sul"]],
+  ifms: [["instituto federal", "mato grosso do sul"]],
+  ucdb: [["universidade catolica dom bosco"]],
+  uniderp: [["uniderp"]],
+};
+
+function poiNameMatches(poiName: string, query: string): boolean {
+  const n = normalize(poiName);
+  if (n.includes(query)) return true;
+  const alias = POI_ALIASES[query];
+  return alias ? alias.some((set) => set.every((tok) => n.includes(tok))) : false;
+}
+
+// All POIs whose name matches (with acronym aliases), narrowed by category (soft).
+// Names like "UFMS" repeat across cities, so callers pick among these.
+function resolvePoiCandidates(pois: Poi[], q: PoiQuery): Poi[] {
+  const name = normalize(q.name);
+  const named = pois.filter((p) => p.name && poiNameMatches(p.name, name));
+  if (!named.length) return [];
+  if (q.category) {
+    const byCat = named.filter((p) => p.category === q.category);
+    if (byCat.length) return byCat;
+  }
+  return named;
+}
+
+const POI_NEAR_M = 5000;
+
+// property_id → min dist_m over the given POIs (from property_poi, the same
+// "nearby" source the detail page uses), within POI_NEAR_M.
+async function nearestByPoi(poiIds: number[]): Promise<Map<string, number>> {
+  if (!poiIds.length) return new Map();
+  const res = await withRetry(() =>
+    supabase
+      .from("property_poi")
+      .select("property_id,dist_m")
+      .in("poi_id", poiIds)
+      .lte("dist_m", POI_NEAR_M),
+  );
+  const near = new Map<string, number>();
+  for (const r of rows<any>("property_poi", res)) {
+    const id = String(r.property_id);
+    const d = Number(r.dist_m);
+    if (!near.has(id) || d < near.get(id)!) near.set(id, d);
+  }
+  return near;
+}
+
+// Re-rank by 0.4·recall + 0.6·exp(-dist/2500), keeping only pooled properties
+// that list the POI among their precomputed neighbours.
+function poiRerank(pool: PoolRow[], near: Map<string, number>): SearchHit[] {
+  const n = pool.length;
+  const hits: SearchHit[] = [];
+  pool.forEach((p, i) => {
+    const dist = near.get(p.id);
+    if (dist == null) return;
+    hits.push({ id: p.id, score: 0.4 * rankNorm(i, n) + 0.6 * Math.exp(-dist / 2500) });
+  });
+  return hits.sort((a, b) => b.score - a.score).slice(0, 20);
+}
+
+async function semanticRank(
+  pool: PoolRow[],
+  normalized: string,
+  useType: boolean,
+): Promise<SearchHit[]> {
+  if (useType) {
+    let scores: number[] | null = null;
+    try {
+      scores = await rerank(
+        normalized,
+        pool.map((p) => p.docText),
+        RERANK_INSTRUCTION,
+      );
+    } catch {
+      scores = null;
+    }
+    if (scores && Math.max(...scores) >= RERANK_ACTIVATE) {
+      return pool
+        .map((p, i) => ({ id: p.id, score: scores![i] ?? 0 }))
+        .filter((h) => h.score >= RERANK_MIN)
+        .sort((a, b) => b.score - a.score)
+        .slice(0, 20);
+    }
+  }
+  return pool.slice(0, 20).map((p, i) => ({ id: p.id, score: 1 - i / 20 }));
+}
+
+function poiPlaceLabel(poi: PoiQuery): string {
+  return poi.name.length <= 5 && !poi.name.includes(" ")
+    ? poi.name.toUpperCase()
+    : titleCase(poi.name);
+}
+
+async function runHybridSearch(query: string): Promise<SearchResult> {
   const cities = await getCities();
   const facets = parseFacets(query, cities);
   const embedding = await embedQuery(facets.normalized, SEARCH_INSTRUCTION);
 
-  return semanticCached<SearchHit[]>({
+  return semanticCached<SearchResult>({
     namespace: "search",
     vector: embedding,
     text: facets.normalized,
@@ -505,9 +661,16 @@ async function runHybridSearch(query: string): Promise<SearchHit[]> {
       city: facets.city,
       bedroomsMin: facets.bedroomsMin,
       priceMax: facets.priceMax,
+      goal: facets.goal,
+      poi: facets.poi ? `${facets.poi.name}|${facets.poi.category ?? ""}` : null,
     },
-    isCacheable: (r) => r.length > 0,
+    isCacheable: (r) => r.hits.length > 0,
     compute: async () => {
+      const ok = (hits: SearchHit[]): SearchResult => ({
+        hits,
+        fallback: false,
+        fallbackNote: null,
+      });
       const full: Filters = {
         type: facets.type,
         city: facets.city,
@@ -515,8 +678,9 @@ async function runHybridSearch(query: string): Promise<SearchHit[]> {
         priceMax: facets.priceMax,
       };
       const hasExtra = !!facets.city || facets.bedroomsMin != null || facets.priceMax != null;
+      const matchCount = facets.poi || facets.goal ? 200 : 60;
 
-      let pool = await runHybrid(embedding, facets.normalized, full);
+      let pool = await runHybrid(embedding, facets.normalized, full, matchCount);
       if (pool.length < MIN_POOL && facets.type && hasExtra) {
         pool = await runHybrid(embedding, facets.normalized, {
           type: facets.type,
@@ -533,93 +697,32 @@ async function runHybridSearch(query: string): Promise<SearchHit[]> {
           priceMax: null,
         });
       }
-      if (!pool.length) return [];
+      if (!pool.length) return ok([]);
 
-      // The reranker reads only the physical doc_text, so it only helps type/keyword
-      // queries; for objective queries (flip, family, revenda — encoded in the
-      // embedding) it scores ~0 and we'd discard it, so skip the call entirely.
-      if (facets.type) {
-        let scores: number[] | null = null;
-        try {
-          scores = await rerank(
-            facets.normalized,
-            pool.map((p) => p.docText),
-            RERANK_INSTRUCTION,
-          );
-        } catch {
-          scores = null;
-        }
-        if (scores && Math.max(...scores) >= RERANK_ACTIVATE) {
-          return pool
-            .map((p, i) => ({ id: p.id, score: scores![i] ?? 0 }))
-            .filter((h) => h.score >= RERANK_MIN)
-            .sort((a, b) => b.score - a.score)
-            .slice(0, 20);
-        }
+      if (facets.poi) {
+        const pois = await getPois();
+        const candIds = resolvePoiCandidates(pois, facets.poi).map((p) => p.id);
+        const near = poiRerank(pool, await nearestByPoi(candIds));
+        if (near.length) return ok(near);
+        return {
+          hits: await semanticRank(pool, facets.normalized, !!facets.type),
+          fallback: true,
+          fallbackNote: `Não encontramos imóveis próximos a “${poiPlaceLabel(facets.poi)}”. Mostrando os resultados mais relevantes para o restante da sua busca.`,
+        };
       }
 
-      return pool.slice(0, 20).map((p, i) => ({ id: p.id, score: 1 - i / 20 }));
+      if (facets.goal) {
+        const props = await getProperties();
+        return ok(goalRerank(pool, props, facets.goal));
+      }
+
+      return ok(await semanticRank(pool, facets.normalized, !!facets.type));
     },
   });
 }
 
-export function hybridSearch(query: string): Promise<SearchHit[]> {
+export function hybridSearch(query: string): Promise<SearchResult> {
   return unstable_cache(() => runHybridSearch(query), ["hybrid-search", query], {
-    revalidate: REVALIDATE,
-  })();
-}
-
-export type DeedResult = { id: string; excerpt: string; relevance: number; reason: string };
-
-const DEED_INSTRUCTION =
-  "Analise matrículas de imóveis como documentos jurídicos. Recupere matrículas em que a condição, gravame, ônus ou restrição descrita na consulta realmente se aplica ao imóvel, considerando negações, baixas e cancelamentos.";
-
-async function runDeedSearch(query: string): Promise<DeedResult[]> {
-  const embedding = await embedQuery(query, DEED_INSTRUCTION);
-
-  return semanticCached<DeedResult[]>({
-    namespace: "deed",
-    vector: embedding,
-    text: query,
-    facets: {},
-    isCacheable: (r) => r.length > 0,
-    compute: async () => {
-      const res = await withRetry(() =>
-        supabase.rpc("hybrid_deed_search", {
-          query_text: query,
-          query_embedding: embedding,
-          model_name: EMBEDDING_MODEL,
-          match_count: 40,
-          full_text_weight: 0.3,
-          semantic_weight: 1.0,
-        }),
-      );
-      const candidates = rows<any>("hybrid_deed_search", res)
-        .map((r) => ({ id: String(r.property_id), text: String(r.deed_text ?? "") }))
-        .slice(0, 12);
-      if (!candidates.length) return [];
-
-      const verdicts = await analyzeDeeds(
-        query,
-        candidates.map((c) => c.text),
-      );
-      const byIndex = new Map(verdicts.map((v) => [v.index, v]));
-      return candidates
-        .map((c, i) => ({ candidate: c, verdict: byIndex.get(i) }))
-        .filter(({ verdict }) => verdict?.matches !== false)
-        .map(({ candidate, verdict }) => ({
-          id: candidate.id,
-          excerpt: candidate.text,
-          relevance: verdict?.relevance ?? 50,
-          reason: verdict?.reason ?? "",
-        }))
-        .sort((a, b) => b.relevance - a.relevance);
-    },
-  });
-}
-
-export function deedSearch(query: string): Promise<DeedResult[]> {
-  return unstable_cache(() => runDeedSearch(query), ["deed-search", query], {
     revalidate: REVALIDATE,
   })();
 }

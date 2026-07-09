@@ -15,13 +15,11 @@ export default function SearchHero({
   sub = "Escreva com suas palavras, como se estivesse falando com um corretor.",
   showExamples = true,
   initial = "",
-  scope,
 }: {
   label?: string;
   sub?: string;
   initial?: string;
   showExamples?: boolean;
-  scope?: string;
 }) {
   const formRef = useRef<HTMLFormElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -44,7 +42,6 @@ export default function SearchHero({
       {label && <div className="lbl">{label}</div>}
       {sub && <div className="sub">{sub}</div>}
       <form ref={formRef} className="bigsearch" action="/search" method="get" onSubmit={onSubmit}>
-        {scope === "matriculas" && <input type="hidden" name="scope" value="matriculas" />}
         <div className="field">
           <IconSearch strokeWidth={1.7} />
           <input
@@ -52,11 +49,7 @@ export default function SearchHero({
             name="q"
             defaultValue={initial}
             onChange={(e) => setEmpty(!e.target.value.trim())}
-            placeholder={
-              scope === "matriculas"
-                ? "Ex.: matrícula com indisponibilidade ou penhora"
-                : "Ex.: apartamento para reformar e revender na zona sul"
-            }
+            placeholder="Ex.: apartamento para reformar e revender na zona sul"
             autoFocus
           />
         </div>

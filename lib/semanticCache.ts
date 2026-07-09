@@ -1,13 +1,12 @@
 import { Index } from "@upstash/vector";
 
-// Semantic cache in front of the search / deed pipelines. On a near-duplicate
-// query (same hard facets + cosine similarity >= threshold) we return the
-// cached result and skip the embedding-driven DB query, reranker and — for
-// deeds — the per-document LLM calls. Vectors are our own Qwen3 embeddings, so
-// the cache lives in the same embedding space as retrieval (Upstash index is
-// created with model "None", 1024 dims, cosine).
+// Semantic cache in front of the search pipeline. On a near-duplicate query
+// (same hard facets + cosine similarity >= threshold) we return the cached
+// result and skip the embedding-driven DB query and reranker. Vectors are our
+// own Qwen3 embeddings, so the cache lives in the same embedding space as
+// retrieval (Upstash index is created with model "None", 1024 dims, cosine).
 
-export type Namespace = "search" | "deed";
+export type Namespace = "search";
 
 type NsConfig = { threshold: number; ttlMs: number };
 
@@ -15,10 +14,6 @@ const NS_CONFIG: Record<Namespace, NsConfig> = {
   search: {
     threshold: envNum("SEMCACHE_SEARCH_MIN", 0.9),
     ttlMs: envNum("SEMCACHE_SEARCH_TTL_MS", 15 * 60_000),
-  },
-  deed: {
-    threshold: envNum("SEMCACHE_DEED_MIN", 0.95),
-    ttlMs: envNum("SEMCACHE_DEED_TTL_MS", 60 * 60_000),
   },
 };
 
@@ -37,7 +32,6 @@ const isShadow = () => process.env.SEMCACHE_SHADOW === "true";
 type Tally = { hit: number; miss: number; shadowHit: number; shadowMatch: number };
 const stats: Record<Namespace, Tally> = {
   search: { hit: 0, miss: 0, shadowHit: 0, shadowMatch: 0 },
-  deed: { hit: 0, miss: 0, shadowHit: 0, shadowMatch: 0 },
 };
 
 function pct(n: number, d: number): number {
@@ -58,7 +52,6 @@ export function getSemanticCacheStats() {
   return {
     mode: isEnabled() ? "enabled" : isShadow() ? "shadow" : "disabled",
     search: per(stats.search),
-    deed: per(stats.deed),
   };
 }
 

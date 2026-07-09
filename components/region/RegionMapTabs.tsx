@@ -2,6 +2,8 @@
 
 import { useState } from "react";
 import RegionMapClient from "@/components/region/RegionMapClient";
+import SameAddressGroups from "@/components/region/SameAddressGroups";
+import { groupByAddress } from "@/lib/geo";
 import type { NearbyPoi, Property } from "@/lib/types";
 
 export default function RegionMapTabs({
@@ -14,6 +16,7 @@ export default function RegionMapTabs({
   pois: NearbyPoi[];
 }) {
   const [tab, setTab] = useState<"heat" | "poi">("heat");
+  const locations = groupByAddress(properties).length;
 
   return (
     <>
@@ -33,9 +36,14 @@ export default function RegionMapTabs({
       />
       <div className="rnote">
         {tab === "heat"
-          ? "Cada marcador é um imóvel em leilão nesta região."
+          ? `${properties.length} ${properties.length === 1 ? "imóvel" : "imóveis"} em leilão com localização no mapa${
+              locations < properties.length
+                ? `, em ${locations} ${locations === 1 ? "endereço" : "endereços"}.`
+                : " — cada marcador é um imóvel."
+            }`
           : "Imóveis e pontos de interesse reais próximos (fonte: OpenStreetMap)."}
       </div>
+      {tab === "heat" && <SameAddressGroups properties={properties} />}
     </>
   );
 }

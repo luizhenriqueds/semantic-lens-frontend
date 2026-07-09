@@ -6,6 +6,7 @@ import ScoreBars from "./_components/ScoreBars";
 import PriceHistory from "./_components/PriceHistory";
 import ScoreBreakdown from "./_components/ScoreBreakdown";
 import VisualScore from "./_components/VisualScore";
+import NearbyPois from "./_components/NearbyPois";
 import PropertyRanks from "./_components/PropertyRanks";
 import RegionPanel from "@/components/region/RegionPanel";
 import PropertyMarket from "@/components/market/PropertyMarket";
@@ -19,6 +20,7 @@ import {
   getPriceHistory,
   getProperties,
   getProperty,
+  getPropertyPois,
   getRecommendations,
   getRegion,
 } from "@/lib/data";
@@ -33,7 +35,7 @@ import {
   showDiscount,
 } from "@/lib/format";
 import { statsForProperty } from "@/lib/market";
-import { IconBack, IconDoc } from "@/lib/icons";
+import { IconBack } from "@/lib/icons";
 
 export const revalidate = 120;
 
@@ -47,20 +49,23 @@ export default async function PropertyPage({ params }: { params: Promise<{ id: s
   const p = await getProperty(id);
   if (!p) notFound();
 
-  const [all, region, marketStats, priceHistory, pois, marketHistory, recs] = await Promise.all([
-    getProperties(),
-    p.h3 ? getRegion(p.h3) : Promise.resolve(null),
-    getMarketStats(),
-    getPriceHistory(p.id),
-    p.lat != null && p.lon != null ? getPois() : Promise.resolve([]),
-    getMarketHistory(addressKey(p.uf, p.city, p.neighborhood, p.propertyType)),
-    getRecommendations(p.id),
-  ]);
+  const [all, region, marketStats, priceHistory, pois, marketHistory, recs, propertyPois] =
+    await Promise.all([
+      getProperties(),
+      p.h3 ? getRegion(p.h3) : Promise.resolve(null),
+      getMarketStats(),
+      getPriceHistory(p.id),
+      p.lat != null && p.lon != null ? getPois() : Promise.resolve([]),
+      getMarketHistory(addressKey(p.uf, p.city, p.neighborhood, p.propertyType)),
+      getRecommendations(p.id),
+      getPropertyPois(p.id),
+    ]);
   const market = statsForProperty(marketStats, p);
   const nearby =
     p.lat != null && p.lon != null ? nearbyPois(pois, p.lat, p.lon, { radius: 2500 }) : [];
 
   const propById = new Map(all.map((x) => [x.id, x]));
+  // Only surface recommendations that are a strong match (≥ 75%).
   const toItems = (kind: "visual" | "similar"): RecItem[] =>
     recs
       .filter((r) => r.kind === kind)
@@ -69,7 +74,7 @@ export default async function PropertyPage({ params }: { params: Promise<{ id: s
         if (!rp) return null;
         return { p: rp, match: Math.min(100, Math.round((r.similarity ?? 0) * 100)) };
       })
-      .filter((x): x is RecItem => x !== null);
+      .filter((x): x is RecItem => x !== null && x.match >= 75);
   const recVisual = toItems("visual");
   const recSemantic = toItems("similar");
 
@@ -169,6 +174,8 @@ export default async function PropertyPage({ params }: { params: Promise<{ id: s
               title={`${p.title} — ${p.neighborhood}`}
             />
           )}
+
+          <NearbyPois pois={propertyPois} />
         </div>
 
         <div>
@@ -205,12 +212,6 @@ export default async function PropertyPage({ params }: { params: Promise<{ id: s
                   style={{ justifyContent: "center" }}
                 >
                   Ver anúncio original
-                </a>
-              )}
-              {p.deed && (
-                <a className="btn ghost deedlink" href={p.deed} target="_blank" rel="noreferrer">
-                  <IconDoc width={18} height={18} strokeWidth={1.7} />
-                  Matrícula (PDF)
                 </a>
               )}
             </div>
@@ -250,7 +251,7 @@ export default async function PropertyPage({ params }: { params: Promise<{ id: s
       </div>
 
       <SimilarCarousel
-        title="Mais semelhantes visualmente"
+        title="Mais imóveis como este"
         subtitle="Imóveis com aparência parecida com este."
         items={recVisual}
       />

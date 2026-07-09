@@ -28,39 +28,6 @@ function fuzzy(token: string, keyword: string): boolean {
   return editDistance(token, keyword) <= maxDist;
 }
 
-const DEED_TERMS = [
-  "indisponibilidade",
-  "penhora",
-  "gravame",
-  "gravames",
-  "onus",
-  "hipoteca",
-  "usufruto",
-  "matricula",
-  "matriculas",
-  "averbacao",
-  "averbado",
-  "clausula",
-  "escritura",
-  "alienacao",
-  "fiduciaria",
-  "servidao",
-  "arresto",
-  "sequestro",
-  "litigio",
-  "judicial",
-  "restricao",
-  "embargo",
-  "inventario",
-  "espolio",
-  "desapropriacao",
-];
-
-export function isDeedQuery(raw: string): boolean {
-  const n = normalize(raw);
-  return DEED_TERMS.some((t) => n.includes(t));
-}
-
 const TYPE_KEYWORDS: [string[], string][] = [
   [["terreno", "lote"], "Terreno"],
   [["casa", "sobrado"], "Casa"],
@@ -68,13 +35,111 @@ const TYPE_KEYWORDS: [string[], string][] = [
   [["sala"], "Sala"],
 ];
 
+// Investment goal → property_scores column. Keywords match as stems.
+export type GoalKey = "airbnb" | "student" | "family" | "flip" | "commercial" | "liquidity";
+
+const GOAL_KEYWORDS: [string[], GoalKey][] = [
+  [["temporada", "airbnb", "veraneio"], "airbnb"],
+  [["estudan", "universitari"], "student"],
+  [["familia"], "family"],
+  [["reform", "revend", "flip"], "flip"],
+  [["comercial"], "commercial"],
+  [["liquidez"], "liquidity"],
+];
+
+// Category words narrow the POI lookup; they stay part of the name too.
+const POI_CATEGORY_KEYWORDS: [string[], string][] = [
+  [["universidade", "faculdade", "campus"], "university"],
+  [["hospital", "upa"], "hospital"],
+  [["supermercado", "mercado", "atacado", "atacadao"], "supermarket"],
+  [["shopping"], "shopping_center"],
+  [["parque"], "park"],
+  [["restaurante"], "restaurant"],
+  [["hotel", "pousada"], "hotel"],
+  [["escola", "colegio"], "school"],
+  [["banco"], "bank"],
+  [["farmacia", "drogaria"], "pharmacy"],
+];
+
+const POI_STOPWORDS = new Set([
+  "de",
+  "da",
+  "do",
+  "das",
+  "dos",
+  "a",
+  "o",
+  "ao",
+  "aos",
+  "as",
+  "um",
+  "uma",
+  "no",
+  "na",
+  "the",
+  "e",
+]);
+
+// Generic place words that describe an area rather than a mappable POI — handled
+// by the city filter + semantic ranking, not by proximity to a point.
+const LOCALITY_WORDS = new Set(["centro", "bairro", "bairros", "regiao", "zona", "cidade"]);
+
+export type PoiQuery = { name: string; category: string | null };
+
 export type Facets = {
   normalized: string;
   type: string | null;
   city: string | null;
   bedroomsMin: number | null;
   priceMax: number | null;
+  goal: GoalKey | null;
+  poi: PoiQuery | null;
 };
+
+function findGoal(tokens: string[]): GoalKey | null {
+  for (const [kws, goal] of GOAL_KEYWORDS) {
+    for (const kw of kws) {
+      if (tokens.some((t) => t === kw || (kw.length >= 5 && t.startsWith(kw)))) return goal;
+    }
+  }
+  return null;
+}
+
+function findPoi(
+  normalized: string,
+  cityList: { raw: string; words: string[] }[],
+): PoiQuery | null {
+  const m = normalized.match(
+    /\b(?:perto|proxim[ao]s?|vizinh[ao]s?|junt[ao]|colad[ao]|lado)\s+(.+)$/,
+  );
+  if (!m) return null;
+  const words = m[1].split(" ").filter(Boolean);
+  while (words.length && POI_STOPWORDS.has(words[0])) words.shift();
+
+  // Drop a city name from the phrase ("perto do centro corumba" is a place, not
+  // a POI) — the city is filtered separately, the neighbourhood semantically.
+  for (const c of cityList) {
+    for (let i = 0; i + c.words.length <= words.length; i++) {
+      if (c.words.every((w, j) => words[i + j] === w)) {
+        words.splice(i, c.words.length);
+        break;
+      }
+    }
+  }
+
+  const significant = words.filter((w) => !POI_STOPWORDS.has(w) && !LOCALITY_WORDS.has(w));
+  const name = significant.join(" ").trim();
+  if (name.length < 2) return null;
+
+  let category: string | null = null;
+  for (const [kws, cat] of POI_CATEGORY_KEYWORDS) {
+    if (significant.some((w) => kws.includes(w))) {
+      category = cat;
+      break;
+    }
+  }
+  return { name, category };
+}
 
 export function parseFacets(raw: string, cities: string[]): Facets {
   const normalized = normalize(raw);
@@ -142,5 +207,8 @@ export function parseFacets(raw: string, cities: string[]): Facets {
     if (!isNaN(n) && n > 0) priceMax = Math.round(n);
   }
 
-  return { normalized, type, city, bedroomsMin, priceMax };
+  const goal = findGoal(tokens);
+  const poi = findPoi(normalized, cityList);
+
+  return { normalized, type, city, bedroomsMin, priceMax, goal, poi };
 }

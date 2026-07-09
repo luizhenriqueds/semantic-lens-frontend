@@ -1244,8 +1244,13 @@
     position: static;
   }
   .lp-searchzone > .lp-wrap {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
     gap: 34px;
+  }
+  /* let grid items shrink so the map card's aspect-ratio can't overflow */
+  .lp-searchzone-left,
+  .lp-mapcard {
+    min-width: 0;
   }
   .lp-searchzone-head {
     text-align: center;

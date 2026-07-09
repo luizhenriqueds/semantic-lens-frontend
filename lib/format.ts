@@ -1,4 +1,10 @@
-import type { ProfileKey, Property, Scores } from "@/lib/types";
+import type { ProfileKey, Property, Scores, VisualAge } from "@/lib/types";
+
+export const VISUAL_AGE_LABEL: Record<VisualAge, string> = {
+  novo: "Novo",
+  intermediario: "Intermediário",
+  antigo: "Antigo",
+};
 
 export const PROFILE_LABEL: Record<ProfileKey, string> = {
   airbnb: "Aluguel por temporada",

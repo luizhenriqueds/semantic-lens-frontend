@@ -571,6 +571,7 @@ button {
 }
 .bigsearch .field {
   flex: 1;
+  min-width: 0;
   display: flex;
   align-items: center;
   gap: 12px;
@@ -584,6 +585,7 @@ button {
   border: 0;
   background: none;
   flex: 1;
+  min-width: 0;
   font-size: 16.5px;
   color: var(--ink);
   outline: none;
@@ -671,109 +673,31 @@ button {
   color: var(--primary);
   cursor: pointer;
 }
+.searchnote {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0 0 16px;
+  padding: 12px 15px;
+  border: 1px solid var(--line-soft);
+  border-radius: 11px;
+  background: var(--surface-2);
+  color: var(--ink-soft);
+  font-size: 13.5px;
+  line-height: 1.45;
+}
+.searchnote svg {
+  flex-shrink: 0;
+  color: var(--ink-faint);
+}
 
 /* property cards grid */
 .pgrid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  /* min(100%, 300px) keeps the track from forcing horizontal overflow on
+     screens narrower than 300px. */
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 300px), 1fr));
   gap: 18px;
-}
-.matchdot {
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  background: var(--primary);
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 22%, transparent);
-}
-
-/* search scope tabs */
-.scopetabs {
-  display: inline-flex;
-  gap: 4px;
-  margin: 18px 0 6px;
-  padding: 4px;
-  background: var(--surface-2);
-  border: 1px solid var(--line);
-  border-radius: 12px;
-}
-.scopetabs a {
-  padding: 7px 16px;
-  border-radius: 9px;
-  font-size: 14px;
-  font-weight: 600;
-  color: var(--ink-soft);
-}
-.scopetabs a.on {
-  background: var(--surface);
-  color: var(--primary);
-  box-shadow: 0 1px 3px rgba(43, 46, 34, 0.1);
-}
-
-/* deed (matrícula) results */
-.deedlist {
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-}
-.deedcard {
-  display: block;
-  background: var(--surface);
-  border: 1px solid var(--line);
-  border-radius: 15px;
-  padding: 18px 20px;
-  transition: border-color 0.15s ease;
-}
-.deedcard:hover {
-  border-color: var(--primary-soft);
-}
-.deedtop {
-  display: flex;
-  align-items: flex-start;
-  gap: 14px;
-}
-.deedid h3 {
-  margin: 0;
-  font-size: 16.5px;
-  letter-spacing: -0.01em;
-}
-.deedloc {
-  margin-top: 3px;
-  font-size: 13px;
-  color: var(--ink-soft);
-}
-.deedrel {
-  margin-left: auto;
-  flex-shrink: 0;
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 5px 11px 5px 9px;
-  border-radius: 100px;
-  background: var(--primary-wash);
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--ink-soft);
-}
-.deedrel b {
-  color: var(--primary);
-  font-weight: 800;
-  font-variant-numeric: tabular-nums;
-}
-.deedreason {
-  margin-top: 12px;
-  padding: 10px 13px;
-  border-left: 3px solid var(--primary);
-  background: var(--primary-wash);
-  border-radius: 0 8px 8px 0;
-  font-size: 13.5px;
-  color: var(--ink);
-  line-height: 1.5;
-}
-.deedexcerpt {
-  margin: 11px 0 0;
-  font-size: 13px;
-  color: var(--ink-faint);
-  line-height: 1.55;
 }
 
 /* search loading */
@@ -804,18 +728,6 @@ button {
   border: 1px solid var(--line);
   border-radius: 15px;
   overflow: hidden;
-}
-.skdeed {
-  background: var(--surface);
-  border: 1px solid var(--line);
-  border-radius: 15px;
-  padding: 18px 20px;
-  display: flex;
-  flex-direction: column;
-  gap: 11px;
-}
-.skdeed .skline.w45 {
-  height: 16px;
 }
 .skphoto {
   aspect-ratio: 3 / 2;
@@ -901,6 +813,7 @@ button {
   margin-top: 11px;
 }
 .pcard {
+  position: relative;
   background: var(--surface);
   border: 1px solid var(--line);
   border-radius: 16px;
@@ -914,6 +827,51 @@ button {
 .pcard:hover {
   transform: translateY(-3px);
   border-color: var(--primary-soft);
+}
+/* stretched link covering the whole card (favorite button sits above it) */
+.pcardlink {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+}
+.favbtn {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  z-index: 3;
+  width: 34px;
+  height: 34px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 1px solid var(--line);
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--surface) 86%, transparent);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  color: var(--ink-soft);
+  cursor: pointer;
+  transition:
+    color 0.15s ease,
+    border-color 0.15s ease,
+    transform 0.12s ease,
+    background 0.15s ease;
+}
+.favbtn svg {
+  width: 19px;
+  height: 19px;
+  stroke: currentColor;
+  stroke-width: 1.8;
+}
+.favbtn:hover {
+  color: var(--primary);
+  border-color: var(--primary-soft);
+  transform: scale(1.06);
+}
+.favbtn.on {
+  color: var(--primary);
+  border-color: var(--primary-soft);
+  background: color-mix(in srgb, var(--primary) 12%, var(--surface));
 }
 .pphoto {
   height: 152px;
@@ -933,6 +891,7 @@ button {
 .pphoto .disc {
   position: absolute;
   z-index: 2;
+  pointer-events: none;
 }
 .pphoto .tag {
   bottom: 12px;
@@ -946,7 +905,7 @@ button {
   padding: 5px 11px;
 }
 .pphoto .disc {
-  top: 12px;
+  bottom: 12px;
   right: 12px;
   background: var(--primary);
   color: var(--surface);
@@ -1217,20 +1176,6 @@ button {
   .filterbar > button.selectish {
     flex: 1 1 auto;
   }
-  .scopetabs {
-    display: flex;
-    width: 100%;
-  }
-  .scopetabs a {
-    flex: 1;
-    text-align: center;
-  }
-  .deedtop {
-    flex-wrap: wrap;
-  }
-  .deedrel {
-    margin-left: 0;
-  }
   .viewbar > .selectish {
     flex: 1 1 auto;
   }
@@ -1296,6 +1241,7 @@ select.selectish {
   color: var(--primary);
 }
 .wcard {
+  position: relative;
   display: grid;
   grid-template-columns: 184px 1.5fr 1fr 0.9fr 168px;
   gap: 20px;
@@ -1313,6 +1259,11 @@ select.selectish {
 .wcard:hover {
   border-color: var(--primary-soft);
   transform: translateY(-2px);
+}
+.wcardlink {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
 }
 .wphoto {
   position: relative;
@@ -1332,6 +1283,7 @@ select.selectish {
   position: absolute;
   top: 9px;
   left: 9px;
+  pointer-events: none;
   background: var(--primary);
   color: var(--surface);
   font-weight: 700;
@@ -1556,6 +1508,10 @@ select.selectish {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  /* wrap the link below the pill when the card is too narrow to fit both,
+     instead of breaking each label across lines mid-word. */
+  flex-wrap: wrap;
+  gap: 8px 12px;
   border-top: 1px solid var(--line-soft);
   padding-top: 13px;
 }
@@ -1566,6 +1522,7 @@ select.selectish {
   background: var(--primary-wash);
   border-radius: 100px;
   padding: 5px 12px;
+  white-space: nowrap;
 }
 .plbody .open {
   display: inline-flex;
@@ -1574,6 +1531,8 @@ select.selectish {
   font-size: 13.5px;
   font-weight: 600;
   color: var(--primary);
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
 /* alerts */
@@ -1606,12 +1565,6 @@ select.selectish {
   align-items: center;
   gap: 8px;
   flex-shrink: 0;
-}
-.deedlink {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
 }
 .alertrow .aactions .iconbtn {
   width: 40px;
@@ -1664,8 +1617,35 @@ select.selectish {
 /* advanced filter sliders + checkboxes */
 .afilters.sliders {
   grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+  gap: 22px;
+  align-items: start;
+}
+.afsection {
+  margin-bottom: 20px;
+}
+.afsection:last-of-type {
+  margin-bottom: 2px;
+}
+.afsection-title {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--ink-faint);
+  padding-bottom: 11px;
+  margin-bottom: 15px;
+  border-bottom: 1px solid var(--line-soft);
+}
+.afsection-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
   gap: 18px 22px;
-  align-items: end;
+  align-items: start;
+}
+.afgroup {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
 }
 .sliderfield {
   gap: 10px;
@@ -1924,6 +1904,7 @@ select.selectish {
   font-weight: 700;
   margin: 0 0 14px;
 }
+
 .pphoto .disc.off,
 .wphoto .disc.off {
   background: var(--ink-faint);
@@ -1934,6 +1915,7 @@ select.selectish {
   top: 12px;
   left: 12px;
   z-index: 2;
+  pointer-events: none;
   background: var(--ink);
   color: var(--bg);
   font-size: 11.5px;
@@ -2665,6 +2647,9 @@ select.selectish {
   box-shadow: 0 0 0 3px var(--primary-wash);
   z-index: 2;
 }
+.pp-dot.appraised {
+  background: var(--primary-soft);
+}
 .pp-dot.est {
   background: var(--warn);
 }
@@ -2690,6 +2675,9 @@ select.selectish {
 }
 .pp-swatch.you {
   background: var(--primary);
+}
+.pp-swatch.appraised {
+  background: var(--primary-soft);
 }
 .pp-swatch.est {
   background: var(--warn);
@@ -2904,6 +2892,91 @@ select.selectish {
   margin-top: 6px;
   color: var(--primary);
   font-weight: 600;
+}
+.pm-sub {
+  color: var(--ink-soft);
+}
+.leaflet-popup-content a.pm-multi {
+  display: flex;
+  justify-content: space-between;
+  gap: 14px;
+  margin-top: 6px;
+  padding-top: 6px;
+  border-top: 1px solid var(--line-soft);
+  color: var(--ink);
+  font-weight: 500;
+}
+.pm-multi .pm-price {
+  flex-shrink: 0;
+}
+
+.sameaddr {
+  margin-top: 12px;
+  border: 1px solid var(--line);
+  background: var(--surface-2);
+  border-radius: 13px;
+  padding: 14px 16px;
+}
+.sameaddr-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  font-weight: 700;
+}
+.sameaddr-head svg {
+  stroke: var(--primary-soft);
+  flex-shrink: 0;
+}
+.sameaddr-note {
+  margin: 6px 0 4px 24px;
+  font-size: 12.5px;
+  color: var(--ink-soft);
+  line-height: 1.5;
+}
+.sameaddr-group {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid var(--line-soft);
+}
+.sameaddr-badge {
+  flex-shrink: 0;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--primary);
+  background: var(--primary-wash);
+  border-radius: 100px;
+  padding: 4px 10px;
+  white-space: nowrap;
+}
+.sameaddr-list {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  min-width: 0;
+  flex: 1;
+}
+.sameaddr-item {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 13.5px;
+}
+.sa-title {
+  color: var(--ink-soft);
+  min-width: 0;
+}
+.sameaddr-item:hover .sa-title {
+  color: var(--primary);
+  text-decoration: underline;
+}
+.sa-price {
+  font-weight: 700;
+  color: var(--primary);
+  flex-shrink: 0;
 }
 .propmap-empty {
   display: grid;
@@ -3669,9 +3742,21 @@ select.selectish {
   .bigsearch {
     flex-direction: column;
   }
+  /* flex:none so the column layout keeps the field's height */
+  .bigsearch .field {
+    flex: none;
+    width: 100%;
+  }
   .bigsearch .btn {
     width: 100%;
     justify-content: center;
+  }
+  .examples {
+    flex-direction: column;
+  }
+  .examples .ex {
+    width: 100%;
+    text-align: center;
   }
   .filterbar > * {
     flex: 1 1 100%;
@@ -4246,11 +4331,22 @@ select.selectish {
   overflow: hidden;
   text-overflow: ellipsis;
 }
+.recfoot {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 9px;
+}
 .recprice {
   font-size: 15.5px;
   font-weight: 800;
   letter-spacing: -0.01em;
-  margin-top: 9px;
+}
+.recscore {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
 }
 
 /* score breakdown explainer */
@@ -4328,7 +4424,7 @@ select.selectish {
   margin-top: 4px;
 }
 
-/* visual score */
+/* visual score / notes */
 .visualscore {
   margin-top: 14px;
   border: 1px solid var(--line-soft);
@@ -4396,9 +4492,117 @@ select.selectish {
   background: var(--surface);
   color: var(--ink-soft);
 }
-.vs-flag.warn {
-  background: color-mix(in srgb, var(--warn) 16%, transparent);
-  color: var(--warn);
+
+/* nearby POIs panel (property page) */
+.poichips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+.poichip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12.5px;
+  font-weight: 600;
+  padding: 6px 11px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  color: var(--ink-soft);
+  cursor: pointer;
+}
+.poichip span {
+  font-variant-numeric: tabular-nums;
+  color: var(--ink-faint);
+  font-weight: 700;
+}
+.poichip.on {
+  border-color: var(--primary-soft);
+  background: var(--primary-wash);
+  color: var(--primary);
+}
+.poichip.on span {
+  color: var(--primary);
+}
+.poilist {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.poirow {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  background: var(--surface-2);
+  border: 1px solid var(--line-soft);
+  border-radius: 11px;
+  padding: 9px 12px;
+}
+.poirow .pic {
+  width: 32px;
+  height: 32px;
+  border-radius: 9px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  display: grid;
+  place-items: center;
+  color: var(--primary);
+  flex-shrink: 0;
+}
+.poirow .pic svg {
+  width: 17px;
+  height: 17px;
+}
+.poirow-name {
+  min-width: 0;
+  flex: 1;
+}
+.poirow-name .lab {
+  font-size: 13.5px;
+  font-weight: 600;
+  line-height: 1.25;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.poirow-name .sub {
+  font-size: 12px;
+  color: var(--ink-faint);
+}
+.poirow-dist {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--ink-soft);
+  font-variant-numeric: tabular-nums;
+  flex-shrink: 0;
+}
+.poimore {
+  margin-top: 12px;
+}
+
+/* single-option filter picker */
+.optrow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+.optbtn {
+  min-width: 40px;
+  font-size: 13px;
+  font-weight: 600;
+  padding: 7px 12px;
+  border-radius: 9px;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  color: var(--ink-soft);
+  cursor: pointer;
+}
+.optbtn.on {
+  border-color: var(--primary-soft);
+  background: var(--primary-wash);
+  color: var(--primary);
 }
 
 /* region real map */

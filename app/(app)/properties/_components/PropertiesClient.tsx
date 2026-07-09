@@ -7,15 +7,16 @@ import EmptyState from "@/components/ui/EmptyState";
 import Pagination from "@/components/ui/Pagination";
 import PropertyRow from "@/components/property/PropertyRow";
 import Slider from "@/components/ui/Slider";
+import OptionPicker from "@/components/ui/OptionPicker";
 import SearchableSelect from "@/components/ui/SearchableSelect";
 import AuctionCalendar from "./AuctionCalendar";
 import PropertiesAnalysis from "./PropertiesAnalysis";
 import { useToast } from "@/components/ui/Toaster";
-import { investmentScore, moneyShort, profileScore } from "@/lib/format";
+import { investmentScore, moneyShort, profileScore, SCORE_LABEL } from "@/lib/format";
 import { useAlerts } from "@/lib/alerts";
 import { useSaved } from "@/lib/saved";
 import { describeFilters, hasAnyFilter, matchesFilters } from "@/lib/alertFilters";
-import type { AlertFilters, Cluster, Property } from "@/lib/types";
+import type { AlertFilters, Cluster, Property, Scores } from "@/lib/types";
 import { IconArrow, IconBell, IconBuilding, IconSearch } from "@/lib/icons";
 
 const PropertiesMap = dynamic(() => import("@/components/property/PropertiesMap"), {
@@ -27,15 +28,35 @@ type View = "list" | "analysis" | "calendar" | "map";
 
 const PAGE_SIZE = 25;
 
-type Sort = "investimento" | "desconto" | "score" | "menor" | "maior";
+type Sort = "investimento" | "desconto" | "score" | "leilao" | "menor" | "maior";
 
 const SORTS: { key: Sort; label: string }[] = [
   { key: "investimento", label: "Melhor investimento" },
   { key: "desconto", label: "Maior desconto" },
   { key: "score", label: "Melhor nota do objetivo" },
+  { key: "leilao", label: "Leilão mais próximo" },
   { key: "menor", label: "Menor preço" },
   { key: "maior", label: "Maior preço" },
 ];
+
+// Score dimensions offered by the "filter by score" control (investment has its
+// own slider, so it is excluded here).
+const SCORE_KEYS: (keyof Scores)[] = [
+  "flip",
+  "liquidity",
+  "airbnb",
+  "student",
+  "family",
+  "commercial",
+  "convenience",
+];
+const SCORE_THRESHOLDS = [0, 50, 60, 70, 80, 90];
+
+const auctionTime = (iso: string | null): number => {
+  if (!iso) return Infinity;
+  const t = new Date(iso).getTime();
+  return isNaN(t) ? Infinity : t;
+};
 
 const niceCeil = (n: number, step: number) => Math.max(step, Math.ceil(n / step) * step);
 
@@ -81,6 +102,8 @@ export default function PropertiesClient({
   const [minArea, setMinArea] = useState(0);
   const [minDesconto, setMinDesconto] = useState(0);
   const [minInvest, setMinInvest] = useState(0);
+  const [scoreKey, setScoreKey] = useState<keyof Scores | "none">("none");
+  const [scoreMin, setScoreMin] = useState(0);
   const [financiamento, setFinanciamento] = useState(false);
   const [fgts, setFgts] = useState(false);
   const [modalidade, setModalidade] = useState("all");
@@ -170,6 +193,7 @@ export default function PropertiesClient({
       if (minArea && (p.area ?? 0) < minArea) return false;
       if (minDesconto && (p.discount ?? 0) < minDesconto) return false;
       if (minInvest && (p.scores.investment ?? 0) < minInvest) return false;
+      if (scoreKey !== "none" && scoreMin && (p.scores[scoreKey] ?? 0) < scoreMin) return false;
       if (financiamento && !p.acceptsFinancing) return false;
       if (fgts && !p.acceptsFgts) return false;
       if (term) {
@@ -183,6 +207,7 @@ export default function PropertiesClient({
       if (sort === "investimento") return (investmentScore(b) ?? 0) - (investmentScore(a) ?? 0);
       if (sort === "desconto") return (b.discount ?? 0) - (a.discount ?? 0);
       if (sort === "score") return (profileScore(b) ?? 0) - (profileScore(a) ?? 0);
+      if (sort === "leilao") return auctionTime(a.auctionDate) - auctionTime(b.auctionDate);
       if (sort === "menor") return (a.saleValue ?? Infinity) - (b.saleValue ?? Infinity);
       return (b.saleValue ?? 0) - (a.saleValue ?? 0);
     });
@@ -204,6 +229,8 @@ export default function PropertiesClient({
     minArea,
     minDesconto,
     minInvest,
+    scoreKey,
+    scoreMin,
     financiamento,
     fgts,
     modalidade,
@@ -225,6 +252,8 @@ export default function PropertiesClient({
       minArea,
       minDesconto,
       minInvest,
+      scoreKey,
+      scoreMin,
       financiamento,
       fgts,
       modalidade,
@@ -259,12 +288,14 @@ export default function PropertiesClient({
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
+  const scoreFilterActive = scoreKey !== "none" && scoreMin > 0;
   const advCount = [
     minQuartos > 0,
     priceCapped,
     minArea > 0,
     minDesconto > 0,
     minInvest > 0,
+    scoreFilterActive,
     financiamento,
     fgts,
     modalidade !== "all",
@@ -278,6 +309,8 @@ export default function PropertiesClient({
     setMinArea(0);
     setMinDesconto(0);
     setMinInvest(0);
+    setScoreKey("none");
+    setScoreMin(0);
     setFinanciamento(false);
     setFgts(false);
     setModalidade("all");
@@ -391,106 +424,156 @@ export default function PropertiesClient({
 
       {advanced && (
         <div className="advpanel">
-          <div className="afilters sliders">
-            <Slider
-              label="Quartos (mínimo)"
-              value={minQuartos}
-              min={0}
-              max={quartosBound}
-              step={1}
-              off={0}
-              format={(v) => `${v}+ quarto${v > 1 ? "s" : ""}`}
-              onChange={setMinQuartos}
-            />
-            <Slider
-              label="Preço máximo"
-              value={maxPreco}
-              min={0}
-              max={priceBound}
-              step={priceStep}
-              off={priceBound}
-              format={(v) => `até ${moneyShort(v)}`}
-              onChange={setMaxPreco}
-            />
-            <Slider
-              label="Área mínima"
-              value={minArea}
-              min={0}
-              max={areaBound}
-              step={10}
-              off={0}
-              format={(v) => `${v}+ m²`}
-              onChange={setMinArea}
-            />
-            <Slider
-              label="Desconto mínimo"
-              value={minDesconto}
-              min={0}
-              max={80}
-              step={5}
-              off={0}
-              format={(v) => `≥ ${v}%`}
-              onChange={setMinDesconto}
-            />
-            <Slider
-              label="Nota de investimento mínima"
-              value={minInvest}
-              min={0}
-              max={100}
-              step={5}
-              off={0}
-              format={(v) => `≥ ${v}`}
-              onChange={setMinInvest}
-            />
-            <div className="afield">
-              <span>Modalidade do leilão</span>
-              <select
-                className={`selectish${modalidade !== "all" ? " on" : ""}`}
-                value={modalidade}
-                onChange={(e) => setModalidade(e.target.value)}
-              >
-                <option value="all">Todas as modalidades</option>
-                {modalidades.map((m) => (
-                  <option key={m} value={m}>
-                    {m}
-                  </option>
-                ))}
-              </select>
+          <div className="afsection">
+            <div className="afsection-title">Imóvel</div>
+            <div className="afsection-grid">
+              <OptionPicker
+                label="Quartos (mínimo)"
+                value={minQuartos}
+                options={[
+                  { value: 0, label: "Qualquer" },
+                  ...Array.from({ length: quartosBound }, (_, i) => ({
+                    value: i + 1,
+                    label: `${i + 1}+`,
+                  })),
+                ]}
+                onChange={setMinQuartos}
+              />
+              <Slider
+                label="Preço máximo"
+                value={maxPreco}
+                min={0}
+                max={priceBound}
+                step={priceStep}
+                off={priceBound}
+                format={(v) => `até ${moneyShort(v)}`}
+                onChange={setMaxPreco}
+              />
+              <Slider
+                label="Área mínima"
+                value={minArea}
+                min={0}
+                max={areaBound}
+                step={10}
+                off={0}
+                format={(v) => `${v}+ m²`}
+                onChange={setMinArea}
+              />
             </div>
-            <div className="afield">
-              <span>Data do leilão</span>
-              <select
-                className={`selectish${prazoLeilao > 0 ? " on" : ""}`}
-                value={prazoLeilao}
-                onChange={(e) => setPrazoLeilao(Number(e.target.value))}
-              >
-                <option value={0}>Qualquer data</option>
-                {PRAZOS.map((pr) => (
-                  <option key={pr.days} value={pr.days}>
-                    {pr.label}
-                  </option>
-                ))}
-              </select>
+          </div>
+
+          <div className="afsection">
+            <div className="afsection-title">Retorno e notas</div>
+            <div className="afsection-grid">
+              <Slider
+                label="Desconto mínimo"
+                value={minDesconto}
+                min={0}
+                max={80}
+                step={5}
+                off={0}
+                format={(v) => `≥ ${v}%`}
+                onChange={setMinDesconto}
+              />
+              <Slider
+                label="Nota de investimento mínima"
+                value={minInvest}
+                min={0}
+                max={100}
+                step={5}
+                off={0}
+                format={(v) => `≥ ${v}`}
+                onChange={setMinInvest}
+              />
+              <div className="afgroup">
+                <div className="afield">
+                  <span>Filtrar por nota do objetivo</span>
+                  <select
+                    className={`selectish${scoreKey !== "none" ? " on" : ""}`}
+                    value={scoreKey}
+                    onChange={(e) => {
+                      const v = e.target.value as keyof Scores | "none";
+                      setScoreKey(v);
+                      if (v !== "none" && scoreMin === 0) setScoreMin(70);
+                      if (v === "none") setScoreMin(0);
+                    }}
+                  >
+                    <option value="none">Escolha um objetivo…</option>
+                    {SCORE_KEYS.map((k) => (
+                      <option key={k} value={k}>
+                        {SCORE_LABEL[k]}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                {scoreKey !== "none" && (
+                  <OptionPicker
+                    label={`Nota mínima · ${SCORE_LABEL[scoreKey]}`}
+                    value={scoreMin}
+                    options={SCORE_THRESHOLDS.map((t) => ({
+                      value: t,
+                      label: t === 0 ? "Qualquer" : `≥ ${t}`,
+                    }))}
+                    onChange={setScoreMin}
+                  />
+                )}
+              </div>
             </div>
-            <div className="afield">
-              <span>Pagamento</span>
-              <div className="checkgroup">
-                <label className={`checkitem${financiamento ? " on" : ""}`}>
-                  <input
-                    type="checkbox"
-                    checked={financiamento}
-                    onChange={(e) => setFinanciamento(e.target.checked)}
-                  />
-                  Aceita financiamento
-                </label>
-                <label className={`checkitem${fgts ? " on" : ""}`}>
-                  <input
-                    type="checkbox"
-                    checked={fgts}
-                    onChange={(e) => setFgts(e.target.checked)}
-                  />
-                  Aceita FGTS
-                </label>
+          </div>
+
+          <div className="afsection">
+            <div className="afsection-title">Leilão e pagamento</div>
+            <div className="afsection-grid">
+              <div className="afield">
+                <span>Modalidade do leilão</span>
+                <select
+                  className={`selectish${modalidade !== "all" ? " on" : ""}`}
+                  value={modalidade}
+                  onChange={(e) => setModalidade(e.target.value)}
+                >
+                  <option value="all">Todas as modalidades</option>
+                  {modalidades.map((m) => (
+                    <option key={m} value={m}>
+                      {m}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="afield">
+                <span>Data do leilão</span>
+                <select
+                  className={`selectish${prazoLeilao > 0 ? " on" : ""}`}
+                  value={prazoLeilao}
+                  onChange={(e) => setPrazoLeilao(Number(e.target.value))}
+                >
+                  <option value={0}>Qualquer data</option>
+                  {PRAZOS.map((pr) => (
+                    <option key={pr.days} value={pr.days}>
+                      {pr.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="afield">
+                <span>Pagamento</span>
+                <div className="checkgroup">
+                  <label className={`checkitem${financiamento ? " on" : ""}`}>
+                    <input
+                      type="checkbox"
+                      checked={financiamento}
+                      onChange={(e) => setFinanciamento(e.target.checked)}
+                    />
+                    Aceita financiamento
+                  </label>
+                  <label className={`checkitem${fgts ? " on" : ""}`}>
+                    <input
+                      type="checkbox"
+                      checked={fgts}
+                      onChange={(e) => setFgts(e.target.checked)}
+                    />
+                    Aceita FGTS
+                  </label>
+                </div>
               </div>
             </div>
           </div>
@@ -533,7 +616,13 @@ export default function PropertiesClient({
       </div>
 
       {view === "map" ? (
-        <PropertiesMap properties={items} />
+        items.length ? (
+          <PropertiesMap properties={items} />
+        ) : (
+          <EmptyState icon={<IconBuilding />} title="Nenhum imóvel para mostrar no mapa">
+            Tente remover um filtro ou limpar a busca para ver imóveis no mapa.
+          </EmptyState>
+        )
       ) : view === "analysis" ? (
         <PropertiesAnalysis items={items} />
       ) : view === "calendar" ? (

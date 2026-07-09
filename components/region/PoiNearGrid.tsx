@@ -1,5 +1,6 @@
 import { fmtDist } from "@/lib/format";
 import { POI_ICON } from "@/lib/icons";
+import { MAX_NEAR_M } from "@/lib/pois";
 import type { Region } from "@/lib/types";
 
 const POIS: { cat: string; label: string }[] = [
@@ -16,12 +17,14 @@ export default function PoiNearGrid({ region }: { region: Region }) {
     <div className="poigrid">
       {POIS.map(({ cat, label }) => {
         const Icon = POI_ICON[cat];
+        const d = region.nearest[cat];
+        const dist = d == null ? "—" : d <= MAX_NEAR_M ? fmtDist(d) : `+${MAX_NEAR_M / 1000} km`;
         return (
           <div className="poi" key={cat}>
             <div className="pic">{Icon && <Icon />}</div>
             <div>
               <div className="lab">{label}</div>
-              <div className="dist">{fmtDist(region.nearest[cat])}</div>
+              <div className="dist">{dist}</div>
             </div>
           </div>
         );

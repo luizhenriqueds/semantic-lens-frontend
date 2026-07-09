@@ -44,6 +44,27 @@ function poiIconHtml(cat: string): string {
   return `<span class="poimk" style="background:${catColor(cat)}">${inner}</span>`;
 }
 
+const HomePinCount = ({ n }: { n: number }) => (
+  <svg viewBox="0 0 40 42" width="40" height="42" fill="none">
+    <path
+      d="M16 41s14-15.2 14-25A14 14 0 1 0 2 16c0 9.8 14 25 14 25Z"
+      fill="var(--primary)"
+      stroke="var(--surface)"
+      strokeWidth="2.5"
+      strokeLinejoin="round"
+    />
+    <circle cx="16" cy="15.5" r="8.6" fill="var(--surface)" />
+    <g stroke="var(--primary)" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M11.4 16.4 16 12.2l4.6 4.2" />
+      <path d="M12.6 15.6v4.2h6.8v-4.2" />
+    </g>
+    <circle cx="30" cy="9" r="8.5" fill="var(--warn)" stroke="var(--surface)" strokeWidth="2" />
+    <text x="30" y="12.7" textAnchor="middle" fontSize="11" fontWeight="700" fill="#fff">
+      {n > 9 ? "9+" : n}
+    </text>
+  </svg>
+);
+
 export const homeIcon = () =>
   L.divIcon({
     className: "lmk-pin",
@@ -51,6 +72,15 @@ export const homeIcon = () =>
     iconSize: [32, 42],
     iconAnchor: [16, 41],
     popupAnchor: [0, -38],
+  });
+
+export const homeIconCount = (n: number) =>
+  L.divIcon({
+    className: "lmk-pin",
+    html: renderToStaticMarkup(<HomePinCount n={n} />),
+    iconSize: [40, 42],
+    iconAnchor: [16, 41],
+    popupAnchor: [2, -38],
   });
 
 export const poiIcon = (cat: string) =>

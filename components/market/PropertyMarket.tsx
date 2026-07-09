@@ -2,9 +2,14 @@ import { fmtDay, money, moneyShort } from "@/lib/format";
 import { hasReliableMarket, moneyM2 } from "@/lib/market";
 import type { MarketStats } from "@/lib/types";
 
-type Mark = { key: string; label: string; value: number; kind: "you" | "market" | "est" };
+type Mark = {
+  key: string;
+  label: string;
+  value: number;
+  kind: "you" | "appraised" | "market" | "est";
+};
 
-const KIND_ORDER: Record<Mark["kind"], number> = { you: 0, market: 1, est: 2 };
+const KIND_ORDER: Record<Mark["kind"], number> = { you: 0, appraised: 1, market: 2, est: 3 };
 
 // A horizontal number line that plots this property's bid against the market
 // median and estimated value. The dots sit on the track for the visual
@@ -97,6 +102,8 @@ export default function PropertyMarket({
 
   const marks: Mark[] = [];
   if (lance != null) marks.push({ key: "you", label: "Este imóvel", value: lance, kind: "you" });
+  if (appraised != null)
+    marks.push({ key: "appr", label: "Valor de avaliação", value: appraised, kind: "appraised" });
   if (med != null)
     marks.push({ key: "med", label: "Mediana do bairro", value: med, kind: "market" });
   if (estValue != null)

@@ -72,7 +72,7 @@ export default async function RegionPage({ params }: { params: Promise<{ h3: str
         </div>
         <div className="rh-main">
           <div className="sub">
-            {region.city} · {region.numProps} imóveis analisados
+            {region.city} · {here.length} {here.length === 1 ? "imóvel" : "imóveis"} em leilão
           </div>
           <h2>{region.name}</h2>
         </div>
@@ -87,7 +87,7 @@ export default async function RegionPage({ params }: { params: Promise<{ h3: str
           </div>
           {here.length > 0 && (
             <Link className="btn solid" href={`/properties?h3=${region.h3}`}>
-              Ver {here.length} imóvel{here.length > 1 ? "is" : ""} em leilão aqui
+              Ver {here.length} {here.length > 1 ? "imóveis" : "imóvel"} em leilão aqui
             </Link>
           )}
         </div>
