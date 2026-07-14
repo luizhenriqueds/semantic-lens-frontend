@@ -11,20 +11,58 @@ export const POI_LABEL: Record<string, string> = {
   school: "Escola",
   bank: "Banco",
   pharmacy: "Farmácia",
+  fuel: "Posto de combustível",
+  fast_food: "Fast-food",
+  clinic: "Clínica",
+  police: "Polícia",
+  kindergarten: "Creche",
+  bar: "Bar",
+  bus_station: "Estação de ônibus",
+  cafe: "Café",
+  market_place: "Feira",
+  dentist: "Dentista",
+  doctors: "Médico",
+  atm: "Caixa eletrônico",
+  veterinary: "Veterinário",
+  fire_station: "Bombeiros",
+  driving_school: "Autoescola",
+  language_school: "Escola de idiomas",
+  cinema: "Cinema",
+  car_rental: "Locadora de veículos",
+  food_court: "Praça de alimentação",
 };
 
 // Order used for legends / listings — everyday essentials first.
 export const POI_ORDER = [
   "supermarket",
-  "school",
-  "university",
-  "hospital",
+  "market_place",
+  "fuel",
   "pharmacy",
+  "school",
+  "kindergarten",
+  "university",
+  "language_school",
+  "driving_school",
+  "hospital",
+  "clinic",
+  "doctors",
+  "dentist",
+  "veterinary",
   "park",
   "restaurant",
+  "fast_food",
+  "food_court",
+  "cafe",
+  "bar",
   "shopping_center",
+  "cinema",
   "bank",
+  "atm",
+  "bus_station",
+  "car_rental",
   "hotel",
+  "police",
+  "fire_station",
 ];
 
 export function haversine(lat1: number, lon1: number, lat2: number, lon2: number): number {
@@ -38,11 +76,14 @@ export function haversine(lat1: number, lon1: number, lat2: number, lon2: number
   return 2 * R * Math.asin(Math.sqrt(a));
 }
 
+// Max distance for a POI to still count as "nearby" (fallback cap + grid cutoff).
+export const MAX_NEAR_M = 5000;
+
 // Returns POIs within `radius` metres of a point, sorted nearest-first and
 // capped at `limit`. Also guarantees the single nearest POI of each category is
 // kept even if it sits just beyond the radius (up to `fallbackRadius`), so the
 // map/legend always has context for amenities that exist in the wider area
-// without dragging in far-flung outliers hundreds of km away.
+// without dragging in far-flung outliers many kilometres away.
 export function nearbyPois(
   pois: Poi[],
   lat: number,
@@ -50,7 +91,7 @@ export function nearbyPois(
   {
     radius = 2500,
     limit = 60,
-    fallbackRadius = 15000,
+    fallbackRadius = MAX_NEAR_M,
   }: { radius?: number; limit?: number; fallbackRadius?: number } = {},
 ): NearbyPoi[] {
   const withDist = pois

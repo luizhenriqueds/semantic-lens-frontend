@@ -38,30 +38,34 @@ export default async function HomePage() {
         </div>
       </div>
 
-      <div className="sectitle">
-        <h2>Coleções recomendadas para você</h2>
-        <Link href="/groups">Ver todas →</Link>
-      </div>
-      <p
-        style={{
-          margin: "-8px 0 16px",
-          color: "var(--ink-soft)",
-          fontSize: "14.5px",
-          maxWidth: "64ch",
-        }}
-      >
-        Grupos de imóveis parecidos, reunidos para combinar com cada objetivo de investimento. Abra
-        uma coleção para ver os imóveis dentro dela.
-      </p>
-      <div className="plgrid">
-        {clusters.slice(0, 3).map((c) => (
-          <CollectionCard
-            key={c.clusterId}
-            c={c}
-            stats={clusterStats(activeProperties, c.clusterId)}
-          />
-        ))}
-      </div>
+      {clusters.length > 0 && (
+        <>
+          <div className="sectitle">
+            <h2>Coleções recomendadas para você</h2>
+            <Link href="/groups">Ver todas →</Link>
+          </div>
+          <p
+            style={{
+              margin: "-8px 0 16px",
+              color: "var(--ink-soft)",
+              fontSize: "14.5px",
+              maxWidth: "64ch",
+            }}
+          >
+            Grupos de imóveis parecidos, reunidos para combinar com cada objetivo de investimento.
+            Abra uma coleção para ver os imóveis dentro dela.
+          </p>
+          <div className="plgrid">
+            {clusters.slice(0, 3).map((c) => (
+              <CollectionCard
+                key={c.clusterId}
+                c={c}
+                stats={clusterStats(activeProperties, c.clusterId)}
+              />
+            ))}
+          </div>
+        </>
+      )}
     </section>
   );
 }

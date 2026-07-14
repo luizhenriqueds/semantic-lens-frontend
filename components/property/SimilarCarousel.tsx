@@ -3,7 +3,8 @@
 import { useRef } from "react";
 import Link from "next/link";
 import PropertyPhoto from "@/components/property/PropertyPhoto";
-import { money } from "@/lib/format";
+import Ring from "@/components/ui/Ring";
+import { investmentScore, money } from "@/lib/format";
 import type { Property } from "@/lib/types";
 import { IconBack } from "@/lib/icons";
 
@@ -45,23 +46,33 @@ export default function SimilarCarousel({
       </div>
 
       <div className="rectrack" ref={trackRef}>
-        {items.map(({ p, match }) => (
-          <Link className="reccard" href={`/property/${p.id}`} key={p.id}>
-            <div className="recphoto">
-              <PropertyPhoto src={p.image} alt={`Foto do imóvel: ${p.title}`} sizes="220px" />
-              <span className="recmatch">{match}% parecido</span>
-              {p.inactive && <span className="statuspill">Inativo</span>}
-            </div>
-            <div className="recbody">
-              <div className="rectype">{p.propertyType}</div>
-              <div className="rectitle">{p.title}</div>
-              <div className="recloc">
-                {p.neighborhood} · {p.city}/{p.uf}
+        {items.map(({ p, match }) => {
+          const nota = investmentScore(p);
+          return (
+            <Link className="reccard" href={`/property/${p.id}`} key={p.id}>
+              <div className="recphoto">
+                <PropertyPhoto src={p.image} alt={`Foto do imóvel: ${p.title}`} sizes="220px" />
+                <span className="recmatch">{match}% parecido</span>
+                {p.inactive && <span className="statuspill">Inativo</span>}
               </div>
-              <div className="recprice">{money(p.saleValue)}</div>
-            </div>
-          </Link>
-        ))}
+              <div className="recbody">
+                <div className="rectype">{p.propertyType}</div>
+                <div className="rectitle">{p.title}</div>
+                <div className="recloc">
+                  {p.neighborhood} · {p.city}/{p.uf}
+                </div>
+                <div className="recfoot">
+                  <div className="recprice">{money(p.saleValue)}</div>
+                  {nota != null && (
+                    <div className="recscore" title={`Nota de investimento: ${Math.round(nota)}`}>
+                      <Ring value={nota} size={38} />
+                    </div>
+                  )}
+                </div>
+              </div>
+            </Link>
+          );
+        })}
       </div>
     </section>
   );

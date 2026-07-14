@@ -25,7 +25,6 @@ export type Property = {
   title: string;
   description: string | null;
   image: string | null;
-  deed: string | null;
   appraisedValue: number | null;
   saleValue: number | null;
   discount: number | null;
@@ -44,19 +43,32 @@ export type Property = {
   lat: number | null;
   lon: number | null;
   visualScore: number | null;
-  visualDetails: VisualDetails | null;
+  visualNote: string | null;
+  visualAge: VisualAge | null;
   priceRank: number | null;
   sizeRank: number | null;
+  centerProximity: number | null;
+  // Distance in metres to the nearest POI of each category (from property_poi,
+  // capped at the batch pipeline's ~5 km radius). Empty when no POIs are linked.
+  nearestPoi: Record<string, number>;
 };
 
-export type VisualDetails = {
-  note: string | null;
-  facade: number | null;
-  standard: number | null;
-  condition: number | null;
-  surroundings: number | null;
-  needsRenovation: boolean;
-  isPropertyPhoto: boolean;
+export type VisualAge = "novo" | "intermediario" | "antigo";
+
+export type ScoreImpact = "ajuda" | "neutro" | "pesa";
+
+export type ScoreTerm = {
+  feature: string;
+  label: string;
+  detail: string | null;
+  impact: ScoreImpact | null;
+  weight: number | null;
+  contribution: number | null;
+};
+
+export type ScoreExplain = {
+  summary: string | null;
+  terms: ScoreTerm[];
 };
 
 export type AlertFilters = {
@@ -67,6 +79,11 @@ export type AlertFilters = {
   propertyType?: string;
   minDiscount?: number;
   maxPrice?: number;
+  minBedrooms?: number;
+  minArea?: number;
+  poiCats?: string[];
+  poiRadius?: number;
+  maxCenter?: number;
 };
 
 export type MarketStats = {

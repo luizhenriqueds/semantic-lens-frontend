@@ -1,24 +1,4 @@
-export default function SearchSkeleton({ scope }: { scope: "imoveis" | "matriculas" }) {
-  if (scope === "matriculas") {
-    return (
-      <>
-        <div className="searchloading">
-          <span className="spinner" aria-hidden="true" />
-          Analisando as matrículas como documentos jurídicos…
-        </div>
-        <div className="deedlist">
-          {Array.from({ length: 4 }).map((_, i) => (
-            <div className="skdeed" key={i}>
-              <div className="skline w45" />
-              <div className="skpill" />
-              <div className="skline w70" />
-            </div>
-          ))}
-        </div>
-      </>
-    );
-  }
-
+export default function SearchSkeleton() {
   return (
     <>
       <div className="searchloading">

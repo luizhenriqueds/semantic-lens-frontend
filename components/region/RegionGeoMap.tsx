@@ -1,10 +1,11 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import { fmtDist, money } from "@/lib/format";
-import { catColor, homeIcon, poiIcon } from "@/lib/mapMarkers";
+import { groupByAddress } from "@/lib/geo";
+import { catColor, homeIcon, homeIconCount, poiIcon } from "@/lib/mapMarkers";
 import { POI_ICON } from "@/lib/icons";
 import { POI_LABEL, POI_ORDER } from "@/lib/pois";
 import type { NearbyPoi, Property } from "@/lib/types";
@@ -22,6 +23,8 @@ export default function RegionGeoMap({
 }) {
   const elRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<L.Map | null>(null);
+  const boundsRef = useRef<L.LatLngBounds | null>(null);
+  const [expanded, setExpanded] = useState(false);
   const heat = variant === "heat";
 
   useEffect(() => {
@@ -38,14 +41,21 @@ export default function RegionGeoMap({
 
     const pts: [number, number][] = [];
 
-    for (const p of properties) {
-      if (p.lat == null || p.lon == null) continue;
-      pts.push([p.lat, p.lon]);
-      L.marker([p.lat, p.lon], { icon: homeIcon() })
+    for (const group of groupByAddress(properties)) {
+      const [lat, lon] = [group[0].lat!, group[0].lon!];
+      pts.push([lat, lon]);
+      const popup =
+        group.length === 1
+          ? `<b>${group[0].title}</b><br>${group[0].neighborhood}<br><span class="pm-price">${money(group[0].saleValue)}</span><br><a href="/property/${group[0].id}">Ver imóvel ›</a>`
+          : `<b>${group.length} imóveis neste endereço</b><br><span class="pm-sub">${group[0].neighborhood}</span>${group
+              .map(
+                (p) =>
+                  `<a class="pm-multi" href="/property/${p.id}"><span>${p.title}</span><span class="pm-price">${money(p.saleValue)}</span></a>`,
+              )
+              .join("")}`;
+      L.marker([lat, lon], { icon: group.length > 1 ? homeIconCount(group.length) : homeIcon() })
         .addTo(map)
-        .bindPopup(
-          `<b>${p.title}</b><br>${p.neighborhood}<br><span class="pm-price">${money(p.saleValue)}</span><br><a href="/property/${p.id}">Ver imóvel ›</a>`,
-        );
+        .bindPopup(popup);
     }
 
     if (!heat) {
@@ -61,7 +71,8 @@ export default function RegionGeoMap({
 
     map.invalidateSize();
     if (pts.length) {
-      map.fitBounds(L.latLngBounds(pts), { padding: [28, 28], maxZoom: 15, animate: false });
+      boundsRef.current = L.latLngBounds(pts);
+      map.fitBounds(boundsRef.current, { padding: [28, 28], maxZoom: 15, animate: false });
     }
 
     return () => {
@@ -70,10 +81,66 @@ export default function RegionGeoMap({
     };
   }, [center, properties, pois, heat]);
 
+  // Resize/refit and toggle scroll-zoom when entering or leaving fullscreen.
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map) return;
+    map.scrollWheelZoom[expanded ? "enable" : "disable"]();
+    const id = setTimeout(() => {
+      map.invalidateSize();
+      if (boundsRef.current) {
+        map.fitBounds(boundsRef.current, { padding: [40, 40], maxZoom: 15, animate: false });
+      }
+    }, 60);
+    return () => clearTimeout(id);
+  }, [expanded]);
+
+  useEffect(() => {
+    if (!expanded) return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    const onKey = (e: KeyboardEvent) => e.key === "Escape" && setExpanded(false);
+    window.addEventListener("keydown", onKey);
+    return () => {
+      document.body.style.overflow = prev;
+      window.removeEventListener("keydown", onKey);
+    };
+  }, [expanded]);
+
   const legend = heat ? [] : POI_ORDER.filter((c) => pois.some((p) => p.category === c));
 
   return (
-    <div className="rgeomap-wrap">
+    <div className={`rgeomap-wrap${expanded ? " expanded" : ""}`}>
+      <button
+        type="button"
+        className="mapexpand"
+        onClick={() => setExpanded((v) => !v)}
+        aria-label={expanded ? "Fechar mapa" : "Expandir mapa"}
+      >
+        {expanded ? (
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <path d="M6 6l12 12M18 6 6 18" />
+          </svg>
+        ) : (
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <path d="M15 3h6v6M9 21H3v-6M21 3l-8 8M3 21l8-8" />
+          </svg>
+        )}
+      </button>
       <div ref={elRef} className="lmap rgeomap" />
       {!heat && legend.length > 0 && (
         <div className="poimap-legend">

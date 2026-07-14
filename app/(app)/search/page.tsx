@@ -1,53 +1,44 @@
 import { Suspense } from "react";
-import Link from "next/link";
 import SearchHero from "@/components/search/SearchHero";
 import SearchResults from "./_components/SearchResults";
+import SearchAlertButton from "./_components/SearchAlertButton";
 import SearchSkeleton from "./_components/SearchSkeleton";
-import { isDeedQuery } from "@/lib/facets";
 
 export const dynamic = "force-dynamic";
 
 export default async function SearchPage({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string; scope?: string }>;
+  searchParams: Promise<{ q?: string }>;
 }) {
   const sp = await searchParams;
   const query = (sp.q ?? "").trim();
-  const scope = sp.scope === "matriculas" ? "matriculas" : "imoveis";
-  const showTabs = !!query && (scope === "matriculas" || isDeedQuery(query));
 
   return (
     <section className="view">
-      <div className="pagehead">
-        <h1>Buscar imóveis</h1>
-        <p>
-          Escreva o que procura com suas palavras. A busca semântica entende o objetivo e ordena os
-          resultados pelos que mais combinam.
-        </p>
+      <div
+        className="pagehead"
+        style={{
+          display: "flex",
+          alignItems: "flex-start",
+          justifyContent: "space-between",
+          gap: 16,
+        }}
+      >
+        <div>
+          <h1>Buscar imóveis</h1>
+          <p>
+            Escreva o que procura com suas palavras. A busca semântica entende o objetivo e ordena
+            os resultados pelos que mais combinam.
+          </p>
+        </div>
+        <SearchAlertButton query={query} />
       </div>
 
-      <SearchHero label="" sub="" initial={query} scope={scope} showExamples={false} />
+      <SearchHero label="" sub="" initial={query} showExamples={false} />
 
-      {showTabs && (
-        <div className="scopetabs">
-          <Link
-            className={scope === "imoveis" ? "on" : ""}
-            href={`/search?q=${encodeURIComponent(query)}`}
-          >
-            Imóveis
-          </Link>
-          <Link
-            className={scope === "matriculas" ? "on" : ""}
-            href={`/search?q=${encodeURIComponent(query)}&scope=matriculas`}
-          >
-            Matrículas
-          </Link>
-        </div>
-      )}
-
-      <Suspense key={`${scope}:${query}`} fallback={<SearchSkeleton scope={scope} />}>
-        <SearchResults query={query} scope={scope} />
+      <Suspense key={query} fallback={<SearchSkeleton />}>
+        <SearchResults query={query} />
       </Suspense>
     </section>
   );

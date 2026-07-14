@@ -6,7 +6,7 @@ import PoiNearGrid from "@/components/region/PoiNearGrid";
 import RegionMapTabs from "@/components/region/RegionMapTabs";
 import RegionScoreBars from "@/components/region/RegionScoreBars";
 import RegionMarket from "@/components/market/RegionMarket";
-import { getMarketStats, getPois, getProperties, getRegion, getRegions } from "@/lib/data";
+import { getMarketStats, getPoisNear, getProperties, getRegion, getRegions } from "@/lib/data";
 import { hasReliableMarket, statsForRegion } from "@/lib/market";
 import { nearbyPois } from "@/lib/pois";
 import { IconBack, IconPin } from "@/lib/icons";
@@ -36,11 +36,10 @@ export async function generateStaticParams() {
 
 export default async function RegionPage({ params }: { params: Promise<{ h3: string }> }) {
   const { h3 } = await params;
-  const [region, all, marketStats, pois] = await Promise.all([
+  const [region, all, marketStats] = await Promise.all([
     getRegion(h3),
     getProperties(),
     getMarketStats(),
-    getPois(),
   ]);
   if (!region) notFound();
 
@@ -57,7 +56,10 @@ export default async function RegionPage({ params }: { params: Promise<{ h3: str
         }
       : null;
   const nearby = center
-    ? nearbyPois(pois, center.lat, center.lon, { radius: 3000, limit: 80 })
+    ? nearbyPois(await getPoisNear(center.lat, center.lon, 5000), center.lat, center.lon, {
+        radius: 3000,
+        limit: 80,
+      })
     : [];
 
   return (
@@ -72,7 +74,7 @@ export default async function RegionPage({ params }: { params: Promise<{ h3: str
         </div>
         <div className="rh-main">
           <div className="sub">
-            {region.city} · {region.numProps} imóveis analisados
+            {region.city} · {here.length} {here.length === 1 ? "imóvel" : "imóveis"} em leilão
           </div>
           <h2>{region.name}</h2>
         </div>
@@ -87,7 +89,7 @@ export default async function RegionPage({ params }: { params: Promise<{ h3: str
           </div>
           {here.length > 0 && (
             <Link className="btn solid" href={`/properties?h3=${region.h3}`}>
-              Ver {here.length} imóvel{here.length > 1 ? "is" : ""} em leilão aqui
+              Ver {here.length} {here.length > 1 ? "imóveis" : "imóvel"} em leilão aqui
             </Link>
           )}
         </div>

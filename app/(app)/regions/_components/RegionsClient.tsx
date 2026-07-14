@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useMemo, useState } from "react";
+import EmptyState from "@/components/ui/EmptyState";
 import { IconBuilding, IconGroups, IconHouse, IconPin, IconStar } from "@/lib/icons";
 import { regionTags } from "@/lib/region";
 import type { Region } from "@/lib/types";
@@ -150,6 +151,15 @@ export default function RegionsClient({ regions }: { regions: Region[] }) {
     },
   ];
 
+  if (regions.length === 0) {
+    return (
+      <EmptyState icon={<IconPin />} title="Nenhuma região disponível">
+        Ainda não há regiões com perfil calculado. Assim que os dados de mapa forem processados, as
+        regiões aparecerão aqui.
+      </EmptyState>
+    );
+  }
+
   return (
     <>
       <div className="rstats">
@@ -220,41 +230,50 @@ export default function RegionsClient({ regions }: { regions: Region[] }) {
               .join(" + ")}
           </p>
         )}
-        <div className="rtable">
-          <div className="rthead">
-            <span>Região</span>
-            <span>Perfil predominante</span>
-            <span className={`num${isSorted("commercial") ? " sorted" : ""}`}>Comercial</span>
-            <span className={`num${isSorted("convenience") ? " sorted" : ""}`}>Conveniência</span>
-            <span className={`num${isSorted("airbnb") ? " sorted" : ""}`}>Temporada</span>
-            <span className={`num${isSorted("numProps") ? " sorted" : ""}`}>Imóveis</span>
+        {rows.length === 0 ? (
+          <EmptyState icon={<IconBuilding />} title="Nenhuma região com imóveis em leilão">
+            Nenhuma das regiões acompanhadas tem imóveis em leilão no momento. Elas voltam ao
+            ranking assim que novos imóveis forem detectados.
+          </EmptyState>
+        ) : (
+          <div className="rtable">
+            <div className="rthead">
+              <span>Região</span>
+              <span>Perfil predominante</span>
+              <span className={`num${isSorted("commercial") ? " sorted" : ""}`}>Comercial</span>
+              <span className={`num${isSorted("convenience") ? " sorted" : ""}`}>Conveniência</span>
+              <span className={`num${isSorted("airbnb") ? " sorted" : ""}`}>Temporada</span>
+              <span className={`num${isSorted("numProps") ? " sorted" : ""}`}>Imóveis</span>
+            </div>
+            {rows.map((r) => (
+              <Link className="rtrow" href={`/regions/${r.h3}`} key={r.h3}>
+                <div className="rg">
+                  <b>{r.name}</b>
+                  <span>{r.city}</span>
+                </div>
+                <div className="rtags">
+                  {regionTags(r).map((t) => (
+                    <span className="t" key={t}>
+                      {t}
+                    </span>
+                  ))}
+                </div>
+                <div className={`num hidem${isSorted("commercial") ? " sorted" : ""}`}>
+                  {Math.round(r.scores.commercial ?? 0)}
+                </div>
+                <div className={`num hidem${isSorted("convenience") ? " sorted" : ""}`}>
+                  {Math.round(r.scores.convenience ?? 0)}
+                </div>
+                <div className={`num hidem${isSorted("airbnb") ? " sorted" : ""}`}>
+                  {Math.round(r.scores.airbnb ?? 0)}
+                </div>
+                <div className={`num dim${isSorted("numProps") ? " sorted" : ""}`}>
+                  {r.numProps}
+                </div>
+              </Link>
+            ))}
           </div>
-          {rows.map((r) => (
-            <Link className="rtrow" href={`/regions/${r.h3}`} key={r.h3}>
-              <div className="rg">
-                <b>{r.name}</b>
-                <span>{r.city}</span>
-              </div>
-              <div className="rtags">
-                {regionTags(r).map((t) => (
-                  <span className="t" key={t}>
-                    {t}
-                  </span>
-                ))}
-              </div>
-              <div className={`num hidem${isSorted("commercial") ? " sorted" : ""}`}>
-                {Math.round(r.scores.commercial ?? 0)}
-              </div>
-              <div className={`num hidem${isSorted("convenience") ? " sorted" : ""}`}>
-                {Math.round(r.scores.convenience ?? 0)}
-              </div>
-              <div className={`num hidem${isSorted("airbnb") ? " sorted" : ""}`}>
-                {Math.round(r.scores.airbnb ?? 0)}
-              </div>
-              <div className={`num dim${isSorted("numProps") ? " sorted" : ""}`}>{r.numProps}</div>
-            </Link>
-          ))}
-        </div>
+        )}
       </div>
 
       <div className="sectitle" style={{ marginTop: 22 }}>
@@ -269,7 +288,10 @@ export default function RegionsClient({ regions }: { regions: Region[] }) {
                   <it.Icon />
                   <span>{it.label}</span>
                 </div>
-                <div className="nm">{it.region.name}</div>
+                <div className="nm">
+                  {it.region.name}
+                  <span className="nm-city"> · {it.region.city}</span>
+                </div>
                 <div className="mv">
                   nota média <b>{Math.round(it.region.scores[it.field] ?? 0)}</b>
                 </div>

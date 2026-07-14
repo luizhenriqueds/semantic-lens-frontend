@@ -1,4 +1,20 @@
-import type { ProfileKey, Property, Scores } from "@/lib/types";
+import type { ProfileKey, Property, Scores, VisualAge } from "@/lib/types";
+import type { GoalKey } from "@/lib/facets";
+
+export const GOAL_PROFILE: Record<GoalKey, ProfileKey> = {
+  airbnb: "airbnb",
+  student: "student",
+  family: "family",
+  flip: "flip",
+  commercial: "commercial",
+  liquidity: "high_liquidity",
+};
+
+export const VISUAL_AGE_LABEL: Record<VisualAge, string> = {
+  novo: "Novo",
+  intermediario: "Intermediário",
+  antigo: "Antigo",
+};
 
 export const PROFILE_LABEL: Record<ProfileKey, string> = {
   airbnb: "Aluguel por temporada",
@@ -74,6 +90,16 @@ export function investmentScore(p: Property): number | null {
 
 export function scoreForProfile(p: Property, profile: ProfileKey): number | null {
   return p.scores[SCORE_FIELD[profile]];
+}
+
+// Ranks the investment goals this property fits best, highest score first.
+// Used to surface the top few "melhor para" pills on cards.
+export function topGoals(p: Property, n = 2): { key: ProfileKey; score: number }[] {
+  return (Object.keys(SCORE_FIELD) as ProfileKey[])
+    .map((key) => ({ key, score: p.scores[SCORE_FIELD[key]] }))
+    .filter((g): g is { key: ProfileKey; score: number } => g.score != null)
+    .sort((a, b) => b.score - a.score)
+    .slice(0, n);
 }
 
 export function isFirstAuction(modalidade: string | null | undefined): boolean {
