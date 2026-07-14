@@ -15,6 +15,8 @@ import type {
   Property,
   Recommendation,
   Region,
+  ScoreExplain,
+  ScoreTerm,
 } from "@/lib/types";
 
 const CLUSTER_RUN = "property-v1";
@@ -50,6 +52,31 @@ function rows<T>(name: string, res: QueryResult<T>): T[] {
   return res.data ?? [];
 }
 
+// Pages past PostgREST's 1000-row cap. `build` must apply a stable `.order(...)`.
+async function fetchAllRows<T>(
+  name: string,
+  build: (from: number, to: number) => PromiseLike<QueryResult<T>>,
+): Promise<T[]> {
+  const PAGE = 1000;
+  const out: T[] = [];
+  for (let from = 0; ; from += PAGE) {
+    const res = await withRetry(() => build(from, from + PAGE - 1));
+    const batch = rows<T>(name, res);
+    out.push(...batch);
+    if (batch.length < PAGE) break;
+  }
+  return out;
+}
+
+// property_id -> { category: nearest distance in metres }, aggregated in Postgres.
+async function loadNearestPoi(): Promise<Map<string, Record<string, number>>> {
+  const list = await fetchAllRows<{ property_id: string; nearest: Record<string, number> | null }>(
+    "property_nearest_poi",
+    (from, to) => supabase.rpc("property_nearest_poi").order("property_id").range(from, to),
+  );
+  return new Map(list.map((r) => [r.property_id, r.nearest ?? {}]));
+}
+
 function pickImage(p: {
   image_source_url?: string | null;
   image_path?: string | null;
@@ -60,65 +87,74 @@ function pickImage(p: {
 }
 
 async function loadProperties(): Promise<Property[]> {
-  const [propsRes, listingsRes, scoresRes, profilesRes, pclRes, clustersRes] = await Promise.all([
-    withRetry(() =>
-      supabase
-        .from("properties")
-        .select(
-          "property_id,property_type,uf,city,neighborhood,area_m2,bedrooms,parking_spots,year_built,occupancy_status,canonical_description,h3_r8,image_path,image_source_url,lat,lon,is_active,visual_score,visual_note,visual_age,price_rank,size_rank",
-        ),
-    ),
-    withRetry(() =>
-      supabase
-        .from("listings")
-        .select(
-          "property_id,appraised_value,sale_value,discount,modality,auction_date,link,snapshot_date,accepts_financing,accepts_fgts",
-        ),
-    ),
-    withRetry(() =>
-      supabase
-        .from("property_scores")
-        .select(
-          "property_id,flip,liquidity,airbnb,student,family,commercial,convenience,investment",
-        )
-        .eq("score_version", 1),
-    ),
-    withRetry(() =>
-      supabase
-        .from("property_profiles")
-        .select("property_id,profile,score,is_primary")
-        .eq("is_primary", true),
-    ),
-    withRetry(() =>
-      supabase
-        .from("property_clusters")
-        .select("property_id,cluster_id")
-        .eq("cluster_run_id", CLUSTER_RUN),
-    ),
-    withRetry(() =>
-      supabase
-        .from("clusters")
-        .select("cluster_id,label,profile")
-        .eq("cluster_run_id", CLUSTER_RUN),
-    ),
-  ]);
+  const [props, listingRows, scoreRows, profileRows, pclRows, clusterRows, nearestPoiMap] =
+    await Promise.all([
+      fetchAllRows<any>("properties", (f, t) =>
+        supabase
+          .from("properties")
+          .select(
+            "property_id,property_type,uf,city,neighborhood,area_m2,bedrooms,parking_spots,year_built,occupancy_status,canonical_description,h3_r8,image_path,image_source_url,lat,lon,is_active,visual_score,visual_note,visual_age,price_rank,size_rank,center_proximity_m",
+          )
+          .order("property_id")
+          .range(f, t),
+      ),
+      fetchAllRows<any>("listings", (f, t) =>
+        supabase
+          .from("listings")
+          .select(
+            "property_id,appraised_value,sale_value,discount,modality,auction_date,link,snapshot_date,accepts_financing,accepts_fgts",
+          )
+          .order("id")
+          .range(f, t),
+      ),
+      fetchAllRows<any>("property_scores", (f, t) =>
+        supabase
+          .from("property_scores")
+          .select(
+            "property_id,flip,liquidity,airbnb,student,family,commercial,convenience,investment",
+          )
+          .eq("score_version", 1)
+          .order("property_id")
+          .range(f, t),
+      ),
+      fetchAllRows<any>("property_profiles", (f, t) =>
+        supabase
+          .from("property_profiles")
+          .select("property_id,profile,score,is_primary")
+          .eq("is_primary", true)
+          .order("property_id")
+          .range(f, t),
+      ),
+      fetchAllRows<any>("property_clusters", (f, t) =>
+        supabase
+          .from("property_clusters")
+          .select("property_id,cluster_id")
+          .eq("cluster_run_id", CLUSTER_RUN)
+          .order("property_id")
+          .range(f, t),
+      ),
+      fetchAllRows<any>("clusters", (f, t) =>
+        supabase
+          .from("clusters")
+          .select("cluster_id,label,profile")
+          .eq("cluster_run_id", CLUSTER_RUN)
+          .order("cluster_id")
+          .range(f, t),
+      ),
+      loadNearestPoi(),
+    ]);
 
-  const props = rows("properties", propsRes);
   const listingMap = new Map<string, any>();
-  for (const l of rows<any>("listings", listingsRes)) {
+  for (const l of listingRows) {
     const cur = listingMap.get(l.property_id);
     if (!cur || (l.snapshot_date ?? "") > (cur.snapshot_date ?? "")) {
       listingMap.set(l.property_id, l);
     }
   }
-  const scoreMap = new Map(rows<any>("property_scores", scoresRes).map((s) => [s.property_id, s]));
-  const profileMap = new Map(
-    rows<any>("property_profiles", profilesRes).map((p) => [p.property_id, p]),
-  );
-  const pclMap = new Map(
-    rows<any>("property_clusters", pclRes).map((c) => [c.property_id, c.cluster_id]),
-  );
-  const clusterMap = new Map(rows<any>("clusters", clustersRes).map((c) => [c.cluster_id, c]));
+  const scoreMap = new Map(scoreRows.map((s) => [s.property_id, s]));
+  const profileMap = new Map(profileRows.map((p) => [p.property_id, p]));
+  const pclMap = new Map(pclRows.map((c) => [c.property_id, c.cluster_id]));
+  const clusterMap = new Map(clusterRows.map((c) => [c.cluster_id, c]));
 
   return (props as any[]).map((p): Property => {
     const l = listingMap.get(p.property_id);
@@ -174,36 +210,58 @@ async function loadProperties(): Promise<Property[]> {
         : null) as Property["visualAge"],
       priceRank: num(p.price_rank),
       sizeRank: num(p.size_rank),
+      centerProximity: num(p.center_proximity_m),
+      nearestPoi: nearestPoiMap.get(p.property_id) ?? {},
     };
   });
 }
 
-async function loadPois(): Promise<Poi[]> {
-  // ~3k rows for the whole coverage area — paginated past PostgREST's 1000-row
-  // cap so every POI is available for distance filtering.
-  const PAGE = 1000;
+// The pois table is large (~236k rows), so it is never loaded whole — callers
+// fetch only the POIs they need by id, by bounding box, or by name.
+const POI_FIELDS = "id,category,name,lat,lon";
+const mapPoi = (r: any): Poi => ({
+  id: r.id,
+  category: r.category ?? "",
+  name: r.name || null,
+  lat: Number(r.lat),
+  lon: Number(r.lon),
+});
+
+async function loadPoisByIds(ids: number[]): Promise<Poi[]> {
   const out: Poi[] = [];
-  for (let from = 0; ; from += PAGE) {
+  for (let i = 0; i < ids.length; i += 500) {
     const res = await withRetry(() =>
       supabase
         .from("pois")
-        .select("id,category,name,lat,lon")
-        .not("lat", "is", null)
-        .not("lon", "is", null)
-        .order("id", { ascending: true })
-        .range(from, from + PAGE - 1),
+        .select(POI_FIELDS)
+        .in("id", ids.slice(i, i + 500)),
     );
-    const batch = rows<any>("pois", res).map((r) => ({
-      id: r.id,
-      category: r.category ?? "",
-      name: r.name || null,
-      lat: Number(r.lat),
-      lon: Number(r.lon),
-    }));
-    out.push(...batch);
-    if (batch.length < PAGE) break;
+    out.push(...rows<any>("pois-by-id", res).map(mapPoi));
   }
   return out;
+}
+
+async function loadPoisNear(lat: number, lon: number, radiusM: number): Promise<Poi[]> {
+  const dLat = radiusM / 111_320;
+  const dLon = radiusM / (111_320 * Math.cos((lat * Math.PI) / 180) || 1);
+  const res = await withRetry(() =>
+    supabase
+      .from("pois")
+      .select(POI_FIELDS)
+      .gte("lat", lat - dLat)
+      .lte("lat", lat + dLat)
+      .gte("lon", lon - dLon)
+      .lte("lon", lon + dLon)
+      .limit(3000),
+  );
+  return rows<any>("pois-near", res).map(mapPoi);
+}
+
+export function getPoisNear(lat: number, lon: number, radiusM: number): Promise<Poi[]> {
+  const key = `${lat.toFixed(3)},${lon.toFixed(3)},${radiusM}`;
+  return unstable_cache(() => loadPoisNear(lat, lon, radiusM), ["pois-near", key], {
+    revalidate: REVALIDATE,
+  })();
 }
 
 async function loadMarketHistory(addressKey: string): Promise<MarketHistoryPoint[]> {
@@ -352,9 +410,6 @@ export const getRegions = unstable_cache(loadRegions, ["regions"], {
 export const getMarketStats = unstable_cache(loadMarketStats, ["market-stats"], {
   revalidate: REVALIDATE,
 });
-export const getPois = unstable_cache(loadPois, ["pois"], {
-  revalidate: REVALIDATE,
-});
 export function getMarketHistory(addressKey: string): Promise<MarketHistoryPoint[]> {
   return unstable_cache(() => loadMarketHistory(addressKey), ["market-history", addressKey], {
     revalidate: REVALIDATE,
@@ -364,6 +419,50 @@ export function getMarketHistory(addressKey: string): Promise<MarketHistoryPoint
 export async function getProperty(id: string): Promise<Property | null> {
   const all = await getProperties();
   return all.find((p) => p.id === id) ?? null;
+}
+
+// The `components` JSONB is heavy, so it is fetched per-property rather than
+// joined into the bulk `loadProperties` result.
+async function loadScoreExplain(id: string): Promise<ScoreExplain | null> {
+  const res = await withRetry(() =>
+    supabase
+      .from("property_scores")
+      .select("components")
+      .eq("property_id", id)
+      .eq("score_version", 1)
+      .limit(1),
+  );
+  const inv = rows<any>("property-score-explain", res)[0]?.components?.investment;
+  if (!Array.isArray(inv)) return null;
+
+  const IMPACTS = ["ajuda", "neutro", "pesa"];
+  const dashless = (s: string) => s.replace(/[—–]/g, "-");
+  let summary: string | null = null;
+  const terms: ScoreTerm[] = [];
+  for (const c of inv) {
+    if (!c || c.available === false) continue;
+    if (c.feature === "resumo") {
+      summary = c.text ? dashless(c.text) : null;
+    } else if (c.label && IMPACTS.includes(c.impact)) {
+      terms.push({
+        feature: String(c.feature ?? ""),
+        label: String(c.label),
+        detail: c.detail ? dashless(c.detail) : null,
+        impact: c.impact,
+        weight: num(c.weight),
+        contribution: num(c.contribution),
+      });
+    }
+  }
+  if (!summary && !terms.length) return null;
+  terms.sort((a, b) => (b.contribution ?? 0) - (a.contribution ?? 0));
+  return { summary, terms };
+}
+
+export function getScoreExplain(id: string): Promise<ScoreExplain | null> {
+  return unstable_cache(() => loadScoreExplain(id), ["property-score-explain", id], {
+    revalidate: REVALIDATE,
+  })();
 }
 
 async function loadPriceHistory(id: string): Promise<PriceHistoryPoint[]> {
@@ -432,12 +531,13 @@ export function getRecommendations(id: string): Promise<Recommendation[]> {
 // Precomputed nearest POIs for a property (property_poi.dist_m), resolved to the
 // full POI record and sorted nearest-first.
 async function loadPropertyPois(id: string): Promise<NearbyPoi[]> {
-  const [res, pois] = await Promise.all([
-    withRetry(() => supabase.from("property_poi").select("poi_id,dist_m").eq("property_id", id)),
-    getPois(),
-  ]);
+  const res = await withRetry(() =>
+    supabase.from("property_poi").select("poi_id,dist_m").eq("property_id", id),
+  );
+  const links = rows<any>("property_poi", res);
+  const pois = await loadPoisByIds(links.map((r) => Number(r.poi_id)));
   const poiById = new Map(pois.map((p) => [p.id, p]));
-  return rows<any>("property_poi", res)
+  return links
     .map((r) => {
       const poi = poiById.get(Number(r.poi_id));
       return poi ? { ...poi, distance: Number(r.dist_m) } : null;
@@ -547,9 +647,9 @@ function goalRerank(pool: PoolRow[], props: Property[], goal: GoalKey): SearchHi
     .slice(0, 20);
 }
 
-// Acronyms whose POIs are stored spelled out (a substring match on "ufms" misses
-// "Universidade Federal de Mato Grosso do Sul"). A name matches if it contains
-// every token of any one set.
+// Acronyms whose POIs are stored spelled out (a name match on "ufms" misses
+// "Universidade Federal de Mato Grosso do Sul"). Each entry expands to token
+// sets; a name matches if it contains every token of a set.
 const POI_ALIASES: Record<string, string[][]> = {
   ufms: [["universidade federal", "mato grosso do sul"]],
   ufgd: [["universidade federal", "grande dourados"]],
@@ -559,24 +659,30 @@ const POI_ALIASES: Record<string, string[][]> = {
   uniderp: [["uniderp"]],
 };
 
-function poiNameMatches(poiName: string, query: string): boolean {
-  const n = normalize(poiName);
-  if (n.includes(query)) return true;
-  const alias = POI_ALIASES[query];
-  return alias ? alias.some((set) => set.every((tok) => n.includes(tok))) : false;
-}
-
-// All POIs whose name matches (with acronym aliases), narrowed by category (soft).
-// Names like "UFMS" repeat across cities, so callers pick among these.
-function resolvePoiCandidates(pois: Poi[], q: PoiQuery): Poi[] {
+// POIs whose name matches the query (with acronym aliases), narrowed by category
+// (soft). Queried by name so the 236k-row table is never loaded into memory.
+async function searchPoisByName(q: PoiQuery): Promise<Poi[]> {
   const name = normalize(q.name);
-  const named = pois.filter((p) => p.name && poiNameMatches(p.name, name));
-  if (!named.length) return [];
+  const seen = new Map<number, Poi>();
+  const run = async (build: () => PromiseLike<QueryResult<any>>) => {
+    for (const p of rows<any>("pois-search", await withRetry(build)).map(mapPoi)) seen.set(p.id, p);
+  };
+
+  await run(() => supabase.from("pois").select(POI_FIELDS).ilike("name", `%${name}%`).limit(200));
+  for (const set of POI_ALIASES[name] ?? []) {
+    await run(() => {
+      let b = supabase.from("pois").select(POI_FIELDS).not("name", "is", null).limit(200);
+      for (const tok of set) b = b.ilike("name", `%${tok}%`);
+      return b;
+    });
+  }
+
+  const cands = [...seen.values()];
   if (q.category) {
-    const byCat = named.filter((p) => p.category === q.category);
+    const byCat = cands.filter((p) => p.category === q.category);
     if (byCat.length) return byCat;
   }
-  return named;
+  return cands;
 }
 
 const POI_NEAR_M = 5000;
@@ -700,9 +806,8 @@ async function runHybridSearch(query: string): Promise<SearchResult> {
       if (!pool.length) return ok([]);
 
       if (facets.poi) {
-        const pois = await getPois();
-        const candIds = resolvePoiCandidates(pois, facets.poi).map((p) => p.id);
-        const near = poiRerank(pool, await nearestByPoi(candIds));
+        const cands = await searchPoisByName(facets.poi);
+        const near = poiRerank(pool, await nearestByPoi(cands.map((p) => p.id)));
         if (near.length) return ok(near);
         return {
           hits: await semanticRank(pool, facets.normalized, !!facets.type),

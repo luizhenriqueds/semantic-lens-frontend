@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import Pagination from "@/components/ui/Pagination";
 import PropertyCard from "@/components/property/PropertyCard";
 import { investmentScore, profileScore } from "@/lib/format";
-import type { Property } from "@/lib/types";
+import type { ProfileKey, Property } from "@/lib/types";
 
 const PAGE_SIZE = 25;
 
@@ -19,7 +19,17 @@ const SORTS: { key: Sort; label: string }[] = [
   { key: "maior", label: "Maior preço" },
 ];
 
-export default function PagedCards({ items, resetKey }: { items: Property[]; resetKey?: string }) {
+export default function PagedCards({
+  items,
+  resetKey,
+  highlightGoal,
+  heading,
+}: {
+  items: Property[];
+  resetKey?: string;
+  highlightGoal?: ProfileKey | null;
+  heading?: string;
+}) {
   const [page, setPage] = useState(1);
   const [sort, setSort] = useState<Sort>("relevancia");
   useEffect(() => setPage(1), [resetKey, sort]);
@@ -41,7 +51,8 @@ export default function PagedCards({ items, resetKey }: { items: Property[]; res
 
   return (
     <>
-      <div className="viewbar" style={{ justifyContent: "flex-end" }}>
+      <div className="viewbar">
+        {heading && <h2 className="resultcount">{heading}</h2>}
         <select
           className="selectish"
           value={sort}
@@ -56,7 +67,7 @@ export default function PagedCards({ items, resetKey }: { items: Property[]; res
       </div>
       <div className="pgrid">
         {pageItems.map((p) => (
-          <PropertyCard key={p.id} p={p} />
+          <PropertyCard key={p.id} p={p} highlightGoal={highlightGoal} />
         ))}
       </div>
       <Pagination

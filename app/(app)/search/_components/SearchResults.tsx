@@ -1,13 +1,16 @@
 import Link from "next/link";
 import PagedCards from "./PagedCards";
-import SearchAlertButton from "./SearchAlertButton";
 import EmptyState from "@/components/ui/EmptyState";
 import { getProperties, hybridSearch } from "@/lib/data";
+import { goalFromQuery } from "@/lib/facets";
+import { GOAL_PROFILE } from "@/lib/format";
 import { IconSearch } from "@/lib/icons";
 import type { Property } from "@/lib/types";
 
 export default async function SearchResults({ query }: { query: string }) {
   const all = await getProperties();
+  const goal = query ? goalFromQuery(query) : null;
+  const highlightGoal = goal ? GOAL_PROFILE[goal] : null;
 
   let items: Property[] = [];
   let failed = false;
@@ -28,19 +31,15 @@ export default async function SearchResults({ query }: { query: string }) {
     items = all.filter((p) => !p.inactive).sort((a, b) => (b.discount ?? 0) - (a.discount ?? 0));
   }
 
+  const heading =
+    query && !failed
+      ? fallbackNote
+        ? `${items.length} ${items.length === 1 ? "resultado aproximado" : "resultados aproximados"}`
+        : `${items.length} ${items.length === 1 ? "imóvel encontrado" : "imóveis encontrados"}`
+      : undefined;
+
   return (
     <>
-      {query && !failed && (
-        <div className="sectitle">
-          <h2>
-            {fallbackNote
-              ? `${items.length} ${items.length === 1 ? "resultado aproximado" : "resultados aproximados"}`
-              : `${items.length} ${items.length === 1 ? "imóvel encontrado" : "imóveis encontrados"}`}
-          </h2>
-          <SearchAlertButton query={query} />
-        </div>
-      )}
-
       {fallbackNote && (
         <div className="searchnote">
           <IconSearch width={17} height={17} strokeWidth={1.8} />
@@ -53,7 +52,12 @@ export default async function SearchResults({ query }: { query: string }) {
           Não foi possível processar a busca agora. Tente novamente em instantes.
         </EmptyState>
       ) : items.length ? (
-        <PagedCards items={items} resetKey={query} />
+        <PagedCards
+          items={items}
+          resetKey={query}
+          highlightGoal={highlightGoal}
+          heading={heading}
+        />
       ) : query ? (
         <EmptyState
           icon={<IconSearch />}

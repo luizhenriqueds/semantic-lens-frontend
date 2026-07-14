@@ -47,9 +47,29 @@ export type Property = {
   visualAge: VisualAge | null;
   priceRank: number | null;
   sizeRank: number | null;
+  centerProximity: number | null;
+  // Distance in metres to the nearest POI of each category (from property_poi,
+  // capped at the batch pipeline's ~5 km radius). Empty when no POIs are linked.
+  nearestPoi: Record<string, number>;
 };
 
 export type VisualAge = "novo" | "intermediario" | "antigo";
+
+export type ScoreImpact = "ajuda" | "neutro" | "pesa";
+
+export type ScoreTerm = {
+  feature: string;
+  label: string;
+  detail: string | null;
+  impact: ScoreImpact | null;
+  weight: number | null;
+  contribution: number | null;
+};
+
+export type ScoreExplain = {
+  summary: string | null;
+  terms: ScoreTerm[];
+};
 
 export type AlertFilters = {
   scoreKey?: keyof Scores;
@@ -59,6 +79,11 @@ export type AlertFilters = {
   propertyType?: string;
   minDiscount?: number;
   maxPrice?: number;
+  minBedrooms?: number;
+  minArea?: number;
+  poiCats?: string[];
+  poiRadius?: number;
+  maxCenter?: number;
 };
 
 export type MarketStats = {

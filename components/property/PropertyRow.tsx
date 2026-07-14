@@ -2,21 +2,37 @@ import Link from "next/link";
 import type { Property } from "@/lib/types";
 import {
   fmtDate,
+  fmtDist,
   investmentScore,
   money,
   PROFILE_LABEL,
   profileScore,
   showDiscount,
 } from "@/lib/format";
+import { POI_ICON } from "@/lib/icons";
+import { POI_LABEL } from "@/lib/pois";
 import PropertyPhoto from "@/components/property/PropertyPhoto";
 import FavoriteButton from "@/components/property/FavoriteButton";
 import Ring from "@/components/ui/Ring";
 
-export default function PropertyRow({ p }: { p: Property }) {
+export default function PropertyRow({
+  p,
+  poiCats,
+  poiRadius,
+}: {
+  p: Property;
+  poiCats?: string[];
+  poiRadius?: number;
+}) {
   const quartos = p.bedrooms ?? 0;
   const vagas = p.parkingSpots ?? 0;
   const data = fmtDate(p.auctionDate);
   const nota = investmentScore(p);
+  const poiChips = (poiCats ?? [])
+    .map((c) => ({ c, d: p.nearestPoi[c] }))
+    .filter(
+      (x): x is { c: string; d: number } => x.d != null && (poiRadius == null || x.d <= poiRadius),
+    );
   return (
     <div className="wcard">
       <Link className="wcardlink" href={`/property/${p.id}`} aria-label={p.title} />
@@ -49,6 +65,19 @@ export default function PropertyRow({ p }: { p: Property }) {
             </span>
           )}
         </div>
+        {poiChips.length > 0 && (
+          <div className="rowpoi">
+            {poiChips.map(({ c, d }) => {
+              const Icon = POI_ICON[c];
+              return (
+                <span className="rowpoichip" key={c}>
+                  {Icon && <Icon />}
+                  {POI_LABEL[c] ?? c} · {fmtDist(d)}
+                </span>
+              );
+            })}
+          </div>
+        )}
       </div>
       <div>
         <div className="colk">Preço no leilão</div>

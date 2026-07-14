@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import { fmtDist } from "@/lib/format";
@@ -28,6 +28,8 @@ export default function PropertyPoiMap({
 }) {
   const elRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<L.Map | null>(null);
+  const boundsRef = useRef<L.LatLngBounds | null>(null);
+  const [expanded, setExpanded] = useState(false);
 
   useEffect(() => {
     if (!elRef.current || mapRef.current) return;
@@ -51,7 +53,8 @@ export default function PropertyPoiMap({
     }
     map.invalidateSize();
     if (pts.length > 1) {
-      map.fitBounds(L.latLngBounds(pts), { padding: [30, 30], maxZoom: 15, animate: false });
+      boundsRef.current = L.latLngBounds(pts);
+      map.fitBounds(boundsRef.current, { padding: [30, 30], maxZoom: 15, animate: false });
     }
 
     return () => {
@@ -60,10 +63,65 @@ export default function PropertyPoiMap({
     };
   }, [lat, lon, title, pois]);
 
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map) return;
+    map.scrollWheelZoom[expanded ? "enable" : "disable"]();
+    const id = setTimeout(() => {
+      map.invalidateSize();
+      if (boundsRef.current) {
+        map.fitBounds(boundsRef.current, { padding: [40, 40], maxZoom: 15, animate: false });
+      }
+    }, 60);
+    return () => clearTimeout(id);
+  }, [expanded]);
+
+  useEffect(() => {
+    if (!expanded) return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    const onKey = (e: KeyboardEvent) => e.key === "Escape" && setExpanded(false);
+    window.addEventListener("keydown", onKey);
+    return () => {
+      document.body.style.overflow = prev;
+      window.removeEventListener("keydown", onKey);
+    };
+  }, [expanded]);
+
   const legend = POI_ORDER.filter((cat) => pois.some((p) => p.category === cat));
 
   return (
-    <div className="poimap-wrap">
+    <div className={`poimap-wrap${expanded ? " expanded" : ""}`}>
+      <button
+        type="button"
+        className="mapexpand"
+        onClick={() => setExpanded((v) => !v)}
+        aria-label={expanded ? "Fechar mapa" : "Expandir mapa"}
+      >
+        {expanded ? (
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <path d="M6 6l12 12M18 6 6 18" />
+          </svg>
+        ) : (
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <path d="M15 3h6v6M9 21H3v-6M21 3l-8 8M3 21l8-8" />
+          </svg>
+        )}
+      </button>
       <div ref={elRef} className="lmap poimap" />
       <div className="poimap-legend">
         {legend.map((cat) => {

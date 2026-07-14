@@ -6,7 +6,7 @@ import PoiNearGrid from "@/components/region/PoiNearGrid";
 import RegionMapTabs from "@/components/region/RegionMapTabs";
 import RegionScoreBars from "@/components/region/RegionScoreBars";
 import RegionMarket from "@/components/market/RegionMarket";
-import { getMarketStats, getPois, getProperties, getRegion, getRegions } from "@/lib/data";
+import { getMarketStats, getPoisNear, getProperties, getRegion, getRegions } from "@/lib/data";
 import { hasReliableMarket, statsForRegion } from "@/lib/market";
 import { nearbyPois } from "@/lib/pois";
 import { IconBack, IconPin } from "@/lib/icons";
@@ -36,11 +36,10 @@ export async function generateStaticParams() {
 
 export default async function RegionPage({ params }: { params: Promise<{ h3: string }> }) {
   const { h3 } = await params;
-  const [region, all, marketStats, pois] = await Promise.all([
+  const [region, all, marketStats] = await Promise.all([
     getRegion(h3),
     getProperties(),
     getMarketStats(),
-    getPois(),
   ]);
   if (!region) notFound();
 
@@ -57,7 +56,10 @@ export default async function RegionPage({ params }: { params: Promise<{ h3: str
         }
       : null;
   const nearby = center
-    ? nearbyPois(pois, center.lat, center.lon, { radius: 3000, limit: 80 })
+    ? nearbyPois(await getPoisNear(center.lat, center.lon, 5000), center.lat, center.lon, {
+        radius: 3000,
+        limit: 80,
+      })
     : [];
 
   return (

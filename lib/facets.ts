@@ -96,6 +96,10 @@ export type Facets = {
   poi: PoiQuery | null;
 };
 
+export function goalFromQuery(query: string): GoalKey | null {
+  return findGoal(normalize(query).split(" ").filter(Boolean));
+}
+
 function findGoal(tokens: string[]): GoalKey | null {
   for (const [kws, goal] of GOAL_KEYWORDS) {
     for (const kw of kws) {

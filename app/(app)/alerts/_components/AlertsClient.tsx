@@ -44,6 +44,9 @@ export default function AlertsClient({ properties }: { properties: Property[] })
   const [tipo, setTipo] = useState("");
   const [minDesconto, setMinDesconto] = useState("");
   const [maxPreco, setMaxPreco] = useState("");
+  // Advanced filters carried through from the properties page — no controls here,
+  // but preserved on edit rather than dropped.
+  const [extra, setExtra] = useState<Partial<AlertFilters>>({});
 
   const ufs = useMemo(
     () => Array.from(new Set(properties.map((p) => p.uf).filter(Boolean))).sort(),
@@ -62,7 +65,7 @@ export default function AlertsClient({ properties }: { properties: Property[] })
   );
 
   const draft = useMemo<AlertFilters>(() => {
-    const f: AlertFilters = {};
+    const f: AlertFilters = { ...extra };
     if (scoreKey) f.scoreKey = scoreKey as keyof Scores;
     if (minScore) f.minScore = Number(minScore);
     if (uf) f.uf = uf;
@@ -71,7 +74,7 @@ export default function AlertsClient({ properties }: { properties: Property[] })
     if (minDesconto) f.minDiscount = Number(minDesconto);
     if (maxPreco) f.maxPrice = Number(maxPreco);
     return f;
-  }, [scoreKey, minScore, uf, cidade, tipo, minDesconto, maxPreco]);
+  }, [extra, scoreKey, minScore, uf, cidade, tipo, minDesconto, maxPreco]);
 
   const draftCount = useMemo(() => countMatches(properties, draft), [properties, draft]);
 
@@ -84,6 +87,7 @@ export default function AlertsClient({ properties }: { properties: Property[] })
     setTipo("");
     setMinDesconto("");
     setMaxPreco("");
+    setExtra({});
     setCreating(false);
     setEditingId(null);
     setMode("filtros");
@@ -104,6 +108,13 @@ export default function AlertsClient({ properties }: { properties: Property[] })
       setTipo(f.propertyType ?? "");
       setMinDesconto(f.minDiscount != null ? String(f.minDiscount) : "");
       setMaxPreco(f.maxPrice != null ? String(f.maxPrice) : "");
+      setExtra({
+        minBedrooms: f.minBedrooms,
+        minArea: f.minArea,
+        poiCats: f.poiCats,
+        poiRadius: f.poiRadius,
+        maxCenter: f.maxCenter,
+      });
     } else {
       setMode("descricao");
       setNome(a.name);

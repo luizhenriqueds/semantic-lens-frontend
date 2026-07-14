@@ -288,7 +288,10 @@ export default function RegionsClient({ regions }: { regions: Region[] }) {
                   <it.Icon />
                   <span>{it.label}</span>
                 </div>
-                <div className="nm">{it.region.name}</div>
+                <div className="nm">
+                  {it.region.name}
+                  <span className="nm-city"> · {it.region.city}</span>
+                </div>
                 <div className="mv">
                   nota média <b>{Math.round(it.region.scores[it.field] ?? 0)}</b>
                 </div>

@@ -1,9 +1,63 @@
 import { showDiscount } from "@/lib/format";
-import type { Property } from "@/lib/types";
+import type { Property, ScoreExplain } from "@/lib/types";
 
 type Factor = { label: string; value: number | null; hint: string };
 
-export default function ScoreBreakdown({ p }: { p: Property }) {
+function fmtPts(n: number): string {
+  const s = Math.abs(n).toLocaleString("pt-BR", { maximumFractionDigits: 1 });
+  return `${n < 0 ? "−" : "+"}${s} pts`;
+}
+
+function ExplainBreakdown({ explain }: { explain: ScoreExplain }) {
+  const { terms } = explain;
+  const maxContrib = Math.max(1, ...terms.map((t) => t.contribution ?? 0));
+  const lines = explain.summary?.split(/\s+(?=O que pesa contra:)/) ?? [];
+
+  return (
+    <details className="scorebreak">
+      <summary>Como calculamos a nota de investimento</summary>
+      {lines.length > 0 && (
+        <div className="sb-explain">
+          {lines.map((line, i) => (
+            <p key={i}>{line}</p>
+          ))}
+        </div>
+      )}
+      {terms.length > 0 && (
+        <div className="sb-factors">
+          {terms.map((t) => (
+            <div className={`sb-factor imp-${t.impact ?? "neutro"}`} key={t.feature || t.label}>
+              <div className="sb-f-top">
+                <span className="sb-f-label">{t.label}</span>
+                {t.contribution != null && (
+                  <span className="sb-f-val">{fmtPts(t.contribution)}</span>
+                )}
+              </div>
+              <div className="sb-f-track">
+                <i
+                  style={{ width: `${Math.round(((t.contribution ?? 0) / maxContrib) * 100)}%` }}
+                />
+              </div>
+              {t.detail && <div className="sb-f-hint">{t.detail}</div>}
+            </div>
+          ))}
+        </div>
+      )}
+    </details>
+  );
+}
+
+export default function ScoreBreakdown({
+  p,
+  explain,
+}: {
+  p: Property;
+  explain?: ScoreExplain | null;
+}) {
+  if (explain && (explain.summary || explain.terms.length)) {
+    return <ExplainBreakdown explain={explain} />;
+  }
+
   const factors: Factor[] = [
     {
       label: "Liquidez",

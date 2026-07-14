@@ -1,23 +1,23 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import EmptyState from "@/components/ui/EmptyState";
 import Pagination from "@/components/ui/Pagination";
 import PropertyRow from "@/components/property/PropertyRow";
-import Slider from "@/components/ui/Slider";
-import OptionPicker from "@/components/ui/OptionPicker";
 import SearchableSelect from "@/components/ui/SearchableSelect";
 import AuctionCalendar from "./AuctionCalendar";
 import PropertiesAnalysis from "./PropertiesAnalysis";
 import { useToast } from "@/components/ui/Toaster";
-import { investmentScore, moneyShort, profileScore, SCORE_LABEL } from "@/lib/format";
+import { fmtDist, investmentScore, moneyShort, profileScore, SCORE_LABEL } from "@/lib/format";
 import { useAlerts } from "@/lib/alerts";
 import { useSaved } from "@/lib/saved";
 import { describeFilters, hasAnyFilter, matchesFilters } from "@/lib/alertFilters";
 import type { AlertFilters, Cluster, Property, Scores } from "@/lib/types";
-import { IconArrow, IconBell, IconBuilding, IconSearch } from "@/lib/icons";
+import { IconArrow, IconBell, IconBuilding, IconSearch, IconSliders, POI_ICON } from "@/lib/icons";
+import { POI_LABEL, POI_ORDER } from "@/lib/pois";
 
 const PropertiesMap = dynamic(() => import("@/components/property/PropertiesMap"), {
   ssr: false,
@@ -39,8 +39,8 @@ const SORTS: { key: Sort; label: string }[] = [
   { key: "maior", label: "Maior preço" },
 ];
 
-// Score dimensions offered by the "filter by score" control (investment has its
-// own slider, so it is excluded here).
+// Score dimensions offered by the "filter by goal" control (investment has its
+// own control, so it is excluded here).
 const SCORE_KEYS: (keyof Scores)[] = [
   "flip",
   "liquidity",
@@ -50,22 +50,16 @@ const SCORE_KEYS: (keyof Scores)[] = [
   "commercial",
   "convenience",
 ];
-const SCORE_THRESHOLDS = [0, 50, 60, 70, 80, 90];
 
-const auctionTime = (iso: string | null): number => {
-  if (!iso) return Infinity;
-  const t = new Date(iso).getTime();
-  return isNaN(t) ? Infinity : t;
-};
-
-const niceCeil = (n: number, step: number) => Math.max(step, Math.ceil(n / step) * step);
-
-const percentile = (values: number[], p: number) => {
-  if (!values.length) return 0;
-  const sorted = [...values].sort((a, b) => a - b);
-  const i = Math.min(sorted.length - 1, Math.floor((sorted.length - 1) * p));
-  return sorted[i];
-};
+const PRICE_STEPS = [150_000, 300_000, 500_000, 750_000, 1_000_000];
+const AREA_STEPS = [50, 100, 150, 200, 300];
+const QUARTOS_STEPS = [1, 2, 3, 4];
+const DESCONTO_STEPS = [10, 20, 30, 40, 50];
+const INVEST_STEPS = [50, 60, 70, 80, 90];
+const GOAL_STEPS = [50, 60, 70, 80, 90];
+const POI_RADII = [500, 1000, 2000, 5000];
+const CENTER_STEPS = [1000, 2000, 5000, 10_000];
+const POI_VISIBLE = 12;
 
 const PRAZOS: { days: number; label: string }[] = [
   { days: 7, label: "Próximos 7 dias" },
@@ -73,6 +67,55 @@ const PRAZOS: { days: number; label: string }[] = [
   { days: 30, label: "Próximos 30 dias" },
   { days: 60, label: "Próximos 60 dias" },
 ];
+
+const auctionTime = (iso: string | null): number => {
+  if (!iso) return Infinity;
+  const t = new Date(iso).getTime();
+  return isNaN(t) ? Infinity : t;
+};
+
+const nImoveis = (n: number) => `${n} ${n === 1 ? "imóvel" : "imóveis"}`;
+
+function Chip({
+  active,
+  onClick,
+  children,
+}: {
+  active: boolean;
+  onClick: () => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <button type="button" className={`fchip${active ? " on" : ""}`} onClick={onClick}>
+      {children}
+    </button>
+  );
+}
+
+function Section({
+  title,
+  count,
+  open,
+  onToggle,
+  children,
+}: {
+  title: string;
+  count: number;
+  open: boolean;
+  onToggle: () => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className={`dsec${open ? " open" : ""}`}>
+      <button type="button" className="dsec-head" onClick={onToggle} aria-expanded={open}>
+        {title}
+        {count > 0 && <span className="dsec-badge">{count}</span>}
+        <span className="dsec-car">▾</span>
+      </button>
+      {open && <div className="dsec-body">{children}</div>}
+    </div>
+  );
+}
 
 export default function PropertiesClient({
   properties,
@@ -96,10 +139,16 @@ export default function PropertiesClient({
   const [cidade, setCidade] = useState(initialCity ?? "all");
   const [tipo, setTipo] = useState("all");
   const [cluster, setCluster] = useState<number | "all">(initialCluster ?? "all");
-  const [advanced, setAdvanced] = useState(false);
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const [openSecs, setOpenSecs] = useState<Set<string>>(new Set(["imovel", "poi"]));
   const [minQuartos, setMinQuartos] = useState(0);
-  const [maxPreco, setMaxPreco] = useState(0);
+  const [maxPreco, setMaxPreco] = useState(0); // 0 = sem limite
+  const [precoInput, setPrecoInput] = useState("");
   const [minArea, setMinArea] = useState(0);
+  const [poiCats, setPoiCats] = useState<string[]>([]);
+  const [poiRadius, setPoiRadius] = useState(2000);
+  const [poiExpanded, setPoiExpanded] = useState(false);
+  const [maxCenter, setMaxCenter] = useState(0);
   const [minDesconto, setMinDesconto] = useState(0);
   const [minInvest, setMinInvest] = useState(0);
   const [scoreKey, setScoreKey] = useState<keyof Scores | "none">("none");
@@ -112,29 +161,48 @@ export default function PropertiesClient({
   const [page, setPage] = useState(1);
   const [view, setView] = useState<View>(initialView);
   const [calDayOpen, setCalDayOpen] = useState(false);
+  const [mounted, setMounted] = useState(false);
+  const [restored, setRestored] = useState(false);
+  const stateKey = useRef("");
+
+  // Restore the previous search on return (e.g. "Voltar" from a property),
+  // keyed by URL query so deep-links keep separate buckets.
+  useEffect(() => {
+    setMounted(true);
+    stateKey.current = `properties:v1:${window.location.search}`;
+    try {
+      const raw = sessionStorage.getItem(stateKey.current);
+      if (raw) {
+        const s = JSON.parse(raw);
+        if (s.q != null) setQ(s.q);
+        if (s.uf != null) setUf(s.uf);
+        if (s.cidade != null) setCidade(s.cidade);
+        if (s.tipo != null) setTipo(s.tipo);
+        if (s.cluster != null) setCluster(s.cluster);
+        if (s.minQuartos != null) setMinQuartos(s.minQuartos);
+        if (s.maxPreco != null) setMaxPreco(s.maxPreco);
+        if (s.precoInput != null) setPrecoInput(s.precoInput);
+        if (s.minArea != null) setMinArea(s.minArea);
+        if (Array.isArray(s.poiCats)) setPoiCats(s.poiCats);
+        if (s.poiRadius != null) setPoiRadius(s.poiRadius);
+        if (s.maxCenter != null) setMaxCenter(s.maxCenter);
+        if (s.minDesconto != null) setMinDesconto(s.minDesconto);
+        if (s.minInvest != null) setMinInvest(s.minInvest);
+        if (s.scoreKey != null) setScoreKey(s.scoreKey);
+        if (s.scoreMin != null) setScoreMin(s.scoreMin);
+        if (s.financiamento != null) setFinanciamento(s.financiamento);
+        if (s.fgts != null) setFgts(s.fgts);
+        if (s.modalidade != null) setModalidade(s.modalidade);
+        if (s.prazoLeilao != null) setPrazoLeilao(s.prazoLeilao);
+        if (s.sort != null) setSort(s.sort);
+        if (s.view != null) setView(s.view);
+      }
+    } catch {}
+    setRestored(true);
+  }, []);
   const { alerts, add: addAlert } = useAlerts();
   const { ids: savedIds } = useSaved();
   const toast = useToast();
-
-  // Slider bounds derived from the dataset. maxPreco === priceBound means "no
-  // upper limit"; the other numeric filters use 0 as their "off" value.
-  const { priceBound, priceStep, areaBound, quartosBound } = useMemo(() => {
-    const prices = properties.map((p) => p.saleValue).filter((v): v is number => v != null);
-    const areas = properties.map((p) => p.area).filter((v): v is number => v != null);
-    const beds = properties.map((p) => p.bedrooms).filter((v): v is number => v != null);
-    const pMax = prices.length ? Math.max(...prices) : 1_000_000;
-    const pBound = niceCeil(pMax, 50_000);
-    return {
-      priceBound: pBound,
-      priceStep: pBound > 1_500_000 ? 50_000 : 10_000,
-      areaBound: areas.length ? niceCeil(percentile(areas, 0.95), 10) : 200,
-      quartosBound: Math.min(6, Math.max(4, beds.length ? Math.max(...beds) : 4)),
-    };
-  }, [properties]);
-
-  useEffect(() => {
-    if (maxPreco === 0) setMaxPreco(priceBound);
-  }, [priceBound, maxPreco]);
 
   const ufs = useMemo(
     () => Array.from(new Set(properties.map((p) => p.uf).filter(Boolean))).sort(),
@@ -158,11 +226,22 @@ export default function PropertiesClient({
       ),
     [properties],
   );
+  // POI categories that actually occur in the dataset, in the canonical order.
+  const poiCategories = useMemo(() => {
+    const present = new Set<string>();
+    for (const p of properties) for (const c of Object.keys(p.nearestPoi)) present.add(c);
+    return POI_ORDER.filter((c) => present.has(c));
+  }, [properties]);
+  // Collapsed to the top categories; selected ones beyond the cut stay visible.
+  const visiblePoiCats = useMemo(() => {
+    if (poiExpanded || poiCategories.length <= POI_VISIBLE) return poiCategories;
+    const top = poiCategories.slice(0, POI_VISIBLE);
+    const extra = poiCategories.slice(POI_VISIBLE).filter((c) => poiCats.includes(c));
+    return [...top, ...extra];
+  }, [poiExpanded, poiCategories, poiCats]);
 
   const clusterLabel =
     cluster !== "all" ? clusters.find((c) => c.clusterId === cluster)?.label : undefined;
-
-  const priceCapped = maxPreco > 0 && maxPreco < priceBound;
 
   const items = useMemo(() => {
     const term = q.trim().toLowerCase();
@@ -189,8 +268,15 @@ export default function PropertiesClient({
         if (isNaN(t) || t < startToday || t > auctionMax) return false;
       }
       if (minQuartos && (p.bedrooms ?? 0) < minQuartos) return false;
-      if (priceCapped && (p.saleValue ?? Infinity) > maxPreco) return false;
+      if (maxPreco && (p.saleValue ?? Infinity) > maxPreco) return false;
       if (minArea && (p.area ?? 0) < minArea) return false;
+      if (poiCats.length) {
+        for (const c of poiCats) {
+          const d = p.nearestPoi[c];
+          if (d == null || d > poiRadius) return false;
+        }
+      }
+      if (maxCenter && (p.centerProximity == null || p.centerProximity > maxCenter)) return false;
       if (minDesconto && (p.discount ?? 0) < minDesconto) return false;
       if (minInvest && (p.scores.investment ?? 0) < minInvest) return false;
       if (scoreKey !== "none" && scoreMin && (p.scores[scoreKey] ?? 0) < scoreMin) return false;
@@ -224,9 +310,11 @@ export default function PropertiesClient({
     sort,
     h3,
     minQuartos,
-    priceCapped,
     maxPreco,
     minArea,
+    poiCats,
+    poiRadius,
+    maxCenter,
     minDesconto,
     minInvest,
     scoreKey,
@@ -250,6 +338,9 @@ export default function PropertiesClient({
       minQuartos,
       maxPreco,
       minArea,
+      poiCats,
+      poiRadius,
+      maxCenter,
       minDesconto,
       minInvest,
       scoreKey,
@@ -260,6 +351,79 @@ export default function PropertiesClient({
       prazoLeilao,
     ],
   );
+
+  useEffect(() => {
+    if (!restored) return;
+    try {
+      sessionStorage.setItem(
+        stateKey.current,
+        JSON.stringify({
+          q,
+          uf,
+          cidade,
+          tipo,
+          cluster,
+          minQuartos,
+          maxPreco,
+          precoInput,
+          minArea,
+          poiCats,
+          poiRadius,
+          maxCenter,
+          minDesconto,
+          minInvest,
+          scoreKey,
+          scoreMin,
+          financiamento,
+          fgts,
+          modalidade,
+          prazoLeilao,
+          sort,
+          view,
+        }),
+      );
+    } catch {}
+  }, [
+    restored,
+    q,
+    uf,
+    cidade,
+    tipo,
+    cluster,
+    minQuartos,
+    maxPreco,
+    precoInput,
+    minArea,
+    poiCats,
+    poiRadius,
+    maxCenter,
+    minDesconto,
+    minInvest,
+    scoreKey,
+    scoreMin,
+    financiamento,
+    fgts,
+    modalidade,
+    prazoLeilao,
+    sort,
+    view,
+  ]);
+
+  // Lock body scroll while the drawer is open.
+  useEffect(() => {
+    if (!drawerOpen) return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    const onKey = (e: KeyboardEvent) => e.key === "Escape" && setDrawerOpen(false);
+    window.addEventListener("keydown", onKey);
+    return () => {
+      document.body.style.overflow = prev;
+      window.removeEventListener("keydown", onKey);
+    };
+  }, [drawerOpen]);
+
+  const priceCapped = maxPreco > 0;
+
   const alertFilters = useMemo<AlertFilters>(() => {
     const f: AlertFilters = {};
     if (uf !== "all") f.uf = uf;
@@ -267,9 +431,36 @@ export default function PropertiesClient({
     if (tipo !== "all") f.propertyType = tipo;
     if (minDesconto) f.minDiscount = minDesconto;
     if (priceCapped) f.maxPrice = maxPreco;
-    if (minInvest) f.minScore = minInvest; // no scoreKey → applies to Investimento
+    if (minQuartos) f.minBedrooms = minQuartos;
+    if (minArea) f.minArea = minArea;
+    if (poiCats.length) {
+      f.poiCats = poiCats;
+      f.poiRadius = poiRadius;
+    }
+    if (maxCenter) f.maxCenter = maxCenter;
+    if (scoreKey !== "none" && scoreMin) {
+      f.scoreKey = scoreKey;
+      f.minScore = scoreMin;
+    } else if (minInvest) {
+      f.minScore = minInvest; // no scoreKey → applies to Investimento
+    }
     return f;
-  }, [uf, cidade, tipo, minDesconto, priceCapped, maxPreco, minInvest]);
+  }, [
+    uf,
+    cidade,
+    tipo,
+    minDesconto,
+    priceCapped,
+    maxPreco,
+    minQuartos,
+    minArea,
+    poiCats,
+    poiRadius,
+    maxCenter,
+    scoreKey,
+    scoreMin,
+    minInvest,
+  ]);
 
   const canAlert = hasAnyFilter(alertFilters);
   const alertLabel = useMemo(() => describeFilters(alertFilters), [alertFilters]);
@@ -288,25 +479,103 @@ export default function PropertiesClient({
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
-  const scoreFilterActive = scoreKey !== "none" && scoreMin > 0;
-  const advCount = [
-    minQuartos > 0,
-    priceCapped,
-    minArea > 0,
-    minDesconto > 0,
-    minInvest > 0,
-    scoreFilterActive,
+  const toggleSec = (id: string) =>
+    setOpenSecs((prev) => {
+      const next = new Set(prev);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
+    });
+  const toggleCat = (c: string) =>
+    setPoiCats((prev) => (prev.includes(c) ? prev.filter((x) => x !== c) : [...prev, c]));
+
+  const setPreco = (v: number) => {
+    setMaxPreco(v);
+    setPrecoInput(v ? String(v) : "");
+  };
+
+  // Active advanced filters, driving the badge, the applied-chips row and the
+  // per-section counts. Each carries the action that removes it.
+  const activeFilters = useMemo(() => {
+    const f: { key: string; label: string; clear: () => void }[] = [];
+    if (maxPreco > 0)
+      f.push({ key: "preco", label: `Até ${moneyShort(maxPreco)}`, clear: () => setPreco(0) });
+    if (minQuartos > 0)
+      f.push({ key: "quartos", label: `${minQuartos}+ quartos`, clear: () => setMinQuartos(0) });
+    if (minArea > 0) f.push({ key: "area", label: `${minArea}+ m²`, clear: () => setMinArea(0) });
+    for (const c of poiCats)
+      f.push({
+        key: `poi-${c}`,
+        label: `${POI_LABEL[c] ?? c} · até ${fmtDist(poiRadius)}`,
+        clear: () => toggleCat(c),
+      });
+    if (maxCenter > 0)
+      f.push({
+        key: "center",
+        label: `Até ${fmtDist(maxCenter)} do centro`,
+        clear: () => setMaxCenter(0),
+      });
+    if (minDesconto > 0)
+      f.push({ key: "desc", label: `Desconto ≥ ${minDesconto}%`, clear: () => setMinDesconto(0) });
+    if (minInvest > 0)
+      f.push({ key: "inv", label: `Investimento ≥ ${minInvest}`, clear: () => setMinInvest(0) });
+    if (scoreKey !== "none" && scoreMin > 0)
+      f.push({
+        key: "goal",
+        label: `${SCORE_LABEL[scoreKey]} ≥ ${scoreMin}`,
+        clear: () => {
+          setScoreKey("none");
+          setScoreMin(0);
+        },
+      });
+    if (modalidade !== "all")
+      f.push({ key: "mod", label: modalidade, clear: () => setModalidade("all") });
+    if (prazoLeilao > 0)
+      f.push({
+        key: "prazo",
+        label: PRAZOS.find((p) => p.days === prazoLeilao)?.label ?? `${prazoLeilao} dias`,
+        clear: () => setPrazoLeilao(0),
+      });
+    if (financiamento)
+      f.push({ key: "fin", label: "Aceita financiamento", clear: () => setFinanciamento(false) });
+    if (fgts) f.push({ key: "fgts", label: "Aceita FGTS", clear: () => setFgts(false) });
+    return f;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    maxPreco,
+    minQuartos,
+    minArea,
+    poiCats,
+    poiRadius,
+    maxCenter,
+    minDesconto,
+    minInvest,
+    scoreKey,
+    scoreMin,
+    modalidade,
+    prazoLeilao,
     financiamento,
     fgts,
-    modalidade !== "all",
-    prazoLeilao > 0,
-  ].filter(Boolean).length;
+  ]);
+
+  const advCount = activeFilters.length;
   const advActive = advCount > 0;
+
+  const imovelCount = [minQuartos > 0, maxPreco > 0, minArea > 0].filter(Boolean).length;
+  const poiCount = poiCats.length + (maxCenter > 0 ? 1 : 0);
+  const retornoCount = [minDesconto > 0, minInvest > 0, scoreKey !== "none" && scoreMin > 0].filter(
+    Boolean,
+  ).length;
+  const leilaoCount = [modalidade !== "all", prazoLeilao > 0, financiamento, fgts].filter(
+    Boolean,
+  ).length;
 
   const clearAdvanced = () => {
     setMinQuartos(0);
-    setMaxPreco(priceBound);
+    setPreco(0);
     setMinArea(0);
+    setPoiCats([]);
+    setPoiRadius(2000);
+    setMaxCenter(0);
     setMinDesconto(0);
     setMinInvest(0);
     setScoreKey("none");
@@ -316,6 +585,16 @@ export default function PropertiesClient({
     setModalidade("all");
     setPrazoLeilao(0);
   };
+
+  const clearAll = () => {
+    setQ("");
+    setUf("all");
+    setCidade("all");
+    setTipo("all");
+    setCluster("all");
+    clearAdvanced();
+  };
+
   const filtered =
     cluster !== "all" ||
     uf !== "all" ||
@@ -325,7 +604,7 @@ export default function PropertiesClient({
     advActive;
   const title = h3Label
     ? `Imóveis em ${h3Label}`
-    : (clusterLabel ?? (filtered ? `${items.length} imóveis encontrados` : "Todos os imóveis"));
+    : (clusterLabel ?? (filtered ? `${nImoveis(items.length)} encontrados` : "Todos os imóveis"));
 
   const VIEWS: { key: View; label: string }[] = [
     { key: "list", label: "Lista" },
@@ -413,83 +692,218 @@ export default function PropertiesClient({
           onChange={(v) => setCluster(v === "all" ? "all" : Number(v))}
         />
         <button
-          className={`selectish${advanced || advActive ? " on" : ""}`}
+          className={`selectish${advActive ? " on" : ""}`}
           type="button"
-          onClick={() => setAdvanced((v) => !v)}
+          onClick={() => setDrawerOpen(true)}
         >
+          <IconSliders width={16} height={16} strokeWidth={1.8} />
           Filtros avançados{advCount > 0 && <span className="advcount">{advCount}</span>}
-          {advanced ? " ▴" : " ▾"}
         </button>
+        {filtered && (
+          <button type="button" className="clearfilters" onClick={clearAll}>
+            Limpar filtros
+          </button>
+        )}
       </div>
 
-      {advanced && (
-        <div className="advpanel">
-          <div className="afsection">
-            <div className="afsection-title">Imóvel</div>
-            <div className="afsection-grid">
-              <OptionPicker
-                label="Quartos (mínimo)"
-                value={minQuartos}
-                options={[
-                  { value: 0, label: "Qualquer" },
-                  ...Array.from({ length: quartosBound }, (_, i) => ({
-                    value: i + 1,
-                    label: `${i + 1}+`,
-                  })),
-                ]}
-                onChange={setMinQuartos}
-              />
-              <Slider
-                label="Preço máximo"
-                value={maxPreco}
-                min={0}
-                max={priceBound}
-                step={priceStep}
-                off={priceBound}
-                format={(v) => `até ${moneyShort(v)}`}
-                onChange={setMaxPreco}
-              />
-              <Slider
-                label="Área mínima"
-                value={minArea}
-                min={0}
-                max={areaBound}
-                step={10}
-                off={0}
-                format={(v) => `${v}+ m²`}
-                onChange={setMinArea}
-              />
-            </div>
-          </div>
+      {advActive && (
+        <div className="appliedchips">
+          {activeFilters.map((f) => (
+            <button key={f.key} type="button" className="appchip" onClick={f.clear}>
+              {f.label}
+              <span className="appchip-x" aria-hidden>
+                ✕
+              </span>
+            </button>
+          ))}
+          <button type="button" className="appclear" onClick={clearAdvanced}>
+            Limpar tudo
+          </button>
+        </div>
+      )}
 
-          <div className="afsection">
-            <div className="afsection-title">Retorno e notas</div>
-            <div className="afsection-grid">
-              <Slider
-                label="Desconto mínimo"
-                value={minDesconto}
-                min={0}
-                max={80}
-                step={5}
-                off={0}
-                format={(v) => `≥ ${v}%`}
-                onChange={setMinDesconto}
-              />
-              <Slider
-                label="Nota de investimento mínima"
-                value={minInvest}
-                min={0}
-                max={100}
-                step={5}
-                off={0}
-                format={(v) => `≥ ${v}`}
-                onChange={setMinInvest}
-              />
-              <div className="afgroup">
-                <div className="afield">
-                  <span>Filtrar por nota do objetivo</span>
+      {mounted &&
+        createPortal(
+          <>
+            <div
+              className={`drawerscrim${drawerOpen ? " on" : ""}`}
+              onClick={() => setDrawerOpen(false)}
+            />
+            <aside
+              className={`filterdrawer${drawerOpen ? " on" : ""}`}
+              role="dialog"
+              aria-modal="true"
+              aria-label="Filtros avançados"
+            >
+              <div className="drawerhead">
+                <h2>Filtros avançados</h2>
+                <button
+                  type="button"
+                  className="dclose"
+                  onClick={() => setDrawerOpen(false)}
+                  aria-label="Fechar"
+                >
+                  ✕
+                </button>
+              </div>
+
+              <div className="dbody">
+                <Section
+                  title="Imóvel"
+                  count={imovelCount}
+                  open={openSecs.has("imovel")}
+                  onToggle={() => toggleSec("imovel")}
+                >
+                  <div className="flabel">Quartos (mínimo)</div>
+                  <div className="fchiprow">
+                    <Chip active={!minQuartos} onClick={() => setMinQuartos(0)}>
+                      Qualquer
+                    </Chip>
+                    {QUARTOS_STEPS.map((v) => (
+                      <Chip key={v} active={minQuartos === v} onClick={() => setMinQuartos(v)}>
+                        {v}+
+                      </Chip>
+                    ))}
+                  </div>
+
+                  <div className="flabel">Preço máximo</div>
+                  <div className="fchiprow">
+                    <Chip active={!maxPreco} onClick={() => setPreco(0)}>
+                      Qualquer
+                    </Chip>
+                    {PRICE_STEPS.map((v) => (
+                      <Chip key={v} active={maxPreco === v} onClick={() => setPreco(v)}>
+                        ≤ {moneyShort(v)}
+                      </Chip>
+                    ))}
+                  </div>
+                  <div className="fcustom">
+                    <span>Outro valor:</span>
+                    <input
+                      type="number"
+                      inputMode="numeric"
+                      min={0}
+                      step={10_000}
+                      placeholder="R$"
+                      value={precoInput}
+                      onChange={(e) => {
+                        setPrecoInput(e.target.value);
+                        setMaxPreco(Math.max(0, Number(e.target.value) || 0));
+                      }}
+                    />
+                  </div>
+
+                  <div className="flabel">Área mínima</div>
+                  <div className="fchiprow">
+                    <Chip active={!minArea} onClick={() => setMinArea(0)}>
+                      Qualquer
+                    </Chip>
+                    {AREA_STEPS.map((v) => (
+                      <Chip key={v} active={minArea === v} onClick={() => setMinArea(v)}>
+                        {v}+ m²
+                      </Chip>
+                    ))}
+                  </div>
+                </Section>
+
+                <Section
+                  title="Perto de"
+                  count={poiCount}
+                  open={openSecs.has("poi")}
+                  onToggle={() => toggleSec("poi")}
+                >
+                  <div className="flabel">Pontos de interesse</div>
+                  <div className="poigrid">
+                    {visiblePoiCats.map((c) => {
+                      const Icon = POI_ICON[c];
+                      return (
+                        <button
+                          key={c}
+                          type="button"
+                          className={`poicat${poiCats.includes(c) ? " on" : ""}`}
+                          onClick={() => toggleCat(c)}
+                        >
+                          {Icon && <Icon />}
+                          {POI_LABEL[c] ?? c}
+                        </button>
+                      );
+                    })}
+                  </div>
+                  {poiCategories.length > POI_VISIBLE && (
+                    <button
+                      type="button"
+                      className="poimoretoggle"
+                      onClick={() => setPoiExpanded((v) => !v)}
+                    >
+                      {poiExpanded
+                        ? "Ver menos"
+                        : `Ver mais ${poiCategories.length - POI_VISIBLE} categorias`}
+                    </button>
+                  )}
+                  <div className="flabel">Distância máxima</div>
+                  <div className="fseg">
+                    {POI_RADII.map((v) => (
+                      <button
+                        key={v}
+                        type="button"
+                        className={poiRadius === v ? "on" : ""}
+                        onClick={() => setPoiRadius(v)}
+                      >
+                        {fmtDist(v)}
+                      </button>
+                    ))}
+                  </div>
+                  <p className="fhint">
+                    Mostra imóveis com pelo menos um ponto de <b>cada</b> categoria escolhida dentro
+                    da distância.
+                  </p>
+
+                  <div className="flabel">Distância do centro (máx.)</div>
+                  <div className="fchiprow">
+                    <Chip active={!maxCenter} onClick={() => setMaxCenter(0)}>
+                      Qualquer
+                    </Chip>
+                    {CENTER_STEPS.map((v) => (
+                      <Chip key={v} active={maxCenter === v} onClick={() => setMaxCenter(v)}>
+                        ≤ {fmtDist(v)}
+                      </Chip>
+                    ))}
+                  </div>
+                </Section>
+
+                <Section
+                  title="Retorno e notas"
+                  count={retornoCount}
+                  open={openSecs.has("retorno")}
+                  onToggle={() => toggleSec("retorno")}
+                >
+                  <div className="flabel">Desconto mínimo</div>
+                  <div className="fchiprow">
+                    <Chip active={!minDesconto} onClick={() => setMinDesconto(0)}>
+                      Qualquer
+                    </Chip>
+                    {DESCONTO_STEPS.map((v) => (
+                      <Chip key={v} active={minDesconto === v} onClick={() => setMinDesconto(v)}>
+                        ≥ {v}%
+                      </Chip>
+                    ))}
+                  </div>
+
+                  <div className="flabel">Nota de investimento</div>
+                  <div className="fchiprow">
+                    <Chip active={!minInvest} onClick={() => setMinInvest(0)}>
+                      Qualquer
+                    </Chip>
+                    {INVEST_STEPS.map((v) => (
+                      <Chip key={v} active={minInvest === v} onClick={() => setMinInvest(v)}>
+                        ≥ {v}
+                      </Chip>
+                    ))}
+                  </div>
+
+                  <div className="flabel">Nota do objetivo</div>
                   <select
-                    className={`selectish${scoreKey !== "none" ? " on" : ""}`}
+                    className={`selectish fwide${scoreKey !== "none" ? " on" : ""}`}
                     value={scoreKey}
                     onChange={(e) => {
                       const v = e.target.value as keyof Scores | "none";
@@ -505,58 +919,57 @@ export default function PropertiesClient({
                       </option>
                     ))}
                   </select>
-                </div>
-                {scoreKey !== "none" && (
-                  <OptionPicker
-                    label={`Nota mínima · ${SCORE_LABEL[scoreKey]}`}
-                    value={scoreMin}
-                    options={SCORE_THRESHOLDS.map((t) => ({
-                      value: t,
-                      label: t === 0 ? "Qualquer" : `≥ ${t}`,
-                    }))}
-                    onChange={setScoreMin}
-                  />
-                )}
-              </div>
-            </div>
-          </div>
+                  {scoreKey !== "none" && (
+                    <>
+                      <div className="flabel">Nota mínima · {SCORE_LABEL[scoreKey]}</div>
+                      <div className="fchiprow">
+                        {GOAL_STEPS.map((v) => (
+                          <Chip key={v} active={scoreMin === v} onClick={() => setScoreMin(v)}>
+                            ≥ {v}
+                          </Chip>
+                        ))}
+                      </div>
+                    </>
+                  )}
+                </Section>
 
-          <div className="afsection">
-            <div className="afsection-title">Leilão e pagamento</div>
-            <div className="afsection-grid">
-              <div className="afield">
-                <span>Modalidade do leilão</span>
-                <select
-                  className={`selectish${modalidade !== "all" ? " on" : ""}`}
-                  value={modalidade}
-                  onChange={(e) => setModalidade(e.target.value)}
+                <Section
+                  title="Leilão e pagamento"
+                  count={leilaoCount}
+                  open={openSecs.has("leilao")}
+                  onToggle={() => toggleSec("leilao")}
                 >
-                  <option value="all">Todas as modalidades</option>
-                  {modalidades.map((m) => (
-                    <option key={m} value={m}>
-                      {m}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div className="afield">
-                <span>Data do leilão</span>
-                <select
-                  className={`selectish${prazoLeilao > 0 ? " on" : ""}`}
-                  value={prazoLeilao}
-                  onChange={(e) => setPrazoLeilao(Number(e.target.value))}
-                >
-                  <option value={0}>Qualquer data</option>
-                  {PRAZOS.map((pr) => (
-                    <option key={pr.days} value={pr.days}>
-                      {pr.label}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div className="afield">
-                <span>Pagamento</span>
-                <div className="checkgroup">
+                  <div className="flabel">Modalidade</div>
+                  <select
+                    className={`selectish fwide${modalidade !== "all" ? " on" : ""}`}
+                    value={modalidade}
+                    onChange={(e) => setModalidade(e.target.value)}
+                  >
+                    <option value="all">Todas as modalidades</option>
+                    {modalidades.map((m) => (
+                      <option key={m} value={m}>
+                        {m}
+                      </option>
+                    ))}
+                  </select>
+
+                  <div className="flabel">Data do leilão</div>
+                  <div className="fchiprow">
+                    <Chip active={!prazoLeilao} onClick={() => setPrazoLeilao(0)}>
+                      Qualquer data
+                    </Chip>
+                    {PRAZOS.map((pr) => (
+                      <Chip
+                        key={pr.days}
+                        active={prazoLeilao === pr.days}
+                        onClick={() => setPrazoLeilao(pr.days)}
+                      >
+                        {pr.days} dias
+                      </Chip>
+                    ))}
+                  </div>
+
+                  <div className="flabel">Pagamento</div>
                   <label className={`checkitem${financiamento ? " on" : ""}`}>
                     <input
                       type="checkbox"
@@ -573,19 +986,31 @@ export default function PropertiesClient({
                     />
                     Aceita FGTS
                   </label>
-                </div>
+                </Section>
               </div>
-            </div>
-          </div>
-          {advActive && (
-            <div className="advfoot">
-              <button className="btn ghost" type="button" onClick={clearAdvanced}>
-                Limpar filtros avançados
-              </button>
-            </div>
-          )}
-        </div>
-      )}
+
+              <div className="dfoot">
+                <button
+                  type="button"
+                  className="btn ghost"
+                  onClick={clearAdvanced}
+                  disabled={!advActive}
+                >
+                  Limpar
+                </button>
+                <button
+                  type="button"
+                  className="btn solid dshow"
+                  onClick={() => setDrawerOpen(false)}
+                  disabled={!items.length}
+                >
+                  {items.length ? `Mostrar ${nImoveis(items.length)}` : "Nenhum imóvel"}
+                </button>
+              </div>
+            </aside>
+          </>,
+          document.body,
+        )}
 
       <div className="viewbar">
         <div className="viewtoggle">
@@ -630,7 +1055,7 @@ export default function PropertiesClient({
       ) : items.length ? (
         <>
           {pageItems.map((p) => (
-            <PropertyRow key={p.id} p={p} />
+            <PropertyRow key={p.id} p={p} poiCats={poiCats} poiRadius={poiRadius} />
           ))}
           <Pagination page={page} total={items.length} pageSize={PAGE_SIZE} onChange={goTo} />
         </>

@@ -1,10 +1,12 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import PropertyPhoto from "@/components/property/PropertyPhoto";
+import BackButton from "./_components/BackButton";
 import SaveButton from "./_components/SaveButton";
 import ScoreBars from "./_components/ScoreBars";
 import PriceHistory from "./_components/PriceHistory";
 import ScoreBreakdown from "./_components/ScoreBreakdown";
+import ScoreWeights from "./_components/ScoreWeights";
 import VisualScore from "./_components/VisualScore";
 import NearbyPois from "./_components/NearbyPois";
 import PropertyRanks from "./_components/PropertyRanks";
@@ -16,26 +18,25 @@ import Ring from "@/components/ui/Ring";
 import {
   getMarketHistory,
   getMarketStats,
-  getPois,
   getPriceHistory,
   getProperties,
   getProperty,
   getPropertyPois,
   getRecommendations,
   getRegion,
+  getScoreExplain,
 } from "@/lib/data";
 import { addressKey } from "@/lib/market";
-import { nearbyPois } from "@/lib/pois";
 import {
   discountPercentile,
   fmtDate,
+  fmtDist,
   money,
   PROFILE_EXPLAIN,
   PROFILE_LABEL,
   showDiscount,
 } from "@/lib/format";
 import { statsForProperty } from "@/lib/market";
-import { IconBack } from "@/lib/icons";
 
 export const revalidate = 120;
 
@@ -49,20 +50,19 @@ export default async function PropertyPage({ params }: { params: Promise<{ id: s
   const p = await getProperty(id);
   if (!p) notFound();
 
-  const [all, region, marketStats, priceHistory, pois, marketHistory, recs, propertyPois] =
+  const [all, region, marketStats, priceHistory, marketHistory, recs, propertyPois, scoreExplain] =
     await Promise.all([
       getProperties(),
       p.h3 ? getRegion(p.h3) : Promise.resolve(null),
       getMarketStats(),
       getPriceHistory(p.id),
-      p.lat != null && p.lon != null ? getPois() : Promise.resolve([]),
       getMarketHistory(addressKey(p.uf, p.city, p.neighborhood, p.propertyType)),
       getRecommendations(p.id),
       getPropertyPois(p.id),
+      getScoreExplain(p.id),
     ]);
   const market = statsForProperty(marketStats, p);
-  const nearby =
-    p.lat != null && p.lon != null ? nearbyPois(pois, p.lat, p.lon, { radius: 2500 }) : [];
+  const nearby = propertyPois;
 
   const propById = new Map(all.map((x) => [x.id, x]));
   // Only surface recommendations that are a strong match (≥ 75%).
@@ -78,25 +78,28 @@ export default async function PropertyPage({ params }: { params: Promise<{ id: s
   const recVisual = toItems("visual");
   const recSemantic = toItems("similar");
 
+  // deriveTitle already appends the neighborhood when there is no bedroom count.
+  const heading =
+    p.neighborhood && !p.title.endsWith(p.neighborhood)
+      ? `${p.title} — ${p.neighborhood}`
+      : p.title;
+
   const data = fmtDate(p.auctionDate);
   const discPct = showDiscount(p) ? discountPercentile(all, p) : null;
 
   return (
     <section className="view">
-      <Link href="/properties" className="backbtn">
-        <IconBack width={18} height={18} strokeWidth={2} /> Voltar
-      </Link>
+      <BackButton />
 
       <div className="dhead">
         <div className="loc">
           {p.propertyType}
           {p.occupancyStatus ? ` · ${p.occupancyStatus}` : ""}
         </div>
-        <h1>
-          {p.title} — {p.neighborhood}
-        </h1>
+        <h1>{heading}</h1>
         <div className="loc">
           {p.city}/{p.uf}
+          {p.centerProximity != null && ` · a ${fmtDist(p.centerProximity)} do centro`}
         </div>
         <div className="matr">
           MATRÍCULA CAIXA {p.id}
@@ -146,8 +149,11 @@ export default async function PropertyPage({ params }: { params: Promise<{ id: s
             {p.scores.investment != null && (
               <div className="investhead">
                 <Ring value={p.scores.investment} size={66} />
-                <div>
-                  <div className="ih-k">Nota geral de investimento</div>
+                <div className="ih-body">
+                  <div className="ih-k-row">
+                    <div className="ih-k">Nota geral de investimento</div>
+                    {scoreExplain && <ScoreWeights explain={scoreExplain} />}
+                  </div>
                   <div className="ih-s">
                     Índice ponderado que combina as notas por objetivo, o desconto e o mercado do
                     bairro em uma única nota de 0 a 100.
@@ -162,17 +168,11 @@ export default async function PropertyPage({ params }: { params: Promise<{ id: s
                 100 e são calculadas a partir dos dados do imóvel e do bairro.
               </div>
             )}
-            <ScoreBreakdown p={p} />
+            <ScoreBreakdown p={p} explain={scoreExplain} />
           </div>
 
           {region && (
-            <RegionPanel
-              region={region}
-              pois={nearby}
-              lat={p.lat}
-              lon={p.lon}
-              title={`${p.title} — ${p.neighborhood}`}
-            />
+            <RegionPanel region={region} pois={nearby} lat={p.lat} lon={p.lon} title={heading} />
           )}
 
           <NearbyPois pois={propertyPois} />
