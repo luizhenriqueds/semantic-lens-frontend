@@ -8,6 +8,7 @@ import { groupByAddress } from "@/lib/geo";
 import { catColor, homeIcon, homeIconCount, poiIcon } from "@/lib/mapMarkers";
 import { POI_ICON } from "@/lib/icons";
 import { POI_LABEL, POI_ORDER } from "@/lib/pois";
+import MapExpandButton from "@/components/ui/MapExpandButton";
 import type { NearbyPoi, Property } from "@/lib/types";
 
 export default function RegionGeoMap({
@@ -111,36 +112,7 @@ export default function RegionGeoMap({
 
   return (
     <div className={`rgeomap-wrap${expanded ? " expanded" : ""}`}>
-      <button
-        type="button"
-        className="mapexpand"
-        onClick={() => setExpanded((v) => !v)}
-        aria-label={expanded ? "Fechar mapa" : "Expandir mapa"}
-      >
-        {expanded ? (
-          <svg
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          >
-            <path d="M6 6l12 12M18 6 6 18" />
-          </svg>
-        ) : (
-          <svg
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          >
-            <path d="M15 3h6v6M9 21H3v-6M21 3l-8 8M3 21l8-8" />
-          </svg>
-        )}
-      </button>
+      <MapExpandButton expanded={expanded} onToggle={() => setExpanded((v) => !v)} />
       <div ref={elRef} className="lmap rgeomap" />
       {!heat && legend.length > 0 && (
         <div className="poimap-legend">

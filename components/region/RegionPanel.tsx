@@ -37,7 +37,8 @@ export default function RegionPanel({
         <div>
           <h3>A região: {region.name}</h3>
           <div className="where">
-            {region.city} · {region.numProps} imóveis analisados
+            {region.city} · {region.numProps} {region.numProps === 1 ? "imóvel" : "imóveis"} em
+            leilão
           </div>
         </div>
         <Link className="btn ghost" href={`/regions/${region.h3}`}>

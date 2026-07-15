@@ -4,6 +4,7 @@ import DnaStars from "./_components/DnaStars";
 import InfraGrid from "./_components/InfraGrid";
 import PoiNearGrid from "@/components/region/PoiNearGrid";
 import RegionMapTabs from "@/components/region/RegionMapTabs";
+import SameAddressGroups from "@/components/region/SameAddressGroups";
 import RegionScoreBars from "@/components/region/RegionScoreBars";
 import RegionMarket from "@/components/market/RegionMarket";
 import { getMarketStats, getPoisNear, getProperties, getRegion, getRegions } from "@/lib/data";
@@ -43,7 +44,8 @@ export default async function RegionPage({ params }: { params: Promise<{ h3: str
   ]);
   if (!region) notFound();
 
-  const here = all.filter((p) => p.h3 === h3);
+  // Must match what /properties?h3= lists, which drops inactive listings.
+  const here = all.filter((p) => p.h3 === h3 && !p.inactive);
   const tags = regionTags(region);
   const market = statsForRegion(marketStats, region).filter(hasReliableMarket);
 
@@ -74,7 +76,9 @@ export default async function RegionPage({ params }: { params: Promise<{ h3: str
         </div>
         <div className="rh-main">
           <div className="sub">
-            {region.city} · {here.length} {here.length === 1 ? "imóvel" : "imóveis"} em leilão
+            {region.city}
+            {region.subLabel ? ` · ${region.subLabel}` : ""} · {here.length}{" "}
+            {here.length === 1 ? "imóvel" : "imóveis"} em leilão
           </div>
           <h2>{region.name}</h2>
         </div>
@@ -125,6 +129,12 @@ export default async function RegionPage({ params }: { params: Promise<{ h3: str
               <RegionMapTabs center={center} properties={geo} pois={nearby} />
             </div>
           </div>
+        </div>
+      )}
+
+      {here.length > 0 && (
+        <div style={{ marginBottom: 18 }}>
+          <SameAddressGroups properties={here} />
         </div>
       )}
 
@@ -191,7 +201,9 @@ export default async function RegionPage({ params }: { params: Promise<{ h3: str
           <div className="rcbody">
             <p className="rabout">
               {region.summary ??
-                `${region.name}, em ${region.city}, com ${region.numProps} imóveis analisados.`}
+                `${region.name}, em ${region.city}, com ${here.length} ${
+                  here.length === 1 ? "imóvel" : "imóveis"
+                } em leilão.`}
             </p>
           </div>
         </div>

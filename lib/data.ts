@@ -4,6 +4,7 @@ import { EMBEDDING_MODEL, embedQuery, rerank } from "@/lib/embed";
 import { normalize, parseFacets, type GoalKey, type PoiQuery } from "@/lib/facets";
 import { semanticCached } from "@/lib/semanticCache";
 import { deriveTitle, titleCase } from "@/lib/format";
+import { dominantStreet } from "@/lib/geo";
 import type {
   Cluster,
   MarketHistoryPoint,
@@ -93,7 +94,7 @@ async function loadProperties(): Promise<Property[]> {
         supabase
           .from("properties")
           .select(
-            "property_id,property_type,uf,city,neighborhood,area_m2,bedrooms,parking_spots,year_built,occupancy_status,canonical_description,h3_r8,image_path,image_source_url,lat,lon,is_active,visual_score,visual_note,visual_age,price_rank,size_rank,center_proximity_m",
+            "property_id,property_type,uf,city,neighborhood,raw_address,area_m2,bedrooms,parking_spots,year_built,occupancy_status,canonical_description,h3_r8,image_path,image_source_url,lat,lon,is_active,visual_score,visual_note,visual_age,price_rank,size_rank,center_proximity_m",
           )
           .order("property_id")
           .range(f, t),
@@ -169,6 +170,7 @@ async function loadProperties(): Promise<Property[]> {
       uf: p.uf ?? "",
       city,
       neighborhood: p.neighborhood ?? "",
+      rawAddress: p.raw_address || null,
       area: num(p.area_m2),
       bedrooms: num(p.bedrooms),
       parkingSpots: num(p.parking_spots),
@@ -326,22 +328,37 @@ async function loadClusters(): Promise<Cluster[]> {
 }
 
 async function loadRegions(): Promise<Region[]> {
-  const [cellsRes, scoresRes, dnaRes, featuresRes, neighborsRes] = await Promise.all([
-    withRetry(() =>
-      supabase.from("region_cells").select("h3,city,neighborhood_label,num_properties"),
-    ),
-    withRetry(() =>
-      supabase
-        .from("region_scores")
-        .select("h3,convenience,walkability,commercial,airbnb,student,family")
-        .eq("score_version", 1),
-    ),
-    withRetry(() => supabase.from("region_dna").select("h3,dna,top_tags,summary_text")),
-    withRetry(() =>
-      supabase.from("region_features").select("h3,features").eq("feature_version", 1),
-    ),
-    withRetry(() => supabase.from("region_neighbors").select("h3,neighbor_h3,similarity,rank")),
+  const [props, [cellsRes, scoresRes, dnaRes, featuresRes, neighborsRes]] = await Promise.all([
+    getProperties(),
+    Promise.all([
+      withRetry(() =>
+        supabase.from("region_cells").select("h3,city,neighborhood_label,num_properties"),
+      ),
+      withRetry(() =>
+        supabase
+          .from("region_scores")
+          .select("h3,convenience,walkability,commercial,airbnb,student,family")
+          .eq("score_version", 1),
+      ),
+      withRetry(() => supabase.from("region_dna").select("h3,dna,top_tags,summary_text")),
+      withRetry(() =>
+        supabase.from("region_features").select("h3,features").eq("feature_version", 1),
+      ),
+      withRetry(() => supabase.from("region_neighbors").select("h3,neighbor_h3,similarity,rank")),
+    ]),
   ]);
+
+  // region_cells.num_properties is a pipeline snapshot that drifts from the live listings, so
+  // count the active properties actually joined to each cell instead.
+  const liveCount = new Map<string, number>();
+  const propsByH3 = new Map<string, Property[]>();
+  for (const p of props) {
+    if (!p.h3 || p.inactive) continue;
+    liveCount.set(p.h3, (liveCount.get(p.h3) ?? 0) + 1);
+    const g = propsByH3.get(p.h3);
+    if (g) g.push(p);
+    else propsByH3.set(p.h3, [p]);
+  }
 
   const cells = rows<any>("region_cells", cellsRes);
   const cellMap = new Map(cells.map((c) => [c.h3, c]));
@@ -362,7 +379,7 @@ async function loadRegions(): Promise<Region[]> {
     };
   };
 
-  return cells
+  const regions = cells
     .filter((c) => scoreMap.has(c.h3))
     .map((c): Region => {
       const s = scoreMap.get(c.h3);
@@ -379,7 +396,8 @@ async function loadRegions(): Promise<Region[]> {
         h3: c.h3,
         name: c.neighborhood_label ?? "Região",
         city: titleCase(c.city ?? ""),
-        numProps: c.num_properties ?? 0,
+        subLabel: null,
+        numProps: liveCount.get(c.h3) ?? 0,
         scores: {
           convenience: num(s?.convenience),
           walkability: num(s?.walkability),
@@ -396,6 +414,20 @@ async function loadRegions(): Promise<Region[]> {
         neighbors: nb,
       };
     });
+
+  const byName = new Map<string, Region[]>();
+  for (const r of regions) {
+    const key = `${r.city}||${r.name}`;
+    const group = byName.get(key);
+    if (group) group.push(r);
+    else byName.set(key, [r]);
+  }
+  for (const group of byName.values()) {
+    if (group.length < 2) continue;
+    for (const r of group) r.subLabel = dominantStreet(propsByH3.get(r.h3) ?? []);
+  }
+
+  return regions;
 }
 
 export const getProperties = unstable_cache(loadProperties, ["properties"], {

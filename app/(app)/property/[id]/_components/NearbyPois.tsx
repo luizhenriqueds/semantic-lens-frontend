@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import { fmtDist } from "@/lib/format";
 import { POI_ICON } from "@/lib/icons";
-import { POI_LABEL, POI_ORDER } from "@/lib/pois";
+import { MAX_NEAR_M, POI_LABEL, POI_ORDER } from "@/lib/pois";
 import type { NearbyPoi } from "@/lib/types";
 
 const SHOWN = 8;
@@ -30,6 +30,10 @@ export default function NearbyPois({ pois }: { pois: NearbyPoi[] }) {
   return (
     <div className="infoblock">
       <h3>Pontos de interesse próximos</h3>
+      <p className="blocksub">
+        Considera apenas o que está num raio de até {MAX_NEAR_M / 1000} km do imóvel, do mais
+        próximo para o mais distante.
+      </p>
       <div className="poichips">
         <button
           type="button"

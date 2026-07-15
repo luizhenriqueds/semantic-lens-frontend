@@ -17,7 +17,7 @@ import { useSaved } from "@/lib/saved";
 import { describeFilters, hasAnyFilter, matchesFilters } from "@/lib/alertFilters";
 import type { AlertFilters, Cluster, Property, Scores } from "@/lib/types";
 import { IconArrow, IconBell, IconBuilding, IconSearch, IconSliders, POI_ICON } from "@/lib/icons";
-import { POI_LABEL, POI_ORDER } from "@/lib/pois";
+import { MAX_NEAR_M, POI_LABEL, POI_ORDER } from "@/lib/pois";
 
 const PropertiesMap = dynamic(() => import("@/components/property/PropertiesMap"), {
   ssr: false,
@@ -855,7 +855,7 @@ export default function PropertiesClient({
                   </div>
                   <p className="fhint">
                     Mostra imóveis com pelo menos um ponto de <b>cada</b> categoria escolhida dentro
-                    da distância.
+                    da distância (máximo {MAX_NEAR_M / 1000} km).
                   </p>
 
                   <div className="flabel">Distância do centro (máx.)</div>

@@ -175,7 +175,7 @@ export default function RegionsClient({ regions }: { regions: Region[] }) {
           <div className="ic">
             <IconHouse />
           </div>
-          <div className="l">Imóveis analisados</div>
+          <div className="l">Imóveis em leilão</div>
           <div className="v">{totalProps.toLocaleString("pt-BR")}</div>
           <div className="s">nessas regiões</div>
         </div>
@@ -249,7 +249,10 @@ export default function RegionsClient({ regions }: { regions: Region[] }) {
               <Link className="rtrow" href={`/regions/${r.h3}`} key={r.h3}>
                 <div className="rg">
                   <b>{r.name}</b>
-                  <span>{r.city}</span>
+                  <span>
+                    {r.city}
+                    {r.subLabel ? ` · ${r.subLabel}` : ""}
+                  </span>
                 </div>
                 <div className="rtags">
                   {regionTags(r).map((t) => (
@@ -290,7 +293,11 @@ export default function RegionsClient({ regions }: { regions: Region[] }) {
                 </div>
                 <div className="nm">
                   {it.region.name}
-                  <span className="nm-city"> · {it.region.city}</span>
+                  <span className="nm-city">
+                    {" · "}
+                    {it.region.city}
+                    {it.region.subLabel ? ` · ${it.region.subLabel}` : ""}
+                  </span>
                 </div>
                 <div className="mv">
                   nota média <b>{Math.round(it.region.scores[it.field] ?? 0)}</b>
