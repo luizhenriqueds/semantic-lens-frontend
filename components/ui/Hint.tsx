@@ -16,6 +16,7 @@ export default function Hint({
 }) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLSpanElement>(null);
+  const popRef = useRef<HTMLSpanElement>(null);
   const id = useId();
 
   useEffect(() => {
@@ -32,6 +33,20 @@ export default function Hint({
     };
   }, [open]);
 
+  useEffect(() => {
+    const pop = popRef.current;
+    const trigger = ref.current;
+    if (!open || !pop || !trigger || window.innerWidth > 640) return;
+    const r = trigger.getBoundingClientRect();
+    Object.assign(pop.style, {
+      position: "fixed",
+      top: `${r.bottom + 6}px`,
+      left: "12px",
+      right: "12px",
+      width: "auto",
+    });
+  }, [open]);
+
   return (
     <span className="hint" ref={ref}>
       <button
@@ -45,7 +60,7 @@ export default function Hint({
         <IconInfo width={size} height={size} strokeWidth={1.8} />
       </button>
       {open && (
-        <span className={`hint-pop ${align}`} id={id} role="tooltip">
+        <span className={`hint-pop ${align}`} id={id} role="tooltip" ref={popRef}>
           <span className="hint-h">{title}</span>
           <span className="hint-body">{children}</span>
         </span>

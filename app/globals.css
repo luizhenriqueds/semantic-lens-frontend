@@ -460,6 +460,7 @@ button {
   padding: 30px;
   max-width: 1180px;
   width: 100%;
+  min-width: 0;
 }
 .view {
   animation: fade 0.25s ease;
@@ -483,6 +484,12 @@ button {
 /* shared bits */
 .pagehead {
   margin-bottom: 24px;
+}
+.searchhead {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
 }
 .pagehead h1 {
   font-size: 30px;
@@ -1884,6 +1891,9 @@ select.selectish {
   gap: 24px;
   align-items: start;
 }
+.detailgrid > * {
+  min-width: 0;
+}
 .gallery {
   height: 300px;
   background: var(--surface-2);
@@ -2093,7 +2103,9 @@ select.selectish {
   top: calc(100% + 6px);
   right: 0;
   z-index: 20;
-  width: 262px;
+  width: max-content;
+  min-width: 262px;
+  max-width: calc(100vw - 32px);
   padding: 12px 14px;
   background: var(--surface);
   border: 1px solid var(--line);
@@ -2115,6 +2127,9 @@ select.selectish {
   font-size: 13px;
   color: var(--ink-soft);
   padding: 3px 0;
+}
+.ihweights-row > span:first-child {
+  white-space: nowrap;
 }
 .ihweights-v {
   font-weight: 700;
@@ -3863,12 +3878,19 @@ select.selectish {
   .steps {
     grid-template-columns: 1fr;
   }
+  .wlist {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 16px;
+  }
   .wcard {
     grid-template-columns: 1fr;
     gap: 12px;
+    margin-bottom: 0;
   }
   .wphoto {
-    height: 180px;
+    height: auto;
+    aspect-ratio: 4 / 3;
   }
 }
 
@@ -3882,6 +3904,13 @@ select.selectish {
   }
   .pagehead {
     margin-bottom: 18px;
+  }
+  .searchhead {
+    flex-direction: column;
+  }
+  .searchhead .btn {
+    width: 100%;
+    justify-content: center;
   }
   .pagehead h1 {
     font-size: 23px;
@@ -3926,6 +3955,9 @@ select.selectish {
   .rstats {
     grid-template-columns: repeat(2, 1fr);
   }
+  .wlist {
+    grid-template-columns: 1fr;
+  }
   .rhead .rh-side {
     margin-left: 0;
     align-items: stretch;
@@ -3951,6 +3983,13 @@ select.selectish {
   .sectitle {
     flex-wrap: wrap;
     gap: 4px;
+  }
+  .recnav {
+    display: none;
+  }
+  .rechead h2 {
+    font-size: 16px;
+    white-space: nowrap;
   }
 }
 
@@ -4544,6 +4583,17 @@ select.selectish {
 }
 .sb-explain p + p {
   margin-top: 7px;
+}
+.sb-explain .sb-pro,
+.sb-explain .sb-con {
+  padding: 6px 10px;
+  border-radius: 8px;
+}
+.sb-explain .sb-pro {
+  background: color-mix(in srgb, var(--good) 10%, transparent);
+}
+.sb-explain .sb-con {
+  background: color-mix(in srgb, var(--warn) 12%, transparent);
 }
 .sb-factors {
   display: flex;
@@ -5229,6 +5279,7 @@ select.selectish {
   z-index: 30;
   display: block;
   width: 268px;
+  max-width: calc(100vw - 24px);
   padding: 11px 13px;
   background: var(--surface);
   border: 1px solid var(--line);

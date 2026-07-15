@@ -49,6 +49,16 @@ export function getPoisNear(lat: number, lon: number, radiusM: number): Promise<
   return cached(loadPoisNear, "pois-near")(Number(lat.toFixed(3)), Number(lon.toFixed(3)), radiusM);
 }
 
+// Named POIs whose H3 res-8 cell is this region (region_cells.h3 is res-8), used
+// to surface the actual establishments in the area.
+async function loadRegionPois(h3: string): Promise<Poi[]> {
+  const res = await withRetry(() =>
+    supabase.from("pois").select(POI_FIELDS).eq("h3_r8", h3).not("name", "is", null).limit(500),
+  );
+  return rows<any>("region-pois", res).map(mapPoi);
+}
+export const getRegionPois = cached(loadRegionPois, "region-pois");
+
 // Precomputed nearest POIs for a property (property_poi.dist_m), resolved to the
 // full POI record and sorted nearest-first.
 async function loadPropertyPois(id: string): Promise<NearbyPoi[]> {

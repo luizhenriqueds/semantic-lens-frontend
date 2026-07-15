@@ -31,6 +31,13 @@ export default function RegionPanel({
   const [tab, setTab] = useState<Tab>("perfil");
   const view = canMap ? tab : "perfil";
 
+  const nearest: Record<string, number> = {};
+  for (const poi of pois) {
+    if (nearest[poi.category] == null || poi.distance < nearest[poi.category]) {
+      nearest[poi.category] = poi.distance;
+    }
+  }
+
   return (
     <div className="rpanel">
       <div className="rp-top">
@@ -75,7 +82,7 @@ export default function RegionPanel({
       ) : (
         <>
           <RegionScoreBars region={region} />
-          <PoiNearGrid region={region} />
+          <PoiNearGrid nearest={nearest} />
           <div className="rnote">Calculado a partir de dados de mapa (OpenStreetMap).</div>
         </>
       )}
