@@ -4,8 +4,14 @@ import { useMemo, useState } from "react";
 import ConfirmDialog from "@/components/ui/ConfirmDialog";
 import EmptyState from "@/components/ui/EmptyState";
 import { useToast } from "@/components/ui/Toaster";
-import { type Alert, useAlerts } from "@/lib/alerts";
-import { countMatches, describeFilters, filterChips, hasAnyFilter } from "@/lib/alertFilters";
+import {
+  countMatches,
+  describeFilters,
+  filterChips,
+  hasAnyFilter,
+  type Alert,
+  useAlerts,
+} from "@/lib/alerts";
 import { SCORE_DIMS, SCORE_LABEL } from "@/lib/format";
 import { IconBell, IconPencil, IconPlus, IconTrash } from "@/lib/icons";
 import type { AlertFilters, Property, Scores } from "@/lib/types";

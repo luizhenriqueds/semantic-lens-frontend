@@ -10,7 +10,7 @@ function provider() {
 export async function embedQuery(text: string, instruction?: string): Promise<number[]> {
   const value = instruction ? `Instruct: ${instruction}\nQuery: ${text}` : text;
   const { embedding } = await embed({
-    model: provider().textEmbeddingModel("Qwen/Qwen3-Embedding-0.6B"),
+    model: provider().embeddingModel("Qwen/Qwen3-Embedding-0.6B"),
     value,
   });
   return embedding;

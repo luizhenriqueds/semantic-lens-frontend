@@ -1,6 +1,6 @@
 import Link from "next/link";
 import type { Cluster } from "@/lib/types";
-import type { ClusterStats } from "@/lib/clusterStats";
+import type { ClusterStats } from "@/lib/clusters";
 import { moneyShort, PROFILE_LABEL } from "@/lib/format";
 import ClusterThumb from "./ClusterThumb";
 

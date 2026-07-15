@@ -1,70 +1,5 @@
 import type { NearbyPoi, Poi } from "@/lib/types";
 
-export const POI_LABEL: Record<string, string> = {
-  university: "Universidade",
-  hospital: "Hospital",
-  supermarket: "Supermercado",
-  shopping_center: "Shopping",
-  park: "Parque",
-  restaurant: "Restaurante",
-  hotel: "Hotel",
-  school: "Escola",
-  bank: "Banco",
-  pharmacy: "Farmácia",
-  fuel: "Posto",
-  fast_food: "Fast-food",
-  clinic: "Clínica",
-  police: "Polícia",
-  kindergarten: "Creche",
-  bar: "Bar",
-  bus_station: "Estação de ônibus",
-  cafe: "Café",
-  market_place: "Feira",
-  dentist: "Dentista",
-  doctors: "Médico",
-  atm: "Caixa eletrônico",
-  veterinary: "Veterinário",
-  fire_station: "Bombeiros",
-  driving_school: "Autoescola",
-  language_school: "Escola de idiomas",
-  cinema: "Cinema",
-  car_rental: "Locadora de veículos",
-  food_court: "Praça de alimentação",
-};
-
-// Legends / listings / filter chips, ordered by how common the category is in the POI table.
-export const POI_ORDER = [
-  "park",
-  "school",
-  "restaurant",
-  "fuel",
-  "supermarket",
-  "fast_food",
-  "pharmacy",
-  "clinic",
-  "hotel",
-  "bank",
-  "hospital",
-  "police",
-  "university",
-  "kindergarten",
-  "bar",
-  "bus_station",
-  "shopping_center",
-  "cafe",
-  "market_place",
-  "dentist",
-  "doctors",
-  "atm",
-  "veterinary",
-  "fire_station",
-  "driving_school",
-  "language_school",
-  "cinema",
-  "car_rental",
-  "food_court",
-];
-
 export function haversine(lat1: number, lon1: number, lat2: number, lon2: number): number {
   const R = 6371000;
   const toRad = (d: number) => (d * Math.PI) / 180;
@@ -82,8 +17,8 @@ export const MAX_NEAR_M = 5000;
 // Returns POIs within `radius` metres of a point, sorted nearest-first and
 // capped at `limit`. Also guarantees the single nearest POI of each category is
 // kept even if it sits just beyond the radius (up to `fallbackRadius`), so the
-// map/legend always has context for amenities that exist in the wider area
-// without dragging in far-flung outliers many kilometres away.
+// map/legend always has context for amenities in the wider area without dragging
+// in far-flung outliers many kilometres away.
 export function nearbyPois(
   pois: Poi[],
   lat: number,

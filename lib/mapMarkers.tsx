@@ -36,8 +36,9 @@ const CAT_COLOR: Record<string, string> = {
 
 export const catColor = (cat: string) => CAT_COLOR[cat] ?? "#6b7770";
 
-const HomePin = () => (
-  <svg viewBox="0 0 32 42" width="32" height="42" fill="none">
+// The teardrop pin with the little house glyph, shared by the plain and counted markers.
+const PinBody = () => (
+  <>
     <path
       d="M16 41s14-15.2 14-25A14 14 0 1 0 2 16c0 9.8 14 25 14 25Z"
       fill="var(--primary)"
@@ -50,6 +51,12 @@ const HomePin = () => (
       <path d="M11.4 16.4 16 12.2l4.6 4.2" />
       <path d="M12.6 15.6v4.2h6.8v-4.2" />
     </g>
+  </>
+);
+
+const HomePin = () => (
+  <svg viewBox="0 0 32 42" width="32" height="42" fill="none">
+    <PinBody />
   </svg>
 );
 
@@ -65,18 +72,7 @@ function poiIconHtml(cat: string): string {
 
 const HomePinCount = ({ n }: { n: number }) => (
   <svg viewBox="0 0 40 42" width="40" height="42" fill="none">
-    <path
-      d="M16 41s14-15.2 14-25A14 14 0 1 0 2 16c0 9.8 14 25 14 25Z"
-      fill="var(--primary)"
-      stroke="var(--surface)"
-      strokeWidth="2.5"
-      strokeLinejoin="round"
-    />
-    <circle cx="16" cy="15.5" r="8.6" fill="var(--surface)" />
-    <g stroke="var(--primary)" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M11.4 16.4 16 12.2l4.6 4.2" />
-      <path d="M12.6 15.6v4.2h6.8v-4.2" />
-    </g>
+    <PinBody />
     <circle cx="30" cy="9" r="8.5" fill="var(--warn)" stroke="var(--surface)" strokeWidth="2" />
     <text x="30" y="12.7" textAnchor="middle" fontSize="11" fontWeight="700" fill="#fff">
       {n > 9 ? "9+" : n}

@@ -96,20 +96,17 @@ export const SCORE_FIELD: Record<ProfileKey, keyof Scores> = {
   commercial: "commercial",
 };
 
-export function profileScore(p: Property): number | null {
-  if (!p.profile) return null;
-  return p.scores[SCORE_FIELD[p.profile]];
-}
-
-// Overall investment score — a weighted index computed from all the other
-// feature scores. Present for every scored property, so it doubles as the
-// property's headline "nota".
-export function investmentScore(p: Property): number | null {
-  return p.scores.investment;
-}
-
 export function scoreForProfile(p: Property, profile: ProfileKey): number | null {
   return p.scores[SCORE_FIELD[profile]];
+}
+
+export function profileScore(p: Property): number | null {
+  return p.profile ? scoreForProfile(p, p.profile) : null;
+}
+
+// Headline "nota": the weighted investment index, present for every scored property.
+export function investmentScore(p: Property): number | null {
+  return p.scores.investment;
 }
 
 // Ranks the investment goals this property fits best, highest score first.
@@ -137,53 +134,4 @@ export function discountPercentile(all: Property[], p: Property): number | null 
   if (others.length < 5) return null;
   const below = others.filter((x) => x.discount! < p.discount!).length;
   return Math.round((below / others.length) * 100);
-}
-
-export function money(n: number | null | undefined): string {
-  if (n == null) return "—";
-  return "R$ " + Math.round(n).toLocaleString("pt-BR");
-}
-
-export function moneyShort(n: number | null | undefined): string {
-  if (n == null) return "—";
-  if (n >= 1_000_000)
-    return "R$ " + (n / 1_000_000).toLocaleString("pt-BR", { maximumFractionDigits: 1 }) + " mi";
-  return "R$ " + Math.round(n / 1000) + " mil";
-}
-
-export function titleCase(s: string): string {
-  return s
-    .toLowerCase()
-    .split(" ")
-    .map((w) => (w.length > 2 ? w[0].toUpperCase() + w.slice(1) : w))
-    .join(" ");
-}
-
-export function fmtDist(meters: number | null | undefined): string {
-  if (meters == null) return "—";
-  if (meters < 1000) return Math.round(meters) + " m";
-  return (meters / 1000).toFixed(1).replace(".", ",") + " km";
-}
-
-export function fmtDate(iso: string | null | undefined): string | null {
-  if (!iso) return null;
-  const d = new Date(iso);
-  if (isNaN(d.getTime())) return null;
-  return d.toLocaleDateString("pt-BR", { day: "2-digit", month: "short" });
-}
-
-export function fmtDay(iso: string | null | undefined): string | null {
-  if (!iso) return null;
-  const d = new Date(iso);
-  if (isNaN(d.getTime())) return null;
-  return d.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric" });
-}
-
-export function deriveTitle(tipo: string, quartos: number | null, bairro: string): string {
-  const t = tipo || "Imóvel";
-  if (quartos && quartos > 0) {
-    return `${t} ${quartos} dormitório${quartos > 1 ? "s" : ""}`;
-  }
-  if (bairro) return `${t} em ${bairro}`;
-  return t;
 }
