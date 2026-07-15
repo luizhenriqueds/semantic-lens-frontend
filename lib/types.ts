@@ -17,6 +17,7 @@ export type Property = {
   uf: string;
   city: string;
   neighborhood: string;
+  rawAddress: string | null;
   area: number | null;
   bedrooms: number | null;
   parkingSpots: number | null;
@@ -157,6 +158,8 @@ export type Region = {
   h3: string;
   name: string;
   city: string;
+  // Set only when another cell shares this city + name, to tell them apart in listings.
+  subLabel: string | null;
   numProps: number;
   scores: {
     convenience: number | null;

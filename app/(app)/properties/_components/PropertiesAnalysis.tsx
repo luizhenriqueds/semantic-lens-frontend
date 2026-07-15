@@ -2,7 +2,7 @@
 
 import { useMemo } from "react";
 import EmptyState from "@/components/ui/EmptyState";
-import { money, moneyShort, profileScore, SCORE_LABEL } from "@/lib/format";
+import { money, moneyShort, SCORE_LABEL } from "@/lib/format";
 import { moneyM2 } from "@/lib/market";
 import type { Property, Scores } from "@/lib/types";
 import { IconBuilding } from "@/lib/icons";
@@ -185,7 +185,9 @@ export default function PropertiesAnalysis({ items }: { items: Property[] }) {
     const m2 = nums(
       items.map((p) => (p.area && p.area > 0 && p.saleValue != null ? p.saleValue / p.area : null)),
     );
-    const pscores = nums(items.map((p) => profileScore(p)));
+    // Not profileScore(): it returns a different dimension per property, so averaging it would
+    // mix airbnb with commercial with family.
+    const invScores = nums(items.map((p) => p.scores.investment));
 
     const scoreDims: (keyof Scores)[] = [
       "investment",
@@ -214,7 +216,8 @@ export default function PropertiesAnalysis({ items }: { items: Property[] }) {
       medianDiscount: median(discounts),
       medianArea: median(areas),
       medianM2: median(m2),
-      avgScore: pscores.length ? Math.round(mean(pscores)!) : null,
+      avgScore: invScores.length ? Math.round(mean(invScores)!) : null,
+      scoredCount: invScores.length,
       financing: items.filter((p) => p.acceptsFinancing).length,
       fgts: items.filter((p) => p.acceptsFgts).length,
       scoreAvgs,
@@ -248,7 +251,14 @@ export default function PropertiesAnalysis({ items }: { items: Property[] }) {
     },
     { k: "Área mediana", v: stats.medianArea != null ? `${Math.round(stats.medianArea)} m²` : "—" },
     { k: "R$/m² mediano", v: moneyM2(stats.medianM2) },
-    { k: "Nota média", v: stats.avgScore != null ? String(stats.avgScore) : "—" },
+    {
+      k: "Nota média",
+      v: stats.avgScore != null ? String(stats.avgScore) : "—",
+      s:
+        stats.avgScore != null
+          ? `de investimento · ${stats.scoredCount} com nota`
+          : "nenhum imóvel com nota",
+    },
     {
       k: "Aceitam financiamento",
       v: `${stats.financing}`,
@@ -300,7 +310,10 @@ export default function PropertiesAnalysis({ items }: { items: Property[] }) {
         </div>
         <div className="ancard">
           <h3>Nota média por objetivo</h3>
-          <p className="ansub">Média das notas de investimento do grupo selecionado.</p>
+          <p className="ansub">
+            Média de cada nota entre os imóveis filtrados. Notas que não se aplicam ao tipo do
+            imóvel ficam de fora da média.
+          </p>
           <div className="scorebars anscores">
             {stats.scoreAvgs.map((s) => {
               const v = Math.round(s.avg ?? 0);

@@ -34,15 +34,35 @@ export const PROFILE_SHORT: Record<ProfileKey, string> = {
   commercial: "Comercial",
 };
 
-export const PROFILE_EXPLAIN: Record<ProfileKey, string> = {
+export const SCORE_GENERAL_EXPLAIN =
+  "Cada nota vai de 0 a 100 e compara o imóvel com os outros da mesma cidade. 70 significa " +
+  "“melhor que a maioria” naquele aspecto - não é uma nota absoluta. Quando falta um dado, ele é " +
+  "ignorado no cálculo e não vira ponto negativo.";
+
+export const SCORE_EXPLAIN: Record<keyof Scores, string> = {
+  investment:
+    "A nota principal: combina preço frente ao mercado, desconto sobre a avaliação, serviços no " +
+    "entorno, facilidade de revenda e o melhor uso possível do imóvel. O peso de cada fator muda " +
+    "conforme o tipo - imóvel, terreno ou outros. A nota é reduzida quando faltam dados sobre o " +
+    "imóvel e quando há muitos imóveis iguais à venda na mesma região.",
+  liquidity:
+    "Estima a facilidade de revender: tipo do imóvel (apartamento é o mais líquido, terreno o " +
+    "menos), área, quartos, preço dentro do próprio segmento e a procura na região.",
+  flip:
+    "Estima a margem de uma revenda rápida: preço frente ao mercado, área, quartos e desconto " +
+    "sobre a avaliação. Aqui um imóvel com aparência ruim pontua mais alto - é o potencial de " +
+    "valorização com reforma.",
   airbnb:
-    "Avalia a procura por aluguel de curta temporada, a localização e o giro de hóspedes na região.",
-  flip: "Avalia o desconto, o custo de reforma estimado e o preço de revenda no bairro.",
-  student: "Avalia a proximidade de universidades e a estabilidade do aluguel para estudantes.",
-  family: "Avalia tamanho, número de quartos, escolas e serviços próximos para moradia familiar.",
-  high_liquidity: "Avalia a facilidade e a rapidez para revender o imóvel no mercado local.",
+    "Mede o quanto a região atrai visitantes: hotéis e restaurantes por perto, proximidade do " +
+    "centro e de universidades. Muitos hotéis por perto contam a favor - indicam uma área que já " +
+    "recebe turistas.",
+  student: "Universidades por perto, somadas a um imóvel compacto e com poucos quartos.",
+  family: "Quartos e área do imóvel, mais escolas, parques e supermercados na região.",
+  convenience:
+    "Mede o dia a dia a pé: supermercados, hospitais, escolas, farmácias e parques por perto.",
   commercial:
-    "Avalia o potencial comercial, o fluxo de pessoas e a densidade de serviços no entorno.",
+    "Mede o movimento comercial do entorno: agências bancárias, shoppings e restaurantes nas " +
+    "proximidades.",
 };
 
 export const SCORE_LABEL: Record<keyof Scores, string> = {
@@ -67,7 +87,7 @@ export const SCORE_DIMS: (keyof Scores)[] = [
   "investment",
 ];
 
-const SCORE_FIELD: Record<ProfileKey, keyof Scores> = {
+export const SCORE_FIELD: Record<ProfileKey, keyof Scores> = {
   airbnb: "airbnb",
   flip: "flip",
   student: "student",

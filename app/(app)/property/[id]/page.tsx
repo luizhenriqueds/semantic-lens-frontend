@@ -27,13 +27,16 @@ import {
   getScoreExplain,
 } from "@/lib/data";
 import { addressKey } from "@/lib/market";
+import Hint from "@/components/ui/Hint";
 import {
   discountPercentile,
   fmtDate,
   fmtDist,
   money,
-  PROFILE_EXPLAIN,
   PROFILE_LABEL,
+  SCORE_EXPLAIN,
+  SCORE_FIELD,
+  SCORE_GENERAL_EXPLAIN,
   showDiscount,
 } from "@/lib/format";
 import { statsForProperty } from "@/lib/market";
@@ -145,7 +148,12 @@ export default async function PropertyPage({ params }: { params: Promise<{ id: s
           <PropertyRanks p={p} />
 
           <div className="infoblock">
-            <h3>Nota por objetivo de investimento</h3>
+            <h3 className="h3-hint">
+              Nota por objetivo de investimento
+              <Hint title="Como ler as notas" align="left">
+                {SCORE_GENERAL_EXPLAIN}
+              </Hint>
+            </h3>
             {p.scores.investment != null && (
               <div className="investhead">
                 <Ring value={p.scores.investment} size={66} />
@@ -164,8 +172,8 @@ export default async function PropertyPage({ params }: { params: Promise<{ id: s
             <ScoreBars scores={p.scores} />
             {p.profile && (
               <div className="explain">
-                <b>{PROFILE_LABEL[p.profile]}:</b> {PROFILE_EXPLAIN[p.profile]} As notas vão de 0 a
-                100 e são calculadas a partir dos dados do imóvel e do bairro.
+                <b>{PROFILE_LABEL[p.profile]}:</b> {SCORE_EXPLAIN[SCORE_FIELD[p.profile]]} As notas
+                vão de 0 a 100 e comparam este imóvel com os outros da mesma cidade.
               </div>
             )}
             <ScoreBreakdown p={p} explain={scoreExplain} />

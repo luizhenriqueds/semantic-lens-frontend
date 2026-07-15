@@ -1,4 +1,5 @@
-import { PROFILE_LABEL } from "@/lib/format";
+import Hint from "@/components/ui/Hint";
+import { PROFILE_LABEL, SCORE_EXPLAIN } from "@/lib/format";
 import type { ProfileKey, Scores } from "@/lib/types";
 
 const ROWS: { key: ProfileKey; field: keyof Scores }[] = [
@@ -20,7 +21,13 @@ export default function ScoreBars({ scores }: { scores: Scores }) {
         return (
           <div key={key} className={`sb${dim ? " dim" : ""}`}>
             <div className="top">
-              <span className="name">{PROFILE_LABEL[key]}</span>
+              <span className="name">
+                {PROFILE_LABEL[key]}
+                <Hint title={`Como calculamos: ${PROFILE_LABEL[key]}`} align="left" size={13}>
+                  {SCORE_EXPLAIN[field]}
+                  {v == null && " Esta nota não se aplica a este tipo de imóvel."}
+                </Hint>
+              </span>
               <span className="num">{v == null ? "—" : Math.round(v)}</span>
             </div>
             <div className="track">
