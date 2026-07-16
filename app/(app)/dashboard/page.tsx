@@ -1,7 +1,7 @@
 import Link from "next/link";
 import CollectionCard from "@/components/groups/CollectionCard";
 import SearchHero from "@/components/search/SearchHero";
-import { clusterStats } from "@/lib/clusterStats";
+import { clusterStats } from "@/lib/clusters";
 import { getClusters, getProperties } from "@/lib/data";
 
 export default async function HomePage() {

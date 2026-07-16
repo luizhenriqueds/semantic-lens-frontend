@@ -1,3 +1,4 @@
+import { BRL, EMPTY } from "@/lib/format";
 import type { MarketStats, Property, Region } from "@/lib/types";
 
 export const MIN_COMPARABLES = 5;
@@ -33,6 +34,6 @@ export function statsForRegion(stats: MarketStats[], region: Region): MarketStat
 }
 
 export function moneyM2(n: number | null | undefined): string {
-  if (n == null) return "—";
-  return "R$ " + Math.round(n).toLocaleString("pt-BR") + "/m²";
+  if (n == null) return EMPTY;
+  return BRL + Math.round(n).toLocaleString("pt-BR") + "/m²";
 }

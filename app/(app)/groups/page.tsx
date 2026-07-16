@@ -1,6 +1,6 @@
 import CollectionCard from "@/components/groups/CollectionCard";
 import EmptyState from "@/components/ui/EmptyState";
-import { clusterStats } from "@/lib/clusterStats";
+import { clusterStats } from "@/lib/clusters";
 import { getClusters, getProperties } from "@/lib/data";
 import { IconGroups } from "@/lib/icons";
 

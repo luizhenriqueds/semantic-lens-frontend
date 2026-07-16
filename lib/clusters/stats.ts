@@ -1,5 +1,6 @@
 import { profileScore } from "@/lib/format";
 import type { Property } from "@/lib/types";
+import { propertyAge } from "./age";
 
 export type ClusterStats = {
   count: number;
@@ -13,14 +14,6 @@ export type ClusterStats = {
   cityCount: number;
   sampleImages: string[];
 };
-
-export function propertyAge(
-  yearBuilt: number | null,
-  now = new Date().getFullYear(),
-): number | null {
-  if (yearBuilt == null || yearBuilt < 1800 || yearBuilt > now) return null;
-  return now - yearBuilt;
-}
 
 function median(values: number[]): number | null {
   if (!values.length) return null;

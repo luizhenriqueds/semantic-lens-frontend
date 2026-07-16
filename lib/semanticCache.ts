@@ -28,7 +28,7 @@ const isEnabled = () => process.env.SEMCACHE_ENABLED === "true";
 const isShadow = () => process.env.SEMCACHE_SHADOW === "true";
 
 // In-process hit-rate counters. Reset on server restart and are per-instance
-// (serverless may fragment them across lambdas) — good enough for calibration.
+// (serverless may fragment them across lambdas) - good enough for calibration.
 type Tally = { hit: number; miss: number; shadowHit: number; shadowMatch: number };
 const stats: Record<Namespace, Tally> = {
   search: { hit: 0, miss: 0, shadowHit: 0, shadowMatch: 0 },
