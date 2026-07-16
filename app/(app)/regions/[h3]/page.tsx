@@ -3,13 +3,21 @@ import { notFound } from "next/navigation";
 import DnaStars from "./_components/DnaStars";
 import InfraGrid from "./_components/InfraGrid";
 import PoiNearGrid from "@/components/region/PoiNearGrid";
+import RegionHighlights from "@/components/region/RegionHighlights";
 import RegionMapTabs from "@/components/region/RegionMapTabs";
 import SameAddressGroups from "@/components/region/SameAddressGroups";
 import RegionScoreBars from "@/components/region/RegionScoreBars";
 import RegionMarket from "@/components/market/RegionMarket";
-import { getMarketStats, getPoisNear, getProperties, getRegion, getRegions } from "@/lib/data";
+import {
+  getMarketStats,
+  getPoisNear,
+  getProperties,
+  getRegion,
+  getRegionPois,
+  getRegions,
+} from "@/lib/data";
 import { hasReliableMarket, statsForRegion } from "@/lib/market";
-import { nearbyPois } from "@/lib/pois";
+import { nearbyPois, regionHighlights } from "@/lib/pois";
 import { IconBack, IconPin } from "@/lib/icons";
 import { regionTags } from "@/lib/region";
 import type { Property } from "@/lib/types";
@@ -37,12 +45,15 @@ export async function generateStaticParams() {
 
 export default async function RegionPage({ params }: { params: Promise<{ h3: string }> }) {
   const { h3 } = await params;
-  const [region, all, marketStats] = await Promise.all([
+  const [region, all, marketStats, cellPois] = await Promise.all([
     getRegion(h3),
     getProperties(),
     getMarketStats(),
+    getRegionPois(h3),
   ]);
   if (!region) notFound();
+
+  const highlights = regionHighlights(cellPois);
 
   // Must match what /properties?h3= lists, which drops inactive listings.
   const here = all.filter((p) => p.h3 === h3 && !p.inactive);
@@ -109,7 +120,7 @@ export default async function RegionPage({ params }: { params: Promise<{ h3: str
         <div className="rcard">
           <h3>2. O que existe por perto?</h3>
           <div className="rcbody">
-            <PoiNearGrid region={region} />
+            <PoiNearGrid nearest={region.nearest} />
             <div className="rnote">Distância até o serviço mais próximo.</div>
           </div>
         </div>
@@ -120,6 +131,17 @@ export default async function RegionPage({ params }: { params: Promise<{ h3: str
           </div>
         </div>
       </div>
+
+      {highlights.length > 0 && (
+        <div style={{ marginBottom: 18 }}>
+          <div className="rcard">
+            <h3>Estabelecimentos no entorno</h3>
+            <div className="rcbody">
+              <RegionHighlights pois={highlights} />
+            </div>
+          </div>
+        </div>
+      )}
 
       {center && geo.length > 0 && (
         <div style={{ marginBottom: 18 }}>

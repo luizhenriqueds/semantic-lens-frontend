@@ -33,6 +33,7 @@ const SEARCH_INSTRUCTION =
 const RERANK_INSTRUCTION =
   "If the query names a property type, listings of that exact type must rank above any other type; each listing begins with its property type.";
 const MIN_POOL = 10;
+const RESULT_LIMIT = 20;
 const RERANK_ACTIVATE = 0.5;
 const RERANK_MIN = 0.3;
 const POI_NEAR_M = 5000;
@@ -101,7 +102,7 @@ function goalRerank(pool: PoolRow[], props: Property[], goal: GoalKey): SearchHi
       score: 0.4 * rankNorm(i, n) + 0.6 * percentile(scoreOf.get(p.id)),
     }))
     .sort((a, b) => b.score - a.score)
-    .slice(0, 20);
+    .slice(0, RESULT_LIMIT);
 }
 
 // POIs whose name matches the query, narrowed by category (soft). Acronyms are
@@ -153,7 +154,7 @@ function poiRerank(pool: PoolRow[], near: Map<string, number>): SearchHit[] {
     if (dist == null) return;
     hits.push({ id: p.id, score: 0.4 * rankNorm(i, n) + 0.6 * Math.exp(-dist / 2500) });
   });
-  return hits.sort((a, b) => b.score - a.score).slice(0, 20);
+  return hits.sort((a, b) => b.score - a.score).slice(0, RESULT_LIMIT);
 }
 
 async function semanticRank(
@@ -177,10 +178,10 @@ async function semanticRank(
         .map((p, i) => ({ id: p.id, score: scores![i] ?? 0 }))
         .filter((h) => h.score >= RERANK_MIN)
         .sort((a, b) => b.score - a.score)
-        .slice(0, 20);
+        .slice(0, RESULT_LIMIT);
     }
   }
-  return pool.slice(0, 20).map((p, i) => ({ id: p.id, score: 1 - i / 20 }));
+  return pool.slice(0, RESULT_LIMIT).map((p, i) => ({ id: p.id, score: 1 - i / RESULT_LIMIT }));
 }
 
 function poiPlaceLabel(poi: PoiQuery): string {

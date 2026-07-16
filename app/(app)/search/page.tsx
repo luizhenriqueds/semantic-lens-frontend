@@ -16,15 +16,7 @@ export default async function SearchPage({
 
   return (
     <section className="view">
-      <div
-        className="pagehead"
-        style={{
-          display: "flex",
-          alignItems: "flex-start",
-          justifyContent: "space-between",
-          gap: 16,
-        }}
-      >
+      <div className="pagehead searchhead">
         <div>
           <h1>Buscar imóveis</h1>
           <p>

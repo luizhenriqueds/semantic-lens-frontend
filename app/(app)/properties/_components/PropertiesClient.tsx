@@ -1053,9 +1053,11 @@ export default function PropertiesClient({
         <AuctionCalendar items={items} onDayOpen={setCalDayOpen} />
       ) : items.length ? (
         <>
-          {pageItems.map((p) => (
-            <PropertyRow key={p.id} p={p} poiCats={poiCats} poiRadius={poiRadius} />
-          ))}
+          <div className="wlist">
+            {pageItems.map((p) => (
+              <PropertyRow key={p.id} p={p} poiCats={poiCats} poiRadius={poiRadius} />
+            ))}
+          </div>
           <Pagination page={page} total={items.length} pageSize={PAGE_SIZE} onChange={goTo} />
         </>
       ) : (

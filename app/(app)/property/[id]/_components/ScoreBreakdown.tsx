@@ -19,7 +19,9 @@ function ExplainBreakdown({ explain }: { explain: ScoreExplain }) {
       {lines.length > 0 && (
         <div className="sb-explain">
           {lines.map((line, i) => (
-            <p key={i}>{line}</p>
+            <p key={i} className={line.startsWith("O que pesa contra") ? "sb-con" : "sb-pro"}>
+              {line}
+            </p>
           ))}
         </div>
       )}
