@@ -1,50 +1,58 @@
 "use client";
 
 import { useCallback } from "react";
-import { createStore } from "@/lib/localStore";
-import type { AlertFilters } from "@/lib/types";
+import * as api from "@/app/actions/alerts";
+import { createClientStore } from "@/lib/clientStore";
+import type { Alert, AlertFilters, AlertPatch } from "@/lib/types";
 
-export type Alert = {
-  id: string;
-  name: string;
-  freq: string;
-  on: boolean;
-  filters?: AlertFilters;
-};
+export type { Alert } from "@/lib/types";
 
-const store = createStore<Alert[]>("matricula-alerts", []);
-
-const nameKey = (name: string) => name.trim().toLowerCase();
+const store = createClientStore<Alert[]>([], () => api.listAlerts());
 
 export function useAlerts() {
   const alerts = store.useValue();
 
-  const add = useCallback((name: string, freq: string, filters?: AlertFilters): boolean => {
-    const cur = store.read();
-    if (cur.some((a) => nameKey(a.name) === nameKey(name))) return false;
-    const id = `${Date.now().toString(36)}-${cur.length}`;
-    store.write([{ id, name, freq, on: true, filters }, ...cur]);
-    return true;
-  }, []);
+  const add = useCallback(
+    async (name: string, freq: string, filters?: AlertFilters): Promise<boolean> => {
+      const created = await api.createAlert(name, freq, filters ?? null);
+      if (!created) return false;
+      store.set([created, ...store.get()]);
+      return true;
+    },
+    [],
+  );
 
   const toggle = useCallback((id: string) => {
-    store.write(store.read().map((a) => (a.id === id ? { ...a, on: !a.on } : a)));
+    const cur = store.get();
+    const alert = cur.find((a) => a.id === id);
+    if (!alert) return;
+    const on = !alert.on;
+    store.set(cur.map((a) => (a.id === id ? { ...a, on } : a)));
+    api.updateAlert(id, { on }).catch((err) => console.warn("Failed to persist alert", err));
   }, []);
 
-  const update = useCallback((id: string, patch: Partial<Omit<Alert, "id">>): boolean => {
-    const cur = store.read();
-    if (
-      patch.name != null &&
-      cur.some((a) => a.id !== id && nameKey(a.name) === nameKey(patch.name!))
-    ) {
-      return false;
-    }
-    store.write(cur.map((a) => (a.id === id ? { ...a, ...patch } : a)));
+  const update = useCallback(async (id: string, patch: AlertPatch): Promise<boolean> => {
+    const ok = await api.updateAlert(id, patch);
+    if (!ok) return false;
+    store.set(
+      store.get().map((a) =>
+        a.id === id
+          ? {
+              ...a,
+              ...(patch.name != null && { name: patch.name }),
+              ...(patch.freq != null && { freq: patch.freq }),
+              ...(patch.filters !== undefined && { filters: patch.filters ?? undefined }),
+              ...(patch.on != null && { on: patch.on }),
+            }
+          : a,
+      ),
+    );
     return true;
   }, []);
 
   const remove = useCallback((id: string) => {
-    store.write(store.read().filter((a) => a.id !== id));
+    store.set(store.get().filter((a) => a.id !== id));
+    api.deleteAlert(id).catch((err) => console.warn("Failed to delete alert", err));
   }, []);
 
   return { alerts, add, toggle, update, remove };

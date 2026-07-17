@@ -1,6 +1,6 @@
 export { getProperties, getProperty } from "./properties";
 export { getPoisNear, getPropertyPois, getRegionPois } from "./pois";
-export { getMarketStats, getMarketHistory } from "./market";
+export { getMarketStats, getMarketHistory, getMarketComparables } from "./market";
 export { getClusters } from "./clusters";
 export { getRegions, getRegion } from "./regions";
 export { getScoreExplain, getPriceHistory, getRecommendations } from "./details";

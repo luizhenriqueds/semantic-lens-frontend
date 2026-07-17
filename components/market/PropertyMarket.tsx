@@ -6,15 +6,14 @@ type Mark = {
   key: string;
   label: string;
   value: number;
-  kind: "you" | "appraised" | "market" | "est";
+  kind: "you" | "appraised" | "market";
 };
 
-const KIND_ORDER: Record<Mark["kind"], number> = { you: 0, appraised: 1, market: 2, est: 3 };
+const KIND_ORDER: Record<Mark["kind"], number> = { you: 0, appraised: 1, market: 2 };
 
-// A horizontal number line that plots this property's bid against the market
-// median and estimated value. The dots sit on the track for the visual
-// comparison; the exact labels live in a legend below so they never overlap,
-// even in the narrow sidebar or when two values are close together.
+// A horizontal number line plotting this property's bid against the market
+// benchmark and appraisal. Labels live in a legend below so the dots never
+// overlap, even in the narrow sidebar.
 function PriceScale({ marks }: { marks: Mark[] }) {
   const values = marks.map((m) => m.value);
   let lo = Math.min(...values);
@@ -50,6 +49,18 @@ function PriceScale({ marks }: { marks: Mark[] }) {
   );
 }
 
+// Market benchmark: real same-size comps > per-m² estimate > raw median.
+function marketBenchmark(stats: MarketStats, area: number | null) {
+  const med = stats.priceMedian;
+  if (stats.sizeMatched)
+    return { value: med, label: "Valor de mercado (comparáveis)", basis: "comps" as const };
+  const est =
+    area != null && area > 0 && stats.priceM2Median != null ? area * stats.priceM2Median : null;
+  if (est != null)
+    return { value: est, label: "Valor de mercado (por m²)", basis: "perM2" as const };
+  return { value: med, label: "Mediana do bairro", basis: "median" as const };
+}
+
 export default function PropertyMarket({
   stats,
   lance,
@@ -74,19 +85,22 @@ export default function PropertyMarket({
   }
 
   const med = stats.priceMedian;
-  const belowPct =
-    med != null && med > 0 && lance != null ? Math.round((1 - lance / med) * 100) : null;
   const propM2 = lance != null && area != null && area > 0 ? lance / area : null;
+  const { value: compareValue, label: marketLabel, basis } = marketBenchmark(stats, area);
 
-  // An estimate below the higher of appraisal/bid — or wildly above it — is unreliable, so we hide it.
-  const rawEst =
-    area != null && area > 0 && stats.priceM2Median != null ? area * stats.priceM2Median : null;
-  const estFloor = Math.max(lance ?? 0, appraised ?? 0);
-  const estValue =
-    rawEst != null && estFloor > 0 && rawEst >= estFloor && rawEst <= estFloor * 3 ? rawEst : null;
-  const upside = estValue != null && lance != null ? estValue - lance : null;
+  const belowPct =
+    compareValue != null && compareValue > 0 && lance != null
+      ? Math.round((1 - lance / compareValue) * 100)
+      : null;
+
+  const upside = compareValue != null && lance != null ? compareValue - lance : null;
   const upsidePct =
     upside != null && lance != null && lance > 0 ? Math.round((upside / lance) * 100) : null;
+  const showUpside =
+    upside != null &&
+    upside > 0 &&
+    compareValue != null &&
+    compareValue <= Math.max(lance ?? 0, appraised ?? 0, 1) * 3;
 
   const p25 = stats.priceM2P25;
   const p75 = stats.priceM2P75;
@@ -104,10 +118,8 @@ export default function PropertyMarket({
   if (lance != null) marks.push({ key: "you", label: "Este imóvel", value: lance, kind: "you" });
   if (appraised != null)
     marks.push({ key: "appr", label: "Valor de avaliação", value: appraised, kind: "appraised" });
-  if (med != null)
-    marks.push({ key: "med", label: "Mediana do bairro", value: med, kind: "market" });
-  if (estValue != null)
-    marks.push({ key: "est", label: "Valor estimado", value: estValue, kind: "est" });
+  if (compareValue != null)
+    marks.push({ key: "mkt", label: marketLabel, value: compareValue, kind: "market" });
   const sortedMarks = [...marks].sort((a, b) => a.value - b.value);
 
   return (
@@ -124,10 +136,10 @@ export default function PropertyMarket({
       {sortedMarks.length >= 2 && <PriceScale marks={sortedMarks} />}
 
       <div className="mkt-tiles">
-        {upside != null && upsidePct != null && upside > 0 && (
+        {showUpside && (
           <div className="mkt-stat good">
             <div className="k">Potencial de ganho</div>
-            <div className="v mkt-up">{moneyShort(upside)}</div>
+            <div className="v mkt-up">{moneyShort(upside!)}</div>
             <div className="s">+{upsidePct}% sobre o lance</div>
           </div>
         )}
@@ -152,7 +164,9 @@ export default function PropertyMarket({
         )}
         {med != null && (
           <div className="mkt-stat">
-            <div className="k">Mediana do bairro</div>
+            <div className="k">
+              {basis === "comps" ? "Mediana de similares" : "Mediana do bairro"}
+            </div>
             <div className="v">{money(med)}</div>
             <div className="s">preço de venda</div>
           </div>
@@ -184,8 +198,8 @@ export default function PropertyMarket({
       )}
       <div className="rnote">
         Baseado em {stats.sampleSize ?? 0} anúncio{stats.sampleSize === 1 ? "" : "s"} de{" "}
-        {stats.propertyType?.toLowerCase() ?? "imóveis"} à venda no bairro (fonte: portais de
-        imóveis).
+        {stats.propertyType?.toLowerCase() ?? "imóveis"}{" "}
+        {basis === "comps" ? "de porte similar " : ""}à venda no bairro (fonte: portais de imóveis).
         {fmtDay(stats.computedAt) && <> Dados coletados em {fmtDay(stats.computedAt)}.</>}
       </div>
     </div>

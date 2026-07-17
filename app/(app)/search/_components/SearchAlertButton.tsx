@@ -23,9 +23,9 @@ export default function SearchAlertButton({ query }: { query: string }) {
     );
   }
 
-  const createAlert = () => {
-    addAlert(q, "Aviso diário");
-    toast("Alerta criado");
+  const createAlert = async () => {
+    const ok = await addAlert(q, "Aviso diário", { q });
+    toast(ok ? "Alerta criado" : "Você já tem um alerta com esse nome");
   };
 
   return (

@@ -12,7 +12,13 @@ import AuctionCalendar from "./AuctionCalendar";
 import PropertiesAnalysis from "./PropertiesAnalysis";
 import { useToast } from "@/components/ui/Toaster";
 import { fmtDist, investmentScore, moneyShort, profileScore, SCORE_LABEL } from "@/lib/format";
-import { describeFilters, hasAnyFilter, matchesFilters, useAlerts } from "@/lib/alerts";
+import {
+  describeFilters,
+  hasAnyFilter,
+  matchesFilters,
+  matchesText,
+  useAlerts,
+} from "@/lib/alerts";
 import { useSaved } from "@/lib/saved";
 import type { AlertFilters, Cluster, Property, Scores } from "@/lib/types";
 import { IconArrow, IconBell, IconBuilding, IconSearch, IconSliders, POI_ICON } from "@/lib/icons";
@@ -281,11 +287,7 @@ export default function PropertiesClient({
       if (scoreKey !== "none" && scoreMin && (p.scores[scoreKey] ?? 0) < scoreMin) return false;
       if (financiamento && !p.acceptsFinancing) return false;
       if (fgts && !p.acceptsFgts) return false;
-      if (term) {
-        const hay =
-          `${p.title} ${p.neighborhood} ${p.city} ${p.uf} ${p.propertyType}`.toLowerCase();
-        if (!hay.includes(term)) return false;
-      }
+      if (term && !matchesText(p, term)) return false;
       return true;
     });
     list.sort((a, b) => {
@@ -425,6 +427,7 @@ export default function PropertiesClient({
 
   const alertFilters = useMemo<AlertFilters>(() => {
     const f: AlertFilters = {};
+    if (q.trim()) f.q = q.trim();
     if (uf !== "all") f.uf = uf;
     if (cidade !== "all") f.city = cidade;
     if (tipo !== "all") f.propertyType = tipo;
@@ -445,6 +448,7 @@ export default function PropertiesClient({
     }
     return f;
   }, [
+    q,
     uf,
     cidade,
     tipo,
@@ -466,9 +470,9 @@ export default function PropertiesClient({
   const alertExists =
     canAlert && alerts.some((a) => a.name.trim().toLowerCase() === alertLabel.trim().toLowerCase());
 
-  const createAlert = () => {
+  const createAlert = async () => {
     if (!canAlert) return;
-    const ok = addAlert(alertLabel, "Aviso diário", alertFilters);
+    const ok = await addAlert(alertLabel, "Aviso diário", alertFilters);
     toast(ok ? "Alerta criado" : "Você já tem um alerta com estes filtros");
   };
 

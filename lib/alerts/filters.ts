@@ -2,7 +2,14 @@ import { fmtDist, moneyShort, SCORE_LABEL } from "@/lib/format";
 import { POI_LABEL } from "@/lib/pois";
 import type { AlertFilters, Property } from "@/lib/types";
 
+export function matchesText(p: Property, term: string): boolean {
+  const hay = `${p.title} ${p.neighborhood} ${p.city} ${p.uf} ${p.propertyType}`.toLowerCase();
+  return hay.includes(term.trim().toLowerCase());
+}
+
 export function matchesFilters(p: Property, f: AlertFilters): boolean {
+  const q = f.q?.trim();
+  if (q && !matchesText(p, q)) return false;
   if (f.uf && p.uf !== f.uf) return false;
   if (f.city && p.city !== f.city) return false;
   if (f.propertyType && p.propertyType !== f.propertyType) return false;
@@ -36,6 +43,7 @@ export function countMatches(properties: Property[], f: AlertFilters): number {
 
 export function hasAnyFilter(f: AlertFilters): boolean {
   return (
+    !!f.q?.trim() ||
     f.scoreKey != null ||
     f.minScore != null ||
     f.uf != null ||
@@ -58,6 +66,7 @@ function scoreLabel(f: AlertFilters): string | null {
 
 export function describeFilters(f: AlertFilters): string {
   const parts: string[] = [];
+  if (f.q?.trim()) parts.push(`“${f.q.trim()}”`);
   const label = scoreLabel(f);
   if (label) parts.push(label);
   if (f.minScore != null) parts.push(`nota ≥ ${f.minScore}`);
@@ -78,6 +87,7 @@ export function describeFilters(f: AlertFilters): string {
 
 export function filterChips(f: AlertFilters): string[] {
   const chips: string[] = [];
+  if (f.q?.trim()) chips.push(`“${f.q.trim()}”`);
   const label = scoreLabel(f);
   if (label) chips.push(label);
   if (f.minScore != null) chips.push(`Nota ≥ ${f.minScore}`);

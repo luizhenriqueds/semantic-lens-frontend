@@ -1,0 +1,4 @@
+# Local project slug only. The prod project ref is passed at deploy time via
+# `supabase link --project-ref` (SUPABASE_PROJECT_ID secret).
+# Do not run `supabase start` / `supabase db reset` in this repo.
+project_id = "semantic-lens-frontend"

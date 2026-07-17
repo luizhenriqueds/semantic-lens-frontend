@@ -12,12 +12,10 @@ import NearbyPois from "./_components/NearbyPois";
 import PropertyRanks from "./_components/PropertyRanks";
 import RegionPanel from "@/components/region/RegionPanel";
 import PropertyMarket from "@/components/market/PropertyMarket";
-import MarketHistory from "@/components/market/MarketHistory";
 import SimilarCarousel, { type RecItem } from "@/components/property/SimilarCarousel";
 import Ring from "@/components/ui/Ring";
 import {
-  getMarketHistory,
-  getMarketStats,
+  getMarketComparables,
   getPriceHistory,
   getProperties,
   getProperty,
@@ -26,7 +24,6 @@ import {
   getRegion,
   getScoreExplain,
 } from "@/lib/data";
-import { addressKey } from "@/lib/market";
 import Hint from "@/components/ui/Hint";
 import {
   discountPercentile,
@@ -39,7 +36,6 @@ import {
   SCORE_GENERAL_EXPLAIN,
   showDiscount,
 } from "@/lib/format";
-import { statsForProperty } from "@/lib/market";
 
 export const revalidate = 120;
 
@@ -53,18 +49,15 @@ export default async function PropertyPage({ params }: { params: Promise<{ id: s
   const p = await getProperty(id);
   if (!p) notFound();
 
-  const [all, region, marketStats, priceHistory, marketHistory, recs, propertyPois, scoreExplain] =
-    await Promise.all([
-      getProperties(),
-      p.h3 ? getRegion(p.h3) : Promise.resolve(null),
-      getMarketStats(),
-      getPriceHistory(p.id),
-      getMarketHistory(addressKey(p.uf, p.city, p.neighborhood, p.propertyType)),
-      getRecommendations(p.id),
-      getPropertyPois(p.id),
-      getScoreExplain(p.id),
-    ]);
-  const market = statsForProperty(marketStats, p);
+  const [all, region, market, priceHistory, recs, propertyPois, scoreExplain] = await Promise.all([
+    getProperties(),
+    p.h3 ? getRegion(p.h3) : Promise.resolve(null),
+    getMarketComparables(p.uf, p.city, p.neighborhood, p.propertyType, p.area),
+    getPriceHistory(p.id),
+    getRecommendations(p.id),
+    getPropertyPois(p.id),
+    getScoreExplain(p.id),
+  ]);
   const nearby = propertyPois;
 
   const propById = new Map(all.map((x) => [x.id, x]));
@@ -235,8 +228,6 @@ export default async function PropertyPage({ params }: { params: Promise<{ id: s
               appraised={p.appraisedValue}
             />
           )}
-
-          <MarketHistory points={marketHistory} />
 
           <div className="infoblock">
             <h3>Sobre o imóvel</h3>

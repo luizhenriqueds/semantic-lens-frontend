@@ -11,6 +11,7 @@ export type MarketStats = {
   priceM2P25: number | null;
   priceM2P75: number | null;
   computedAt: string | null;
+  sizeMatched?: boolean;
 };
 
 export type MarketHistoryPoint = {
