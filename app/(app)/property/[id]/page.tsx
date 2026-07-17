@@ -246,6 +246,43 @@ export default async function PropertyPage({ params }: { params: Promise<{ id: s
               )}
             </p>
           </div>
+
+          {(p.condoPaymentRule || p.taxPaymentRule) && (
+            <div className="infoblock">
+              <h3>Quem paga as dívidas do imóvel</h3>
+              <div className="debtrules">
+                {p.condoPaymentRule && (
+                  <div className="debtrule">
+                    <span className="dr-ic">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                        <path d="M4 21V5a1 1 0 0 1 1-1h9a1 1 0 0 1 1 1v16M15 21V9h4a1 1 0 0 1 1 1v11M3 21h18M8 8h3M8 12h3M8 16h3" />
+                      </svg>
+                    </span>
+                    <div>
+                      <div className="dr-k">Condomínio</div>
+                      <p>{p.condoPaymentRule}</p>
+                    </div>
+                  </div>
+                )}
+                {p.taxPaymentRule && (
+                  <div className="debtrule">
+                    <span className="dr-ic">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                        <path d="M6 2h12v20l-3-2-3 2-3-2-3 2zM9 7h6M9 11h6M9 15h4" />
+                      </svg>
+                    </span>
+                    <div>
+                      <div className="dr-k">IPTU e tributos</div>
+                      <p>{p.taxPaymentRule}</p>
+                    </div>
+                  </div>
+                )}
+              </div>
+              <p className="dr-note">
+                Conforme a seção “Regras para pagamento das despesas” do edital da Caixa.
+              </p>
+            </div>
+          )}
         </div>
       </div>
 

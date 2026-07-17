@@ -36,10 +36,10 @@ const PAGE_SIZE = 25;
 type Sort = "investimento" | "desconto" | "score" | "leilao" | "menor" | "maior";
 
 const SORTS: { key: Sort; label: string }[] = [
+  { key: "leilao", label: "Data do leilão (mais próxima)" },
   { key: "investimento", label: "Melhor investimento" },
   { key: "desconto", label: "Maior desconto" },
   { key: "score", label: "Melhor nota do objetivo" },
-  { key: "leilao", label: "Leilão mais próximo" },
   { key: "menor", label: "Menor preço" },
   { key: "maior", label: "Maior preço" },
 ];
@@ -122,6 +122,88 @@ function Section({
   );
 }
 
+function ModalityFilter({
+  options,
+  selected,
+  onChange,
+}: {
+  options: string[];
+  selected: string[];
+  onChange: (v: string[]) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!open) return;
+    const onDoc = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener("mousedown", onDoc);
+    return () => document.removeEventListener("mousedown", onDoc);
+  }, [open]);
+  const toggle = (m: string) =>
+    onChange(selected.includes(m) ? selected.filter((x) => x !== m) : [...selected, m]);
+  const label =
+    selected.length === 0
+      ? "Modalidade: todas"
+      : selected.length === 1
+        ? `Modalidade: ${selected[0]}`
+        : `Modalidade: ${selected.length}`;
+  return (
+    <div className={`modalityfilter${selected.length ? " on" : ""}`} ref={ref}>
+      <button
+        type="button"
+        className="mf-toggle"
+        onClick={() => setOpen((o) => !o)}
+        aria-expanded={open}
+        aria-haspopup="listbox"
+      >
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden="true">
+          <path d="m13 3 8 8-2.5 2.5-8-8zM10.5 5.5 3 13l3 3 7.5-7.5M3 21h9M5 15.5 3 17.5" />
+        </svg>
+        <span className="mf-label">{label}</span>
+        <svg
+          className="mf-car"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          aria-hidden="true"
+        >
+          <path d="m6 9 6 6 6-6" />
+        </svg>
+      </button>
+      {open && (
+        <div className="mf-pop" role="listbox" aria-multiselectable="true">
+          {options.map((m) => (
+            <button
+              key={m}
+              type="button"
+              role="option"
+              aria-selected={selected.includes(m)}
+              className={`mf-opt${selected.includes(m) ? " on" : ""}`}
+              onClick={() => toggle(m)}
+            >
+              <span className="mf-box">
+                {selected.includes(m) && (
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                    <path d="m5 13 4 4L19 7" />
+                  </svg>
+                )}
+              </span>
+              {m}
+            </button>
+          ))}
+          {selected.length > 0 && (
+            <button type="button" className="mf-clear" onClick={() => onChange([])}>
+              Limpar modalidades
+            </button>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function PropertiesClient({
   properties,
   clusters,
@@ -145,7 +227,7 @@ export default function PropertiesClient({
   const [tipo, setTipo] = useState("all");
   const [cluster, setCluster] = useState<number | "all">(initialCluster ?? "all");
   const [drawerOpen, setDrawerOpen] = useState(false);
-  const [openSecs, setOpenSecs] = useState<Set<string>>(new Set(["imovel", "poi"]));
+  const [openSecs, setOpenSecs] = useState<Set<string>>(new Set(["grupo", "imovel", "poi"]));
   const [minQuartos, setMinQuartos] = useState(0);
   const [maxPreco, setMaxPreco] = useState(0); // 0 = sem limite
   const [precoInput, setPrecoInput] = useState("");
@@ -160,9 +242,9 @@ export default function PropertiesClient({
   const [scoreMin, setScoreMin] = useState(0);
   const [financiamento, setFinanciamento] = useState(false);
   const [fgts, setFgts] = useState(false);
-  const [modalidade, setModalidade] = useState("all");
+  const [modalidade, setModalidade] = useState<string[]>([]);
   const [prazoLeilao, setPrazoLeilao] = useState(0);
-  const [sort, setSort] = useState<Sort>("desconto");
+  const [sort, setSort] = useState<Sort>("leilao");
   const [page, setPage] = useState(1);
   const [view, setView] = useState<View>(initialView);
   const [calDayOpen, setCalDayOpen] = useState(false);
@@ -197,7 +279,7 @@ export default function PropertiesClient({
         if (s.scoreMin != null) setScoreMin(s.scoreMin);
         if (s.financiamento != null) setFinanciamento(s.financiamento);
         if (s.fgts != null) setFgts(s.fgts);
-        if (s.modalidade != null) setModalidade(s.modalidade);
+        if (Array.isArray(s.modalidade)) setModalidade(s.modalidade);
         if (s.prazoLeilao != null) setPrazoLeilao(s.prazoLeilao);
         if (s.sort != null) setSort(s.sort);
         if (s.view != null) setView(s.view);
@@ -266,7 +348,8 @@ export default function PropertiesClient({
       if (uf !== "all" && p.uf !== uf) return false;
       if (cidade !== "all" && p.city !== cidade) return false;
       if (tipo !== "all" && p.propertyType !== tipo) return false;
-      if (modalidade !== "all" && p.modality !== modalidade) return false;
+      if (modalidade.length > 0 && !(p.modality != null && modalidade.includes(p.modality)))
+        return false;
       if (prazoLeilao) {
         if (!p.auctionDate) return false;
         const t = new Date(p.auctionDate).getTime();
@@ -431,6 +514,7 @@ export default function PropertiesClient({
     if (uf !== "all") f.uf = uf;
     if (cidade !== "all") f.city = cidade;
     if (tipo !== "all") f.propertyType = tipo;
+    if (modalidade.length) f.modalities = modalidade;
     if (minDesconto) f.minDiscount = minDesconto;
     if (priceCapped) f.maxPrice = maxPreco;
     if (minQuartos) f.minBedrooms = minQuartos;
@@ -452,6 +536,7 @@ export default function PropertiesClient({
     uf,
     cidade,
     tipo,
+    modalidade,
     minDesconto,
     priceCapped,
     maxPreco,
@@ -530,8 +615,10 @@ export default function PropertiesClient({
           setScoreMin(0);
         },
       });
-    if (modalidade !== "all")
-      f.push({ key: "mod", label: modalidade, clear: () => setModalidade("all") });
+    if (cluster !== "all") {
+      const cl = clusters.find((c) => c.clusterId === cluster);
+      f.push({ key: "cluster", label: cl?.label ?? "Grupo", clear: () => setCluster("all") });
+    }
     if (prazoLeilao > 0)
       f.push({
         key: "prazo",
@@ -554,7 +641,8 @@ export default function PropertiesClient({
     minInvest,
     scoreKey,
     scoreMin,
-    modalidade,
+    cluster,
+    clusters,
     prazoLeilao,
     financiamento,
     fgts,
@@ -568,9 +656,7 @@ export default function PropertiesClient({
   const retornoCount = [minDesconto > 0, minInvest > 0, scoreKey !== "none" && scoreMin > 0].filter(
     Boolean,
   ).length;
-  const leilaoCount = [modalidade !== "all", prazoLeilao > 0, financiamento, fgts].filter(
-    Boolean,
-  ).length;
+  const leilaoCount = [prazoLeilao > 0, financiamento, fgts].filter(Boolean).length;
 
   const clearAdvanced = () => {
     setMinQuartos(0);
@@ -585,8 +671,8 @@ export default function PropertiesClient({
     setScoreMin(0);
     setFinanciamento(false);
     setFgts(false);
-    setModalidade("all");
     setPrazoLeilao(0);
+    setCluster("all");
   };
 
   const clearAll = () => {
@@ -594,15 +680,15 @@ export default function PropertiesClient({
     setUf("all");
     setCidade("all");
     setTipo("all");
-    setCluster("all");
+    setModalidade([]);
     clearAdvanced();
   };
 
   const filtered =
-    cluster !== "all" ||
     uf !== "all" ||
     cidade !== "all" ||
     tipo !== "all" ||
+    modalidade.length > 0 ||
     q.trim() ||
     advActive;
   const title = h3Label
@@ -687,13 +773,7 @@ export default function PropertiesClient({
             </option>
           ))}
         </select>
-        <SearchableSelect
-          label="Grupo"
-          allLabel="todos"
-          value={cluster === "all" ? "all" : String(cluster)}
-          options={clusters.map((c) => ({ value: String(c.clusterId), label: c.label }))}
-          onChange={(v) => setCluster(v === "all" ? "all" : Number(v))}
-        />
+        <ModalityFilter options={modalidades} selected={modalidade} onChange={setModalidade} />
         <button
           className={`selectish${advActive ? " on" : ""}`}
           type="button"
@@ -719,9 +799,6 @@ export default function PropertiesClient({
               </span>
             </button>
           ))}
-          <button type="button" className="appclear" onClick={clearAdvanced}>
-            Limpar tudo
-          </button>
         </div>
       )}
 
@@ -751,6 +828,28 @@ export default function PropertiesClient({
               </div>
 
               <div className="dbody">
+                <Section
+                  title="Grupo"
+                  count={cluster !== "all" ? 1 : 0}
+                  open={openSecs.has("grupo")}
+                  onToggle={() => toggleSec("grupo")}
+                >
+                  <div className="flabel">Grupo de imóveis</div>
+                  <select
+                    className="selectish fwide"
+                    value={cluster === "all" ? "all" : String(cluster)}
+                    onChange={(e) =>
+                      setCluster(e.target.value === "all" ? "all" : Number(e.target.value))
+                    }
+                  >
+                    <option value="all">Todos os grupos</option>
+                    {clusters.map((c) => (
+                      <option key={c.clusterId} value={String(c.clusterId)}>
+                        {c.label}
+                      </option>
+                    ))}
+                  </select>
+                </Section>
                 <Section
                   title="Imóvel"
                   count={imovelCount}
@@ -942,20 +1041,6 @@ export default function PropertiesClient({
                   open={openSecs.has("leilao")}
                   onToggle={() => toggleSec("leilao")}
                 >
-                  <div className="flabel">Modalidade</div>
-                  <select
-                    className={`selectish fwide${modalidade !== "all" ? " on" : ""}`}
-                    value={modalidade}
-                    onChange={(e) => setModalidade(e.target.value)}
-                  >
-                    <option value="all">Todas as modalidades</option>
-                    {modalidades.map((m) => (
-                      <option key={m} value={m}>
-                        {m}
-                      </option>
-                    ))}
-                  </select>
-
                   <div className="flabel">Data do leilão</div>
                   <div className="fchiprow">
                     <Chip active={!prazoLeilao} onClick={() => setPrazoLeilao(0)}>

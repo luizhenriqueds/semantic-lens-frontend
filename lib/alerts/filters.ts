@@ -13,6 +13,8 @@ export function matchesFilters(p: Property, f: AlertFilters): boolean {
   if (f.uf && p.uf !== f.uf) return false;
   if (f.city && p.city !== f.city) return false;
   if (f.propertyType && p.propertyType !== f.propertyType) return false;
+  if (f.modalities?.length && !(p.modality != null && f.modalities.includes(p.modality)))
+    return false;
   if (f.minDiscount != null && (p.discount ?? 0) < f.minDiscount) return false;
   if (f.maxPrice != null && (p.saleValue ?? Infinity) > f.maxPrice) return false;
   if (f.minBedrooms != null && (p.bedrooms ?? 0) < f.minBedrooms) return false;
@@ -49,6 +51,7 @@ export function hasAnyFilter(f: AlertFilters): boolean {
     f.uf != null ||
     f.city != null ||
     f.propertyType != null ||
+    (f.modalities != null && f.modalities.length > 0) ||
     f.minDiscount != null ||
     f.maxPrice != null ||
     f.minBedrooms != null ||
@@ -71,6 +74,7 @@ export function describeFilters(f: AlertFilters): string {
   if (label) parts.push(label);
   if (f.minScore != null) parts.push(`nota ≥ ${f.minScore}`);
   if (f.propertyType) parts.push(f.propertyType);
+  if (f.modalities?.length) parts.push(f.modalities.join(", "));
   const loc = f.city ? `${f.city}${f.uf ? `/${f.uf}` : ""}` : f.uf;
   if (loc) parts.push(`em ${loc}`);
   if (f.minDiscount != null) parts.push(`desconto ≥ ${f.minDiscount}%`);
@@ -92,6 +96,7 @@ export function filterChips(f: AlertFilters): string[] {
   if (label) chips.push(label);
   if (f.minScore != null) chips.push(`Nota ≥ ${f.minScore}`);
   if (f.propertyType) chips.push(f.propertyType);
+  if (f.modalities?.length) for (const m of f.modalities) chips.push(m);
   if (f.city) chips.push(f.city);
   else if (f.uf) chips.push(f.uf);
   if (f.minDiscount != null) chips.push(`Desconto ≥ ${f.minDiscount}%`);

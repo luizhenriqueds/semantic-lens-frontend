@@ -29,6 +29,8 @@ export function makeProperty(overrides: Overrides = {}): Property {
     parkingSpots: null,
     yearBuilt: null,
     occupancyStatus: null,
+    condoPaymentRule: null,
+    taxPaymentRule: null,
     title: "Apartamento",
     description: null,
     image: null,
