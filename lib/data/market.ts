@@ -1,3 +1,4 @@
+import { addressKey } from "@/lib/market";
 import { supabase } from "@/lib/supabase";
 import type { MarketHistoryPoint, MarketStats } from "@/lib/types";
 import { cached, num, rows, withRetry } from "./client";
@@ -45,5 +46,38 @@ async function loadMarketStats(): Promise<MarketStats[]> {
   }));
 }
 
+// Size-matched market comparables for one property (see
+// docs/backend-market-comparables-spec.md).
+async function loadMarketComparables(
+  uf: string | null,
+  city: string | null,
+  neighborhood: string | null,
+  propertyType: string | null,
+  area: number | null,
+): Promise<MarketStats | null> {
+  const key = addressKey(uf, city, neighborhood, propertyType);
+  const res = await withRetry(() =>
+    supabase.rpc("market_comparable_stats", { p_address_key: key, p_area: area }),
+  );
+  const row = rows<any>("market_comparable_stats", res)[0];
+  if (!row || !num(row.sample_size)) return null;
+  return {
+    addressKey: key,
+    uf,
+    city,
+    neighborhood,
+    propertyType,
+    sampleSize: num(row.sample_size),
+    priceMedian: num(row.price_median),
+    areaMedian: num(row.area_median),
+    priceM2Median: num(row.price_m2_median),
+    priceM2P25: num(row.price_m2_p25),
+    priceM2P75: num(row.price_m2_p75),
+    computedAt: row.computed_at ?? null,
+    sizeMatched: !!row.size_matched,
+  };
+}
+
 export const getMarketStats = cached(loadMarketStats, "market-stats");
 export const getMarketHistory = cached(loadMarketHistory, "market-history");
+export const getMarketComparables = cached(loadMarketComparables, "market-comparables");

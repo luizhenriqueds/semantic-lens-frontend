@@ -1,4 +1,4 @@
-import { profileScore } from "@/lib/format";
+import { investmentScore, profileScore } from "@/lib/format";
 import type { Property } from "@/lib/types";
 import { propertyAge } from "./age";
 
@@ -26,7 +26,7 @@ export function clusterStats(properties: Property[], clusterId: number): Cluster
   const items = properties.filter((p) => p.clusterId === clusterId);
   const prices = items.map((p) => p.saleValue).filter((v): v is number => v != null);
   const discounts = items.map((p) => p.discount).filter((v): v is number => v != null && v > 0);
-  const scores = items.map((p) => profileScore(p)).filter((v): v is number => v != null);
+  const scores = items.map((p) => investmentScore(p)).filter((v): v is number => v != null);
   const cityCount = new Map<string, number>();
   for (const p of items) {
     if (p.city) cityCount.set(p.city, (cityCount.get(p.city) ?? 0) + 1);

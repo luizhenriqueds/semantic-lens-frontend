@@ -1,5 +1,5 @@
 import { BRL, EMPTY } from "@/lib/format";
-import type { MarketStats, Property, Region } from "@/lib/types";
+import type { MarketStats, Region } from "@/lib/types";
 
 export const MIN_COMPARABLES = 5;
 
@@ -18,11 +18,6 @@ export function addressKey(
   tipo: string | null,
 ): string {
   return [uf, cidade, bairro, tipo].map(normKey).join("|");
-}
-
-export function statsForProperty(stats: MarketStats[], p: Property): MarketStats | null {
-  const key = addressKey(p.uf, p.city, p.neighborhood, p.propertyType);
-  return stats.find((s) => s.addressKey === key) ?? null;
 }
 
 export function statsForRegion(stats: MarketStats[], region: Region): MarketStats[] {

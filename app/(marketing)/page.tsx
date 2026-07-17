@@ -2,6 +2,7 @@ import Link from "next/link";
 import LandingEffects from "@/app/(marketing)/_components/LandingEffects";
 import HeroSearchScene from "@/app/(marketing)/_components/HeroSearchScene";
 import LavraLogo from "@/components/brand/LavraLogo";
+import { getUser } from "@/lib/supabase/server";
 
 function CheckIcon() {
   return (
@@ -60,7 +61,9 @@ function HexField({ withPattern = false }: { withPattern?: boolean }) {
   );
 }
 
-export default function LandingPage() {
+export default async function LandingPage() {
+  const { user } = await getUser();
+
   return (
     <>
       <header className="lp-nav">
@@ -79,9 +82,20 @@ export default function LandingPage() {
             <a href="#comparar">Comparar</a>
           </nav>
           <div className="lp-cta">
-            <Link className="btn solid" href="/dashboard">
-              Dashboard
-            </Link>
+            {user ? (
+              <Link className="btn solid" href="/dashboard">
+                Dashboard
+              </Link>
+            ) : (
+              <>
+                <Link className="btn ghost" href="/login">
+                  Entrar
+                </Link>
+                <Link className="btn solid" href="/register">
+                  Criar conta
+                </Link>
+              </>
+            )}
           </div>
         </div>
       </header>

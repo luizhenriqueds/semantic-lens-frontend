@@ -1,10 +1,12 @@
 import AlertsBell from "@/components/alerts/AlertsBell";
 import Breadcrumb from "@/components/layout/Breadcrumb";
 import MobileNav from "@/components/layout/MobileNav";
-import { IconSearch } from "@/lib/icons";
 import ThemeToggle from "@/components/layout/ThemeToggle";
+import UserMenu from "@/components/layout/UserMenu";
+import type { Account } from "@/lib/account";
+import { IconSearch } from "@/lib/icons";
 
-export default function Topbar() {
+export default function Topbar({ account }: { account: Account }) {
   return (
     <div className="topbar">
       <MobileNav />
@@ -20,6 +22,7 @@ export default function Topbar() {
       </form>
       <ThemeToggle />
       <AlertsBell />
+      <UserMenu account={account} />
     </div>
   );
 }

@@ -12,6 +12,7 @@ import {
   type Alert,
   useAlerts,
 } from "@/lib/alerts";
+import { FREQS } from "@/lib/alerts/cadence";
 import { SCORE_DIMS, SCORE_LABEL } from "@/lib/format";
 import { IconBell, IconPencil, IconPlus, IconTrash } from "@/lib/icons";
 import type { AlertFilters, Property, Scores } from "@/lib/types";
@@ -24,7 +25,6 @@ type Confirm = {
   action: () => void;
 };
 
-const FREQS = ["Aviso imediato", "Aviso diário", "Aviso semanal"];
 const SCORES = [50, 60, 70, 80, 90];
 const DESCONTOS = [20, 30, 40, 50];
 const PRECOS = [100000, 200000, 300000, 500000, 1000000];
@@ -40,7 +40,7 @@ export default function AlertsClient({ properties }: { properties: Property[] })
   const [editingId, setEditingId] = useState<string | null>(null);
   const [confirm, setConfirm] = useState<Confirm | null>(null);
   const [mode, setMode] = useState<Mode>("filtros");
-  const [freq, setFreq] = useState(FREQS[1]);
+  const [freq, setFreq] = useState(FREQS[0]);
 
   const [nome, setNome] = useState("");
   const [scoreKey, setScoreKey] = useState("");
@@ -115,6 +115,7 @@ export default function AlertsClient({ properties }: { properties: Property[] })
       setMinDesconto(f.minDiscount != null ? String(f.minDiscount) : "");
       setMaxPreco(f.maxPrice != null ? String(f.maxPrice) : "");
       setExtra({
+        q: f.q,
         minBedrooms: f.minBedrooms,
         minArea: f.minArea,
         poiCats: f.poiCats,
@@ -127,13 +128,13 @@ export default function AlertsClient({ properties }: { properties: Property[] })
     }
   }
 
-  function commit() {
+  async function commit() {
     if (editingId) {
       const name = mode === "descricao" ? nome.trim() : nome.trim() || describeFilters(draft);
-      const ok = update(editingId, {
+      const ok = await update(editingId, {
         name,
         freq,
-        filters: mode === "descricao" ? undefined : draft,
+        filters: mode === "descricao" ? null : draft,
       });
       if (!ok) {
         toast("Você já tem um alerta com esse nome");
@@ -144,7 +145,7 @@ export default function AlertsClient({ properties }: { properties: Property[] })
       return;
     }
     const name = mode === "descricao" ? nome.trim() : nome.trim() || describeFilters(draft);
-    const ok = mode === "descricao" ? add(name, freq) : add(name, freq, draft);
+    const ok = mode === "descricao" ? await add(name, freq) : await add(name, freq, draft);
     if (!ok) {
       toast("Você já tem um alerta com esse nome");
       return;

@@ -31,14 +31,6 @@ export default function Sidebar() {
       ))}
 
       <div className="spacer" />
-
-      <div className="acct">
-        <div className="av">LH</div>
-        <div>
-          <div className="nm">Luiz H.</div>
-          <div className="pl">Plano investidor</div>
-        </div>
-      </div>
     </aside>
   );
 }
