@@ -25,6 +25,8 @@ export type Property = {
   parkingSpots: number | null;
   yearBuilt: number | null;
   occupancyStatus: string | null;
+  condoPaymentRule: string | null;
+  taxPaymentRule: string | null;
   title: string;
   description: string | null;
   image: string | null;

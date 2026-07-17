@@ -24,6 +24,7 @@ export type AlertFilters = {
   uf?: string;
   city?: string;
   propertyType?: string;
+  modalities?: string[];
   minDiscount?: number;
   maxPrice?: number;
   minBedrooms?: number;

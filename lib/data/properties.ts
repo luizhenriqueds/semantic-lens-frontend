@@ -6,6 +6,7 @@ import { cached, CLUSTER_RUN, fetchAllRows, num } from "./client";
 const PROPERTY_COLS = [
   "property_id,property_type,uf,city,neighborhood,raw_address",
   "area_m2,bedrooms,parking_spots,year_built,occupancy_status,canonical_description",
+  "condo_payment_rule,tax_payment_rule",
   "h3_r8,image_path,image_source_url,lat,lon,is_active",
   "visual_score,visual_note,visual_age,price_rank,size_rank,center_proximity_m",
 ].join(",");
@@ -110,6 +111,8 @@ async function loadProperties(): Promise<Property[]> {
       parkingSpots: num(p.parking_spots),
       yearBuilt: num(p.year_built),
       occupancyStatus: p.occupancy_status || null,
+      condoPaymentRule: p.condo_payment_rule || null,
+      taxPaymentRule: p.tax_payment_rule || null,
       title: deriveTitle(p.property_type ?? "Imóvel", num(p.bedrooms), p.neighborhood ?? ""),
       description: p.canonical_description || null,
       image: pickImage(p),
@@ -152,9 +155,12 @@ async function loadProperties(): Promise<Property[]> {
   });
 }
 
-export const getProperties = cached(loadProperties, "properties");
+export const getAllProperties = cached(loadProperties, "properties");
+
+export async function getProperties(): Promise<Property[]> {
+  return (await getAllProperties()).filter((p) => !p.inactive);
+}
 
 export async function getProperty(id: string): Promise<Property | null> {
-  const all = await getProperties();
-  return all.find((p) => p.id === id) ?? null;
+  return (await getAllProperties()).find((p) => p.id === id) ?? null;
 }

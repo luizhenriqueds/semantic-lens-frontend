@@ -1,8 +1,8 @@
 import PortfolioClient from "./_components/PortfolioClient";
-import { getProperties } from "@/lib/data";
+import { getAllProperties } from "@/lib/data";
 
 export default async function PortfolioPage() {
-  const properties = await getProperties();
+  const properties = await getAllProperties();
   return (
     <section className="view">
       <div className="pagehead">
