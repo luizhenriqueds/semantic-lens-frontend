@@ -1,17 +1,25 @@
 import Link from "next/link";
 import CollectionCard from "@/components/groups/CollectionCard";
 import SearchHero from "@/components/search/SearchHero";
+import { accountFrom, shortName } from "@/lib/account";
 import { clusterStats } from "@/lib/clusters";
 import { getClusters, getProperties } from "@/lib/data";
+import { getUser } from "@/lib/supabase/server";
 
 export default async function HomePage() {
-  const [clusters, properties] = await Promise.all([getClusters(), getProperties()]);
+  const [clusters, properties, { user }] = await Promise.all([
+    getClusters(),
+    getProperties(),
+    getUser(),
+  ]);
   const activeProperties = properties.filter((p) => !p.inactive);
+  const { name } = accountFrom(user);
+  const greeting = user ? `Olá, ${shortName(name)}.` : "Olá!";
 
   return (
     <section className="view">
       <div className="pagehead">
-        <h1>Olá, Luiz H. Vamos encontrar uma boa oportunidade?</h1>
+        <h1>{greeting} Vamos encontrar uma boa oportunidade?</h1>
         <p>
           Diga o que você procura e nós comparamos milhares de imóveis de leilão para mostrar os que
           mais combinam com o seu objetivo.

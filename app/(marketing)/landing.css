@@ -3665,3 +3665,78 @@ footer.lp-foot .lp-fine {
 .lp-hero[id] {
   scroll-margin-top: 84px;
 }
+
+/* ============================================================
+   Mobile: enxuga a página — esconde as demonstrações pesadas do
+   produto e transforma as grades de cartões em sliders.
+   ============================================================ */
+@media (max-width: 760px) {
+  .lp-m-hide {
+    display: none;
+  }
+
+  .lp-m-slide {
+    display: grid;
+    grid-template-columns: none;
+    grid-auto-flow: column;
+    grid-auto-columns: 84%;
+    gap: 14px;
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    scroll-snap-type: x mandatory;
+    scroll-padding: 0 28px;
+    padding: 4px 28px 16px;
+    margin: 0 -28px;
+    max-width: none;
+    scrollbar-width: none;
+  }
+  .lp-m-slide::-webkit-scrollbar {
+    display: none;
+  }
+  .lp-m-slide > * {
+    scroll-snap-align: start;
+    min-width: 0;
+  }
+  .lp-m-slide > .lp-reveal {
+    opacity: 1;
+    transform: none;
+  }
+
+  .lp-m-slide > .lp-layer {
+    position: static;
+    margin-bottom: 0;
+  }
+  .lp-m-slide .lp-lcard {
+    height: 100%;
+    min-height: 0;
+  }
+  .lp-m-slide .lp-lviz {
+    display: none;
+  }
+
+  .lp-slidedots {
+    display: flex;
+    justify-content: center;
+    gap: 7px;
+    margin: 2px 0 0;
+  }
+  .lp-slidedots i {
+    width: 6px;
+    height: 6px;
+    border-radius: 100px;
+    background: var(--line);
+    transition:
+      width 0.25s ease,
+      background 0.25s ease;
+  }
+  .lp-slidedots i.lp-on {
+    width: 18px;
+    background: var(--primary);
+  }
+}
+
+@media (min-width: 761px) {
+  .lp-slidedots {
+    display: none;
+  }
+}

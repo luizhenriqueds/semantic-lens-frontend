@@ -1,8 +1,19 @@
 "use server";
 
 import * as data from "@/lib/data/alerts";
+import { hybridSearch, RESULT_LIMIT } from "@/lib/data";
 import { requireUser } from "@/lib/supabase/server";
 import type { Alert, AlertFilters, AlertPatch } from "@/lib/types";
+
+export async function countDescriptionMatches(
+  query: string,
+): Promise<{ count: number; capped: boolean }> {
+  await requireUser();
+  const q = query.trim();
+  if (!q) return { count: 0, capped: false };
+  const { hits } = await hybridSearch(q);
+  return { count: hits.length, capped: hits.length >= RESULT_LIMIT };
+}
 
 export async function listAlerts(): Promise<Alert[]> {
   const { supabase } = await requireUser();

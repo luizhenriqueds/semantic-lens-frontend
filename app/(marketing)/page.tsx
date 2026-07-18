@@ -52,7 +52,9 @@ export default async function LandingPage() {
           <div className="lp-navmenu" id="navmenu">
             <nav>
               <a href="#recursos">Recursos</a>
-              <a href="#painel">O painel</a>
+              <a className="lp-m-hide" href="#painel">
+                O painel
+              </a>
               <a href="#analise">Como funciona</a>
               <a href="#planos">Planos</a>
               <a href="#faq">Dúvidas</a>
@@ -346,7 +348,7 @@ export default async function LandingPage() {
             <p>Da busca à hora do lance, cada etapa fica mais simples - e mais clara.</p>
           </div>
 
-          <div className="lp-stack">
+          <div className="lp-stack lp-m-slide">
             <div className="lp-layer">
               <div className="lp-lcard">
                 <div className="lp-lbody">
@@ -695,7 +697,7 @@ export default async function LandingPage() {
         </div>
       </section>
 
-      <section className="lp-band lp-alt" id="painel">
+      <section className="lp-band lp-alt lp-m-hide" id="painel">
         <div className="lp-wrap">
           <div className="lp-sechead lp-reveal">
             <span className="lp-seclabel">// o produto por dentro</span>
@@ -1782,7 +1784,7 @@ export default async function LandingPage() {
         </div>
       </section>
 
-      <section className="lp-band lp-alt">
+      <section className="lp-band lp-alt lp-m-hide">
         <div className="lp-wrap">
           <div className="lp-breakdown">
             <div className="lp-txt lp-reveal">
@@ -1994,7 +1996,7 @@ export default async function LandingPage() {
         </div>
       </section>
 
-      <section className="lp-band">
+      <section className="lp-band lp-m-hide">
         <div className="lp-wrap">
           <div className="lp-region">
             <div className="lp-txt lp-reveal">
@@ -2144,7 +2146,7 @@ export default async function LandingPage() {
         </div>
       </section>
 
-      <section className="lp-band lp-alt">
+      <section className="lp-band lp-alt lp-m-hide">
         <div className="lp-wrap">
           <div className="lp-market">
             <div className="lp-txt lp-reveal">
@@ -2225,7 +2227,7 @@ export default async function LandingPage() {
               claros. Fica fácil explorar o que combina com você.
             </p>
           </div>
-          <div className="lp-clusters">
+          <div className="lp-clusters lp-m-slide">
             <div className="lp-cluster lp-reveal">
               <div className="lp-hexrow">
                 <svg viewBox="0 0 26 30">
@@ -2314,7 +2316,7 @@ export default async function LandingPage() {
         </div>
       </section>
 
-      <section className="lp-band lp-alt">
+      <section className="lp-band lp-alt lp-m-hide">
         <div className="lp-wrap">
           <div className="lp-sechead lp-reveal">
             <span className="lp-seclabel">// recomendações</span>
@@ -2689,7 +2691,7 @@ export default async function LandingPage() {
             <h2>Feita para o seu objetivo</h2>
             <p>Seja qual for o seu plano, a Lavra mostra os imóveis que realmente fazem sentido.</p>
           </div>
-          <div className="lp-personas">
+          <div className="lp-personas lp-m-slide">
             <div className="lp-persona lp-reveal">
               <div className="lp-emo">🔨</div>
               <div>
@@ -2762,7 +2764,7 @@ export default async function LandingPage() {
             <p>Comece de graça e evolua conforme suas oportunidades crescem.</p>
           </div>
 
-          <div className="lp-plans-grid">
+          <div className="lp-plans-grid lp-m-slide">
             <div className="lp-plan lp-reveal">
               <div className="lp-phead">
                 <span className="lp-pname">Grátis</span>

@@ -2,6 +2,7 @@
 
 import { useRouter, useSearchParams } from "next/navigation";
 import { useState } from "react";
+import { requestPasswordReset } from "@/app/actions/auth";
 import { createClient } from "@/lib/supabase/client";
 
 export default function LoginForm() {
@@ -35,7 +36,7 @@ export default function LoginForm() {
       return;
     }
     setError("");
-    await createClient().auth.resetPasswordForEmail(email);
+    await requestPasswordReset(email);
     setNotice("Se houver uma conta com esse e-mail, enviamos um link para redefinir a senha.");
   }
 
