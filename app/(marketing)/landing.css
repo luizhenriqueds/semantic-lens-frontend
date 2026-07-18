@@ -3666,10 +3666,7 @@ footer.lp-foot .lp-fine {
   scroll-margin-top: 84px;
 }
 
-/* ============================================================
-   Mobile: enxuga a página — esconde as demonstrações pesadas do
-   produto e transforma as grades de cartões em sliders.
-   ============================================================ */
+/* ---------- mobile: hide heavy product mocks, cards become sliders ---------- */
 @media (max-width: 760px) {
   .lp-m-hide {
     display: none;
