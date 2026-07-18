@@ -33,7 +33,7 @@ const SEARCH_INSTRUCTION =
 const RERANK_INSTRUCTION =
   "If the query names a property type, listings of that exact type must rank above any other type; each listing begins with its property type.";
 const MIN_POOL = 10;
-const RESULT_LIMIT = 20;
+export const RESULT_LIMIT = 20;
 const RERANK_ACTIVATE = 0.5;
 const RERANK_MIN = 0.3;
 const POI_NEAR_M = 5000;

@@ -1,8 +1,10 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { countDescriptionMatches } from "@/app/actions/alerts";
 import ConfirmDialog from "@/components/ui/ConfirmDialog";
 import EmptyState from "@/components/ui/EmptyState";
+import SkeletonText from "@/components/ui/SkeletonText";
 import { useToast } from "@/components/ui/Toaster";
 import {
   countMatches,
@@ -32,6 +34,7 @@ const PRECOS = [100000, 200000, 300000, 500000, 1000000];
 const precoLabel = (n: number) => (n >= 1_000_000 ? "R$ 1 mi" : `R$ ${n / 1000} mil`);
 
 type Mode = "filtros" | "descricao";
+type DescCount = { count: number; capped: boolean };
 
 export default function AlertsClient({ properties }: { properties: Property[] }) {
   const { alerts, add, toggle, update, remove } = useAlerts();
@@ -83,6 +86,35 @@ export default function AlertsClient({ properties }: { properties: Property[] })
   }, [extra, scoreKey, minScore, uf, cidade, tipo, minDesconto, maxPreco]);
 
   const draftCount = useMemo(() => countMatches(properties, draft), [properties, draft]);
+
+  const [descCounts, setDescCounts] = useState<Record<string, DescCount | null>>({});
+  const descKey = JSON.stringify(
+    alerts.filter((a) => !a.filters && a.name.trim()).map((a) => [a.id, a.name]),
+  );
+
+  useEffect(() => {
+    const items: [string, string][] = JSON.parse(descKey);
+    if (!items.length) return;
+    let cancelled = false;
+    setDescCounts({});
+    Promise.all(
+      items.map(
+        async ([id, name]) =>
+          [
+            id,
+            await countDescriptionMatches(name).catch((err) => {
+              console.warn("Failed to count alert matches", err);
+              return null;
+            }),
+          ] as const,
+      ),
+    ).then((entries) => {
+      if (!cancelled) setDescCounts(Object.fromEntries(entries));
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [descKey]);
 
   function reset() {
     setNome("");
@@ -408,7 +440,10 @@ export default function AlertsClient({ properties }: { properties: Property[] })
 
       {alerts.length ? (
         alerts.map((a) => {
-          const count = a.filters ? countMatches(properties, a.filters) : null;
+          const isDesc = !a.filters && Boolean(a.name.trim());
+          const desc = isDesc ? descCounts[a.id] : null;
+          const counting = isDesc && desc === undefined;
+          const count = a.filters ? countMatches(properties, a.filters) : (desc?.count ?? null);
           const chips = a.filters ? filterChips(a.filters) : [];
           return (
             <div className="alertrow" key={a.id}>
@@ -428,12 +463,22 @@ export default function AlertsClient({ properties }: { properties: Property[] })
                 )}
                 <p>
                   {a.freq}
-                  {count != null && (
+                  {counting ? (
                     <>
                       {" · "}
-                      <b style={{ color: "var(--primary)" }}>{count}</b>{" "}
-                      {count === 1 ? "imóvel corresponde" : "imóveis correspondem"} hoje
+                      <SkeletonText width={148} />
                     </>
+                  ) : (
+                    count != null && (
+                      <>
+                        {" · "}
+                        <b style={{ color: "var(--primary)" }}>
+                          {count}
+                          {desc?.capped ? "+" : ""}
+                        </b>{" "}
+                        {count === 1 ? "imóvel corresponde" : "imóveis correspondem"} hoje
+                      </>
+                    )
                   )}
                 </p>
               </div>

@@ -120,12 +120,36 @@ export default function LandingEffects() {
       auto();
     }
 
+    const sliderCleanups: (() => void)[] = [];
+    document.querySelectorAll<HTMLElement>(".lp-m-slide").forEach((slider) => {
+      const total = slider.childElementCount;
+      if (total < 2) return;
+      const dots = document.createElement("div");
+      dots.className = "lp-slidedots";
+      dots.setAttribute("aria-hidden", "true");
+      for (let i = 0; i < total; i++) dots.appendChild(document.createElement("i"));
+      slider.after(dots);
+      const marks = Array.from(dots.children);
+      const sync = () => {
+        const step = slider.scrollWidth / total;
+        const active = step > 0 ? Math.min(Math.round(slider.scrollLeft / step), total - 1) : 0;
+        marks.forEach((m, i) => m.classList.toggle("lp-on", i === active));
+      };
+      sync();
+      slider.addEventListener("scroll", sync, { passive: true });
+      sliderCleanups.push(() => {
+        slider.removeEventListener("scroll", sync);
+        dots.remove();
+      });
+    });
+
     return () => {
       navToggle?.removeEventListener("click", onToggle);
       anchors.forEach((a) => a.removeEventListener("click", onAnchor));
       reveal.disconnect();
       mocks.disconnect();
       stop();
+      sliderCleanups.forEach((fn) => fn());
     };
   }, []);
 

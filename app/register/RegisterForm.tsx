@@ -1,13 +1,9 @@
 "use client";
 
-import { useRouter, useSearchParams } from "next/navigation";
 import { useState } from "react";
-import { createClient } from "@/lib/supabase/client";
+import { registerAccount } from "@/app/actions/auth";
 
 export default function RegisterForm() {
-  const router = useRouter();
-  const redirect = useSearchParams().get("redirect") || "/dashboard";
-
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -20,20 +16,14 @@ export default function RegisterForm() {
     setBusy(true);
     setError("");
     setNotice("");
-    const { data, error } = await createClient().auth.signUp({
-      email,
-      password,
-      options: { data: { full_name: name } },
-    });
-    if (error) {
-      setError(error.message);
-      setBusy(false);
-    } else if (!data.session) {
-      setNotice("Enviamos um e-mail para você confirmar o cadastro.");
-      setBusy(false);
+    const result = await registerAccount({ name, email, password });
+    setBusy(false);
+    if (result.error) {
+      setError(result.error);
     } else {
-      router.push(redirect);
-      router.refresh();
+      setNotice(
+        `Enviamos um link de confirmação para ${email}. Clique nele para concluir seu cadastro.`,
+      );
     }
   }
 
