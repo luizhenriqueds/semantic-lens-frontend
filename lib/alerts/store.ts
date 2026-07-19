@@ -28,7 +28,10 @@ export function useAlerts() {
     if (!alert) return;
     const on = !alert.on;
     store.set(cur.map((a) => (a.id === id ? { ...a, on } : a)));
-    api.updateAlert(id, { on }).catch((err) => console.warn("Failed to persist alert", err));
+    api.updateAlert(id, { on }).catch((err) => {
+      console.warn("Failed to persist alert", err);
+      store.set(store.get().map((a) => (a.id === id ? { ...a, on: !on } : a)));
+    });
   }, []);
 
   const update = useCallback(async (id: string, patch: AlertPatch): Promise<boolean> => {
@@ -51,8 +54,12 @@ export function useAlerts() {
   }, []);
 
   const remove = useCallback((id: string) => {
-    store.set(store.get().filter((a) => a.id !== id));
-    api.deleteAlert(id).catch((err) => console.warn("Failed to delete alert", err));
+    const cur = store.get();
+    store.set(cur.filter((a) => a.id !== id));
+    api.deleteAlert(id).catch((err) => {
+      console.warn("Failed to delete alert", err);
+      store.set(cur);
+    });
   }, []);
 
   return { alerts, add, toggle, update, remove };

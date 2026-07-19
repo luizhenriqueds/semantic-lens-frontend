@@ -55,6 +55,12 @@ export default function PriceHistory({ points }: { points: PriceHistoryPoint[] }
 
   const stroke = stable ? "var(--primary-soft)" : down ? "var(--good)" : "var(--warn)";
 
+  // Distinct modalities in order — the property may have moved between auction formats.
+  const modalities = pts.reduce<string[]>((acc, p) => {
+    if (p.modality && p.modality !== acc[acc.length - 1]) acc.push(p.modality);
+    return acc;
+  }, []);
+
   return (
     <div className="infoblock">
       <h3>Histórico de preços</h3>
@@ -136,9 +142,28 @@ export default function PriceHistory({ points }: { points: PriceHistoryPoint[] }
         </text>
       </svg>
 
+      {modalities.length > 1 && (
+        <div className="phist-mod">
+          <span className="phist-mod-lbl">Mudança de modalidade</span>
+          <div className="phist-mod-flow">
+            {modalities.map((m, i) => (
+              <span
+                key={i}
+                className={`phist-mod-step${i === modalities.length - 1 ? " now" : ""}`}
+              >
+                {i > 0 && <i aria-hidden="true">→</i>}
+                {m}
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
+
       <div className="rnote">
         {stable
-          ? "Este imóvel já foi anunciado mais de uma vez pelo mesmo valor de venda."
+          ? modalities.length > 1
+            ? "Este imóvel foi reanunciado pelo mesmo valor, mas em outra modalidade de venda."
+            : "Este imóvel já foi anunciado mais de uma vez pelo mesmo valor de venda."
           : down
             ? "O valor de venda caiu ao longo dos anúncios — imóveis reofertados costumam ter descontos maiores."
             : "O valor de venda subiu entre um anúncio e outro."}

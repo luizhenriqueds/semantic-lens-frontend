@@ -1,4 +1,4 @@
-export { getAllProperties, getProperties, getProperty } from "./properties";
+export { getAllProperties, getProperties, getProperty, isListable } from "./properties";
 export { getPoisNear, getPropertyPois, getRegionPois } from "./pois";
 export { getMarketStats, getMarketHistory, getMarketComparables } from "./market";
 export { getClusters } from "./clusters";

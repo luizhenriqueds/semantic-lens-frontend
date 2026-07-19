@@ -1,7 +1,9 @@
 "use client";
 
 import { useMemo } from "react";
+import Link from "next/link";
 import EmptyState from "@/components/ui/EmptyState";
+import { dimValue, fmtBucket, fmtValue, rangeHref, type RangeDim } from "@/lib/facets/range";
 import { money, moneyShort, SCORE_LABEL } from "@/lib/format";
 import { moneyM2 } from "@/lib/market";
 import type { Property, Scores } from "@/lib/types";
@@ -29,15 +31,17 @@ function mean(v: number[]): number | null {
 function Histogram({
   values,
   edges,
-  fmt,
-  tickFmt = fmt,
+  tickFmt,
   unit = "imóveis",
+  dim,
+  onPick,
 }: {
   values: number[];
   edges: number[];
-  fmt: (v: number) => string;
   tickFmt?: (v: number) => string;
   unit?: string;
+  dim: RangeDim;
+  onPick: (dim: RangeDim, from: number, to: number) => void;
 }) {
   const { bars, max } = useMemo(() => {
     const nb = edges.length - 1;
@@ -53,24 +57,45 @@ function Histogram({
   }, [values, edges]);
 
   const H = 130;
-  const label = (b: { from: number; to: number }) =>
-    b.to === Infinity ? `${tickFmt(b.from)}+` : tickFmt(b.from);
-  const range = (b: { from: number; to: number }) =>
-    b.to === Infinity ? `${fmt(b.from)} ou mais` : `${fmt(b.from)} – ${fmt(b.to)}`;
+  const tick = (v: number) => (tickFmt ? tickFmt(v) : fmtValue(dim, v));
 
   return (
     <div className="histo">
       <div className="histo-bars" style={{ height: H }}>
-        {bars.map((b, i) => (
-          <div key={i} className="histo-bar" title={`${range(b)}: ${b.c} ${unit}`}>
-            <span className="hb-count">{b.c || ""}</span>
-            <i style={{ height: `${(b.c / max) * 100}%` }} />
-          </div>
-        ))}
+        {bars.map((b, i) => {
+          const title = `${fmtBucket(dim, b.from, b.to)}: ${b.c} ${unit}`;
+          const bar = (
+            <>
+              <span className="hb-count">{b.c || ""}</span>
+              <i style={{ height: `${(b.c / max) * 100}%` }} />
+            </>
+          );
+          return b.c ? (
+            <Link
+              key={i}
+              className="histo-bar link"
+              href={rangeHref(dim, b.from, b.to)}
+              title={`${title} — ver na lista`}
+              prefetch={false}
+              onClick={(e) => {
+                // Plain clicks filter in place; the href stays real for new-tab/share.
+                if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+                e.preventDefault();
+                onPick(dim, b.from, b.to);
+              }}
+            >
+              {bar}
+            </Link>
+          ) : (
+            <div key={i} className="histo-bar" title={title}>
+              {bar}
+            </div>
+          );
+        })}
       </div>
       <div className="histo-ticks">
         {bars.map((b, i) => (
-          <span key={i}>{label(b)}</span>
+          <span key={i}>{b.to === Infinity ? `${tick(b.from)}+` : tick(b.from)}</span>
         ))}
       </div>
     </div>
@@ -79,6 +104,8 @@ function Histogram({
 
 const PRICE_EDGES = [0, 100_000, 200_000, 300_000, 400_000, 500_000, 750_000, 1_000_000, Infinity];
 const DISCOUNT_EDGES = [0, 10, 20, 30, 40, 50, 60, 70, Infinity];
+const AREA_EDGES = [0, 40, 60, 80, 100, 150, 200, 300, Infinity];
+const INVEST_EDGES = [0, 30, 40, 50, 60, 70, 80, 90, Infinity];
 
 // ── Scatter: area × price, tinted by discount ───────────────────────
 function Scatter({ items }: { items: Property[] }) {
@@ -177,17 +204,23 @@ function topCounts(items: Property[], key: (p: Property) => string, limit = 6) {
     .map(([label, value]) => ({ label, value }));
 }
 
-export default function PropertiesAnalysis({ items }: { items: Property[] }) {
+export default function PropertiesAnalysis({
+  items,
+  onPickRange,
+}: {
+  items: Property[];
+  onPickRange: (dim: RangeDim, from: number, to: number) => void;
+}) {
   const stats = useMemo(() => {
-    const prices = nums(items.map((p) => p.saleValue));
-    const discounts = nums(items.map((p) => p.discount)).filter((d) => d > 0);
-    const areas = nums(items.map((p) => p.area));
+    const prices = nums(items.map((p) => dimValue("price", p)));
+    const discounts = nums(items.map((p) => dimValue("discount", p)));
+    const areas = nums(items.map((p) => dimValue("area", p)));
     const m2 = nums(
       items.map((p) => (p.area && p.area > 0 && p.saleValue != null ? p.saleValue / p.area : null)),
     );
     // Not profileScore(): it returns a different dimension per property, so averaging it would
     // mix airbnb with commercial with family.
-    const invScores = nums(items.map((p) => p.scores.investment));
+    const invScores = nums(items.map((p) => dimValue("invest", p)));
 
     const scoreDims: (keyof Scores)[] = [
       "investment",
@@ -200,7 +233,10 @@ export default function PropertiesAnalysis({ items }: { items: Property[] }) {
       "convenience",
     ];
     const scoreAvgs = scoreDims
-      .map((d) => ({ dim: d, avg: mean(nums(items.map((p) => p.scores[d]))) }))
+      .map((d) => ({
+        dim: d,
+        avg: mean(d === "investment" ? invScores : nums(items.map((p) => p.scores[d]))),
+      }))
       .filter((s) => s.avg != null)
       .sort((a, b) => (b.avg ?? 0) - (a.avg ?? 0));
 
@@ -209,6 +245,7 @@ export default function PropertiesAnalysis({ items }: { items: Property[] }) {
       prices,
       discounts,
       areas,
+      invScores,
       m2,
       medianPrice: median(prices),
       p25: quantile(prices, 0.25),
@@ -285,10 +322,11 @@ export default function PropertiesAnalysis({ items }: { items: Property[] }) {
           <Histogram
             values={stats.prices}
             edges={PRICE_EDGES}
-            fmt={moneyShort}
             tickFmt={(v) =>
               v >= 1_000_000 ? `R$${v / 1_000_000}mi` : `R$${Math.round(v / 1000)}k`
             }
+            dim="price"
+            onPick={onPickRange}
           />
         </div>
         <div className="ancard">
@@ -297,7 +335,29 @@ export default function PropertiesAnalysis({ items }: { items: Property[] }) {
           <Histogram
             values={stats.discounts}
             edges={DISCOUNT_EDGES}
-            fmt={(v) => `${Math.round(v)}%`}
+            dim="discount"
+            onPick={onPickRange}
+          />
+        </div>
+        <div className="ancard">
+          <h3>Distribuição de áreas</h3>
+          <p className="ansub">Quantos imóveis em cada faixa de área útil.</p>
+          <Histogram
+            values={stats.areas}
+            edges={AREA_EDGES}
+            tickFmt={(v) => `${Math.round(v)}m²`}
+            dim="area"
+            onPick={onPickRange}
+          />
+        </div>
+        <div className="ancard">
+          <h3>Distribuição de notas</h3>
+          <p className="ansub">Nota geral de investimento, de 0 a 100.</p>
+          <Histogram
+            values={stats.invScores}
+            edges={INVEST_EDGES}
+            dim="invest"
+            onPick={onPickRange}
           />
         </div>
       </div>

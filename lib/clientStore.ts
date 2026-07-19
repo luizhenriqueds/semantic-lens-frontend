@@ -2,6 +2,13 @@
 
 import { useEffect, useState } from "react";
 
+const stores = new Set<() => void>();
+
+// Account-scoped data must not leak between sessions in the same tab.
+export function resetClientStores() {
+  stores.forEach((r) => r());
+}
+
 // In-memory store shared across hook instances, hydrated once from the server.
 export function createClientStore<T>(fallback: T, load: () => Promise<T>) {
   let value = fallback;
@@ -36,6 +43,11 @@ export function createClientStore<T>(fallback: T, load: () => Promise<T>) {
     }, []);
     return v;
   };
+
+  stores.add(() => {
+    started = false;
+    set(fallback);
+  });
 
   return { get: () => value, set, useValue };
 }

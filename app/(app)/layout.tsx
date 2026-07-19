@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import SessionStores from "@/components/layout/SessionStores";
 import Sidebar from "@/components/layout/Sidebar";
 import Topbar from "@/components/layout/Topbar";
 import ToastProvider from "@/components/ui/Toaster";
@@ -17,6 +18,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
 
   return (
     <ToastProvider>
+      <SessionStores />
       <div className="app">
         <Sidebar />
         <div className="main">

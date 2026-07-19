@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import dynamic from "next/dynamic";
+import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import EmptyState from "@/components/ui/EmptyState";
 import Pagination from "@/components/ui/Pagination";
@@ -20,6 +21,7 @@ import {
   useAlerts,
 } from "@/lib/alerts";
 import { useSaved } from "@/lib/saved";
+import { matchesRange, parseRange, rangeLabel, type RangeDim } from "@/lib/facets/range";
 import type { AlertFilters, Cluster, Property, Scores } from "@/lib/types";
 import { IconArrow, IconBell, IconBuilding, IconSearch, IconSliders, POI_ICON } from "@/lib/icons";
 import { MAX_NEAR_M, POI_LABEL, POI_ORDER } from "@/lib/pois";
@@ -30,6 +32,8 @@ const PropertiesMap = dynamic(() => import("@/components/property/PropertiesMap"
 });
 
 type View = "list" | "analysis" | "calendar" | "map";
+
+const VIEWS_BY_KEY = new Set<string>(["list", "analysis", "calendar", "map"]);
 
 const PAGE_SIZE = 25;
 
@@ -246,17 +250,49 @@ export default function PropertiesClient({
   const [prazoLeilao, setPrazoLeilao] = useState(0);
   const [sort, setSort] = useState<Sort>("leilao");
   const [page, setPage] = useState(1);
-  const [view, setView] = useState<View>(initialView);
   const [calDayOpen, setCalDayOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
   const [restored, setRestored] = useState(false);
   const stateKey = useRef("");
 
-  // Restore the previous search on return (e.g. "Voltar" from a property),
-  // keyed by URL query so deep-links keep separate buckets.
+  // Tab and drill-down bucket are URL-owned, so they survive reload and sharing.
+  const params = useSearchParams();
+  const view = VIEWS_BY_KEY.has(params.get("view") ?? "")
+    ? (params.get("view") as View)
+    : initialView;
+  const range = useMemo(
+    () => parseRange(params.get("dim"), params.get("from"), params.get("to")) ?? null,
+    [params],
+  );
+
+  // replaceState syncs useSearchParams without re-running the server component.
+  const setParams = useCallback((patch: Record<string, string | null>) => {
+    const sp = new URLSearchParams(window.location.search);
+    for (const [k, v] of Object.entries(patch)) {
+      if (v == null) sp.delete(k);
+      else sp.set(k, v);
+    }
+    const qs = sp.toString();
+    window.history.replaceState(null, "", qs ? `?${qs}` : window.location.pathname);
+  }, []);
+
+  const setView = useCallback((v: View) => setParams({ view: v }), [setParams]);
+  const clearRange = useCallback(() => setParams({ dim: null, from: null, to: null }), [setParams]);
+
+  const pickRange = useCallback(
+    (dim: RangeDim, from: number, to: number) =>
+      setParams({ dim, from: String(from), to: to === Infinity ? "" : String(to), view: "list" }),
+    [setParams],
+  );
+
+  // Restore the previous search on return. Keyed only by the params that scope the
+  // dataset, so switching tab or bucket keeps one filter set.
   useEffect(() => {
     setMounted(true);
-    stateKey.current = `properties:v1:${window.location.search}`;
+    const sp = new URLSearchParams(window.location.search);
+    stateKey.current = `properties:v2:${["cluster", "city", "h3"]
+      .map((k) => `${k}=${sp.get(k) ?? ""}`)
+      .join("&")}`;
     try {
       const raw = sessionStorage.getItem(stateKey.current);
       if (raw) {
@@ -282,11 +318,11 @@ export default function PropertiesClient({
         if (Array.isArray(s.modalidade)) setModalidade(s.modalidade);
         if (s.prazoLeilao != null) setPrazoLeilao(s.prazoLeilao);
         if (s.sort != null) setSort(s.sort);
-        if (s.view != null) setView(s.view);
       }
     } catch {}
     setRestored(true);
   }, []);
+
   const { alerts, add: addAlert } = useAlerts();
   const { ids: savedIds } = useSaved();
   const toast = useToast();
@@ -344,6 +380,7 @@ export default function PropertiesClient({
         return false;
       }
       if (h3 && p.h3 !== h3) return false;
+      if (range && !matchesRange(p, range)) return false;
       if (cluster !== "all" && p.clusterId !== cluster) return false;
       if (uf !== "all" && p.uf !== uf) return false;
       if (cidade !== "all" && p.city !== cidade) return false;
@@ -393,6 +430,7 @@ export default function PropertiesClient({
     cluster,
     sort,
     h3,
+    range,
     minQuartos,
     maxPreco,
     minArea,
@@ -463,7 +501,6 @@ export default function PropertiesClient({
           modalidade,
           prazoLeilao,
           sort,
-          view,
         }),
       );
     } catch {}
@@ -490,7 +527,6 @@ export default function PropertiesClient({
     modalidade,
     prazoLeilao,
     sort,
-    view,
   ]);
 
   // Lock body scroll while the drawer is open.
@@ -585,6 +621,7 @@ export default function PropertiesClient({
   // per-section counts. Each carries the action that removes it.
   const activeFilters = useMemo(() => {
     const f: { key: string; label: string; clear: () => void }[] = [];
+    if (range) f.push({ key: "range", label: rangeLabel(range), clear: clearRange });
     if (maxPreco > 0)
       f.push({ key: "preco", label: `Até ${moneyShort(maxPreco)}`, clear: () => setPreco(0) });
     if (minQuartos > 0)
@@ -631,6 +668,8 @@ export default function PropertiesClient({
     return f;
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
+    range,
+    clearRange,
     maxPreco,
     minQuartos,
     minArea,
@@ -659,6 +698,7 @@ export default function PropertiesClient({
   const leilaoCount = [prazoLeilao > 0, financiamento, fgts].filter(Boolean).length;
 
   const clearAdvanced = () => {
+    clearRange();
     setMinQuartos(0);
     setPreco(0);
     setMinArea(0);
@@ -685,6 +725,7 @@ export default function PropertiesClient({
   };
 
   const filtered =
+    range != null ||
     uf !== "all" ||
     cidade !== "all" ||
     tipo !== "all" ||
@@ -1137,7 +1178,7 @@ export default function PropertiesClient({
           </EmptyState>
         )
       ) : view === "analysis" ? (
-        <PropertiesAnalysis items={items} />
+        <PropertiesAnalysis items={items} onPickRange={pickRange} />
       ) : view === "calendar" ? (
         <AuctionCalendar items={items} onDayOpen={setCalDayOpen} />
       ) : items.length ? (

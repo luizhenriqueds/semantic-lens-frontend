@@ -62,13 +62,14 @@ async function loadPriceHistory(id: string): Promise<PriceHistoryPoint[]> {
       modality: l.modality || null,
     }));
 
-  // Drop interior snapshots whose price didn't change so the chart shows price
+  // Drop interior snapshots whose price and modality didn't change so the chart shows real
   // movements rather than scraping cadence, but always keep the first and last.
   const out: PriceHistoryPoint[] = [];
   for (let i = 0; i < raw.length; i++) {
     const prev = out[out.length - 1];
     const isLast = i === raw.length - 1;
-    if (prev && prev.saleValue === raw[i].saleValue && !isLast) continue;
+    const same = prev && prev.saleValue === raw[i].saleValue && prev.modality === raw[i].modality;
+    if (same && !isLast) continue;
     out.push(raw[i]);
   }
   return out;
