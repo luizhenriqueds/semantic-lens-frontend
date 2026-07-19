@@ -1,5 +1,5 @@
 import { fmtDay, money, moneyShort } from "@/lib/format";
-import { hasReliableMarket, moneyM2 } from "@/lib/market";
+import { marketQuality, moneyM2 } from "@/lib/market";
 import type { MarketStats } from "@/lib/types";
 
 type Mark = {
@@ -72,7 +72,9 @@ export default function PropertyMarket({
   area: number | null;
   appraised?: number | null;
 }) {
-  if (!hasReliableMarket(stats)) {
+  const quality = marketQuality(stats);
+
+  if (quality === "none") {
     return (
       <div className="infoblock">
         <h3>Comparativo de mercado</h3>
@@ -86,6 +88,38 @@ export default function PropertyMarket({
 
   const med = stats.priceMedian;
   const propM2 = lance != null && area != null && area > 0 ? lance / area : null;
+  // Degenerate sample: show only the raw references, no derived comparisons.
+  if (quality === "thin") {
+    return (
+      <div className="infoblock">
+        <h3>Comparativo de mercado</h3>
+        <div className="mkt-tiles">
+          {med != null && (
+            <div className="mkt-stat">
+              <div className="k">Mediana do bairro</div>
+              <div className="v">{money(med)}</div>
+              <div className="s">preço de venda</div>
+            </div>
+          )}
+          {propM2 != null && (
+            <div className="mkt-stat">
+              <div className="k">R$/m² deste imóvel</div>
+              <div className="v">{moneyM2(propM2)}</div>
+              {stats.priceM2Median != null && (
+                <div className="s">bairro: {moneyM2(stats.priceM2Median)}</div>
+              )}
+            </div>
+          )}
+        </div>
+        <div className="rnote">
+          Os {stats.sampleSize ?? 0} anúncio{stats.sampleSize === 1 ? "" : "s"} encontrados neste
+          bairro têm preços muito parecidos entre si, então não é possível estimar com segurança se
+          este imóvel está acima ou abaixo do mercado.
+          {fmtDay(stats.computedAt) && <> Dados coletados em {fmtDay(stats.computedAt)}.</>}
+        </div>
+      </div>
+    );
+  }
   const { value: compareValue, label: marketLabel, basis } = marketBenchmark(stats, area);
 
   const belowPct =

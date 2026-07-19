@@ -157,8 +157,11 @@ async function loadProperties(): Promise<Property[]> {
 
 export const getAllProperties = cached(loadProperties, "properties");
 
+// Browsable: still on offer, and scored (a missing score means the pipeline failed on it).
+export const isListable = (p: Property): boolean => !p.inactive && p.scores.investment != null;
+
 export async function getProperties(): Promise<Property[]> {
-  return (await getAllProperties()).filter((p) => !p.inactive);
+  return (await getAllProperties()).filter(isListable);
 }
 
 export async function getProperty(id: string): Promise<Property | null> {

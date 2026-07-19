@@ -22,6 +22,8 @@ const MONTHS = [
   "dezembro",
 ];
 
+const AUCTION_DAY_CLOSE_UTC_HOUR = 15;
+
 function parseAuctionDate(iso: string): Date | null {
   const m = iso.match(/^(\d{4})-(\d{2})-(\d{2})/);
   if (m) return new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]));
@@ -44,19 +46,26 @@ export default function AuctionCalendar({
     return new Date(d.getFullYear(), d.getMonth(), d.getDate());
   }, []);
 
+  // Same-day auctions only count until 15:00 UTC.
+  const cutoff = useMemo(() => {
+    const now = new Date();
+    const closed = now.getUTCHours() >= AUCTION_DAY_CLOSE_UTC_HOUR;
+    return closed ? new Date(today.getFullYear(), today.getMonth(), today.getDate() + 1) : today;
+  }, [today]);
+
   const byDay = useMemo(() => {
     const map = new Map<string, Property[]>();
     for (const p of items) {
       if (!p.auctionDate) continue;
       const d = parseAuctionDate(p.auctionDate);
-      if (!d || d < today) continue;
+      if (!d || d < cutoff) continue;
       const k = keyOf(d);
       const list = map.get(k);
       if (list) list.push(p);
       else map.set(k, [p]);
     }
     return map;
-  }, [items, today]);
+  }, [items, cutoff]);
 
   const firstMonth = useMemo(() => {
     const keys = [...byDay.keys()].sort();
@@ -127,7 +136,7 @@ export default function AuctionCalendar({
           if (!d) return <div className="calcell empty" key={`e${i}`} />;
           const k = keyOf(d);
           const count = byDay.get(k)?.length ?? 0;
-          const past = d < today;
+          const past = d < cutoff;
           const cls = `calcell${past ? " past" : ""}${count ? " has" : ""}${selected === k ? " sel" : ""}`;
           return (
             <button

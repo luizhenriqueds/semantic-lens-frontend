@@ -7,7 +7,12 @@ type View = (typeof VALID_VIEWS)[number];
 export default async function PropertiesPage({
   searchParams,
 }: {
-  searchParams: Promise<{ cluster?: string; city?: string; h3?: string; view?: string }>;
+  searchParams: Promise<{
+    cluster?: string;
+    city?: string;
+    h3?: string;
+    view?: string;
+  }>;
 }) {
   const [properties, clusters, sp] = await Promise.all([
     getProperties(),

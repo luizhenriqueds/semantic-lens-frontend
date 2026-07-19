@@ -1,7 +1,26 @@
+import Image from "next/image";
 import Link from "next/link";
 import LandingEffects from "@/app/(marketing)/_components/LandingEffects";
 import ApiWaitlist from "@/app/(marketing)/_components/ApiWaitlist";
 import { getUser } from "@/lib/supabase/server";
+
+function ScoreBars({ items }: { items: { k: string; v: number }[] }) {
+  return (
+    <>
+      {items.map((i) => (
+        <div className="lp-bar" key={i.k}>
+          <div className="lp-t">
+            <span>{i.k}</span>
+            <b>{i.v}</b>
+          </div>
+          <div className="lp-track">
+            <i data-w={`${i.v}%`}></i>
+          </div>
+        </div>
+      ))}
+    </>
+  );
+}
 
 export default async function LandingPage() {
   const { user } = await getUser();
@@ -56,6 +75,7 @@ export default async function LandingPage() {
                 O painel
               </a>
               <a href="#analise">Como funciona</a>
+              <a href="#exemplo">Exemplo real</a>
               <a href="#planos">Planos</a>
               <a href="#faq">Dúvidas</a>
             </nav>
@@ -280,62 +300,154 @@ export default async function LandingPage() {
         </div>
       </div>
 
-      <section className="lp-band">
+      <section className="lp-band lp-alt lp-showband" id="exemplo">
         <div className="lp-wrap">
-          <div className="lp-unique lp-reveal">
-            <svg
-              className="lp-uhexes"
-              viewBox="0 0 600 300"
-              preserveAspectRatio="xMidYMid slice"
-              aria-hidden="true"
-            >
-              <polygon points="540,40 572,58 572,94 540,112 508,94 508,58" opacity="0.06" />
-              <polygon points="500,110 532,128 532,164 500,182 468,164 468,128" opacity="0.05" />
-              <polygon points="580,110 612,128 612,164 580,182 548,164 548,128" opacity="0.04" />
-            </svg>
-            <div className="lp-u-head">
-              <span className="lp-upill">Novidade</span>
-              <h2>
-                A primeira base de leilões que entende <u>linguagem</u> e <u>geografia</u>
-              </h2>
-              <p>
-                Milhares de imóveis organizados por significado e por lugar - uma combinação que
-                nenhum outro portal de leilões do Brasil oferece.
-              </p>
-            </div>
-            <div className="lp-unique-pillars">
-              <div className="lp-upillar">
-                <span className="lp-ic">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                    <path d="M4 5h16v10H9l-4 4z" />
-                    <path d="M8 9h8M8 12h5" />
-                  </svg>
-                </span>
-                <div>
-                  <b>Base semântica</b>
-                  <span>
-                    Descreva em português; a Lavra combina significado e palavras-chave (busca
-                    híbrida) e ranqueia por afinidade, não só por palavra-chave.
-                  </span>
+          <div className="lp-sechead lp-reveal">
+            <span className="lp-seclabel">// um leilão de verdade, agora</span>
+            <h2>Veja a Lavra analisando um imóvel real</h2>
+            <p>
+              Nada de tela de exemplo. Este apartamento está em leilão neste momento - abaixo,
+              exatamente o que a plataforma mostra sobre ele:{" "}
+              <b>nota, melhores usos e leitura da região</b>.
+            </p>
+          </div>
+
+          <div className="lp-showcase">
+            <article className="lp-sc-card lp-reveal">
+              <div className="lp-sc-photo">
+                <Image
+                  src="/showcase/porto-canoa.jpg"
+                  alt="Fachada do condomínio Vista Mata da Serra, em Porto Canoa, Serra/ES"
+                  width={1200}
+                  height={600}
+                  sizes="(max-width: 900px) 100vw, 620px"
+                />
+                <span className="lp-tag">Apartamento</span>
+                <span className="lp-simi">1º Leilão</span>
+              </div>
+              <div className="lp-sc-body">
+                <span className="lp-sc-kicker mono">Matrícula Caixa 1787702095171</span>
+                <b className="lp-sc-title">Apartamento 2 dormitórios - Porto Canoa</b>
+                <div className="lp-loc">Serra/ES · a 4,2 km do centro</div>
+
+                <div className="lp-sc-attrs">
+                  {[
+                    { k: "Área útil", v: "44 m²" },
+                    { k: "Quartos", v: "2" },
+                    { k: "Vagas", v: "1" },
+                    { k: "Situação", v: "Ocupado" },
+                  ].map((a) => (
+                    <div key={a.k}>
+                      <span>{a.k}</span>
+                      <b>{a.v}</b>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="lp-sc-price">
+                  <div>
+                    <span>Lance inicial</span>
+                    <b>R$ 274.000</b>
+                  </div>
+                  <div className="lp-sc-visual">
+                    <i>77</i> avaliação visual da fachada
+                  </div>
                 </div>
               </div>
-              <div className="lp-upillar">
-                <span className="lp-ic">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                    <path d="M12 22s7-6.5 7-12a7 7 0 1 0-14 0c0 5.5 7 12 7 12z" />
-                    <circle cx="12" cy="10" r="2.5" />
-                  </svg>
-                </span>
+            </article>
+
+            <div className="lp-sc-side lp-reveal lp-d1">
+              <div className="lp-sc-ring">
+                <svg className="lp-ring" width="92" height="92" viewBox="0 0 56 56">
+                  <circle className="lp-track" cx="28" cy="28" r="23" strokeWidth="6" />
+                  <circle
+                    className="lp-bar"
+                    cx="28"
+                    cy="28"
+                    r="23"
+                    strokeWidth="6"
+                    strokeDasharray="144.5"
+                    strokeDashoffset="144.5"
+                    data-off="28.9"
+                    transform="rotate(-90 28 28)"
+                  />
+                  <text x="28" y="33" textAnchor="middle" fontSize="17">
+                    80
+                  </text>
+                </svg>
                 <div>
-                  <b>Base geográfica</b>
-                  <span>
-                    <b>Mais de 400 mil POIs</b> mapeados em todo o Brasil. Cada imóvel é lido por
-                    células hexagonais, com densidade de serviços, qualidade do entorno e as
-                    distâncias que importam.
-                  </span>
+                  <b>Nota geral de investimento</b>
+                  <span>combina desconto, região e liquidez em uma nota de 0 a 100.</span>
                 </div>
               </div>
+
+              <div className="lp-sc-uses">
+                <span className="lp-seclabel lp-sc-lbl">Melhores usos</span>
+                <ScoreBars
+                  items={[
+                    { k: "Aluguel por temporada", v: 98 },
+                    { k: "Comercial", v: 95 },
+                    { k: "Moradia familiar", v: 77 },
+                    { k: "Venda rápida", v: 67 },
+                  ]}
+                />
+              </div>
+
+              <div className="lp-whybox">
+                <b>Por quê?</b> fica a 299 m de supermercado e 234 m de parque, com universidade e
+                shopping a menos de 800 m - perfil que sustenta temporada e uso comercial.
+              </div>
             </div>
+          </div>
+
+          <div className="lp-sc-region lp-reveal lp-d2">
+            <div className="lp-sc-reghead">
+              <div>
+                <span className="lp-seclabel lp-sc-lbl">A região</span>
+                <b>Porto Canoa · Serra/ES</b>
+              </div>
+              <div className="lp-sc-chips">
+                <span>Temporada</span>
+                <span>Familiar</span>
+              </div>
+            </div>
+            <div className="lp-sc-reggrid">
+              <div className="lp-sc-regscores">
+                <ScoreBars
+                  items={[
+                    { k: "Familiar", v: 88 },
+                    { k: "Caminhabilidade", v: 88 },
+                    { k: "Conveniência", v: 85 },
+                    { k: "Temporada", v: 83 },
+                  ]}
+                />
+              </div>
+              <div className="lp-sc-pois">
+                {[
+                  { k: "Parque", v: "234 m" },
+                  { k: "Supermercado", v: "299 m" },
+                  { k: "Restaurante", v: "471 m" },
+                  { k: "Shopping", v: "514 m" },
+                  { k: "Universidade", v: "749 m" },
+                  { k: "Hospital", v: "928 m" },
+                ].map((p) => (
+                  <div className="lp-sc-poi" key={p.k}>
+                    <span>{p.k}</span>
+                    <b>{p.v}</b>
+                  </div>
+                ))}
+              </div>
+            </div>
+            <div className="lp-sc-foot">
+              Distância até o serviço mais próximo, a partir de dados de mapa (OpenStreetMap).
+            </div>
+          </div>
+
+          <div className="lp-sc-cta lp-reveal lp-d3">
+            <Link className="lp-btn lp-solid lp-big" href={user ? "/dashboard" : "/register"}>
+              Ver imóveis como este
+            </Link>
+            <span>Dados reais do leilão da Caixa, coletados em jul. de 2026.</span>
           </div>
         </div>
       </section>
@@ -1752,7 +1864,7 @@ export default async function LandingPage() {
         </div>
       </section>
 
-      <section className="lp-band">
+      <section className="lp-band lp-tint">
         <div className="lp-wrap">
           <div className="lp-scores-lead">
             <div className="lp-reveal">
@@ -2169,7 +2281,7 @@ export default async function LandingPage() {
             <div className="lp-marketviz lp-reveal lp-d1">
               <div className="lp-lbl">Preço mediano por m² · Vila Mariana</div>
               <div className="lp-med">
-                <b>R$ 9.200</b>
+                <b>R$ 4.300</b>
                 <span>/ m² no mercado aberto</span>
               </div>
               <div className="lp-scatter" aria-hidden="true">
@@ -2217,7 +2329,7 @@ export default async function LandingPage() {
         </div>
       </section>
 
-      <section className="lp-band">
+      <section className="lp-band lp-tint">
         <div className="lp-wrap">
           <div className="lp-sechead lp-reveal">
             <span className="lp-seclabel">// segmentos de mercado</span>
@@ -2756,7 +2868,7 @@ export default async function LandingPage() {
         </div>
       </section>
 
-      <section className="lp-band" id="planos">
+      <section className="lp-band lp-tint" id="planos">
         <div className="lp-wrap">
           <div className="lp-sechead lp-reveal">
             <span className="lp-seclabel">// planos</span>
