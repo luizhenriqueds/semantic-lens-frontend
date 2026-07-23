@@ -1,6 +1,15 @@
 export { getAllProperties, getProperties, getProperty, isListable } from "./properties";
 export { getPoisNear, getPropertyPois, getRegionPois } from "./pois";
 export { getMarketStats, getMarketHistory, getMarketComparables } from "./market";
+export {
+  getMarketDashboard,
+  type MarketDashboard,
+  type MarketBucket,
+  type MarketCity,
+  type MarketUf,
+  type MarketType,
+  type MarketOpp,
+} from "./dashboard";
 export { getClusters } from "./clusters";
 export { getRegions, getRegion } from "./regions";
 export { getScoreExplain, getPriceHistory, getRecommendations } from "./details";

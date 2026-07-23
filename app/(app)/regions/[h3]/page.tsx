@@ -8,14 +8,7 @@ import RegionMapTabs from "@/components/region/RegionMapTabs";
 import SameAddressGroups from "@/components/region/SameAddressGroups";
 import RegionScoreBars from "@/components/region/RegionScoreBars";
 import RegionMarket from "@/components/market/RegionMarket";
-import {
-  getMarketStats,
-  getPoisNear,
-  getProperties,
-  getRegion,
-  getRegionPois,
-  getRegions,
-} from "@/lib/data";
+import { getMarketStats, getPoisNear, getProperties, getRegion, getRegionPois } from "@/lib/data";
 import { hasReliableMarket, statsForRegion } from "@/lib/market";
 import { nearbyPois, regionHighlights } from "@/lib/pois";
 import { IconBack, IconPin } from "@/lib/icons";
@@ -38,9 +31,9 @@ function avg(list: Property[], field: keyof Property["scores"]): number | null {
 
 export const revalidate = 120;
 
+// On-demand ISR rather than prerendering every h3 cell at build.
 export async function generateStaticParams() {
-  const regions = await getRegions();
-  return regions.map((r) => ({ h3: r.h3 }));
+  return [];
 }
 
 export default async function RegionPage({ params }: { params: Promise<{ h3: string }> }) {

@@ -6141,3 +6141,470 @@ select.selectish {
     padding: 0 8px;
   }
 }
+
+/* ============ market dashboard (/market) ============ */
+.market .pagehead .updated {
+  margin-top: 8px;
+  font-size: 12.5px;
+  color: var(--ink-faint);
+}
+.market .stat .s {
+  font-size: 12.5px;
+  color: var(--ink-faint);
+  margin-top: 4px;
+}
+.market .stat .s b {
+  color: var(--primary);
+  font-weight: 600;
+}
+.market .sectitle .hint {
+  font-size: 13px;
+  color: var(--ink-faint);
+  font-weight: 500;
+}
+.market .pad {
+  padding: 20px 22px;
+}
+.market .cardhead {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+.market .cardhead h3 {
+  font-size: 15.5px;
+  font-weight: 700;
+  margin: 0;
+}
+.market .cardhead .k {
+  font-size: 12px;
+  color: var(--ink-faint);
+  font-weight: 600;
+}
+.market .grid2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 18px;
+}
+.market .grid2.wide {
+  grid-template-columns: 1.35fr 1fr;
+}
+.market .grid3 {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 18px;
+}
+/* section rhythm: stronger break before each titled section, and a gap for
+   grids/opps that follow a card directly (no sectitle between) */
+.market .sectitle {
+  margin-top: 34px;
+}
+.market .grid2,
+.market .grid3,
+.market .oppgrid {
+  margin-top: 18px;
+}
+
+/* insights — plain cards (no accent border) */
+.market .insights {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+  margin: 16px 0 4px;
+}
+.market .ins {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 15px;
+  padding: 18px 20px;
+}
+.market .ins .lab {
+  font-size: 11.5px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--primary);
+}
+.market .ins .big {
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  margin: 9px 0 4px;
+}
+.market .ins p {
+  margin: 0;
+  font-size: 13.5px;
+  color: var(--ink-soft);
+  line-height: 1.5;
+}
+
+/* column bar chart */
+.market .bars {
+  display: flex;
+  align-items: flex-end;
+  gap: 14px;
+  height: 190px;
+  padding-top: 10px;
+}
+.market .bars .col {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 9px;
+  height: 100%;
+}
+.market .bars .col .fill {
+  width: 100%;
+  max-width: 56px;
+  background: var(--primary);
+  border-radius: 8px 8px 3px 3px;
+  position: relative;
+}
+.market .bars .col .fill.soft {
+  background: var(--primary-soft);
+  opacity: 0.5;
+}
+.market .bars .col .cap {
+  position: absolute;
+  top: -20px;
+  left: 0;
+  right: 0;
+  text-align: center;
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--ink);
+}
+.market .bars .col .xl {
+  font-size: 11.5px;
+  color: var(--ink-soft);
+  text-align: center;
+  font-weight: 600;
+}
+.market .bars .col .xl small {
+  display: block;
+  color: var(--ink-faint);
+  font-weight: 500;
+  font-size: 10.5px;
+}
+
+/* horizontal ranking bars */
+.market .hbars {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.market .hbar {
+  display: grid;
+  grid-template-columns: 78px 1fr 92px;
+  gap: 12px;
+  align-items: center;
+}
+.market .hbar .lb {
+  font-size: 13.5px;
+  font-weight: 600;
+}
+.market .hbar .lb small {
+  color: var(--ink-faint);
+  font-weight: 500;
+  font-size: 11.5px;
+  display: block;
+}
+.market .hbar .track {
+  height: 11px;
+  background: var(--surface-2);
+  border-radius: 6px;
+  overflow: hidden;
+}
+.market .hbar .track i {
+  display: block;
+  height: 100%;
+  background: var(--primary);
+  border-radius: 6px;
+}
+.market .hbar .val {
+  text-align: right;
+  font-size: 13.5px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+.market .hbar .val small {
+  color: var(--ink-faint);
+  font-weight: 500;
+}
+
+/* donut */
+.market .donutwrap {
+  display: flex;
+  align-items: center;
+  gap: 22px;
+}
+.market .donut {
+  flex-shrink: 0;
+}
+.market .legend {
+  display: flex;
+  flex-direction: column;
+  gap: 11px;
+  flex: 1;
+}
+.market .legend .row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 13.5px;
+}
+.market .legend .row i {
+  width: 11px;
+  height: 11px;
+  border-radius: 3px;
+  flex-shrink: 0;
+}
+.market .legend .row .n {
+  margin-left: auto;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+.market .legend .row .p {
+  color: var(--ink-faint);
+  font-size: 12px;
+  min-width: 44px;
+  text-align: right;
+}
+
+/* score dna bars */
+.market .dna {
+  display: flex;
+  flex-direction: column;
+  gap: 13px;
+}
+.market .sb .top {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-bottom: 6px;
+}
+.market .sb .name {
+  font-size: 14px;
+  font-weight: 500;
+}
+.market .sb .num {
+  font-size: 15px;
+  font-weight: 700;
+}
+.market .sb.dim .num {
+  color: var(--ink-faint);
+}
+.market .sb .track {
+  height: 9px;
+  background: var(--primary-wash);
+  border-radius: 6px;
+  overflow: hidden;
+}
+.market .sb .track i {
+  display: block;
+  height: 100%;
+  background: var(--primary);
+  border-radius: 6px;
+}
+.market .sb.dim .track i {
+  background: var(--primary-soft);
+  opacity: 0.55;
+}
+
+/* ranking table (top cities) */
+.market .rtable {
+  overflow-x: auto;
+}
+.market .rthead,
+.market .rtrow {
+  display: grid;
+  grid-template-columns: 2fr 0.9fr 1.1fr 1fr 1.1fr 1fr;
+  gap: 14px;
+  align-items: center;
+  min-width: 640px;
+}
+.market .rthead {
+  padding: 0 14px 12px;
+  font-size: 11px;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  font-weight: 700;
+}
+.market .rthead .num {
+  text-align: right;
+}
+.market .rtrow {
+  padding: 13px 14px;
+  border-top: 1px solid var(--line-soft);
+  cursor: pointer;
+  border-radius: 10px;
+}
+.market .rtrow:hover {
+  background: var(--surface-2);
+}
+.market .rtrow .rg b {
+  font-size: 15px;
+  font-weight: 700;
+  display: block;
+  letter-spacing: -0.01em;
+}
+.market .rtrow .rg span {
+  font-size: 12px;
+  color: var(--ink-soft);
+}
+.market .rtrow .num {
+  text-align: right;
+  font-weight: 700;
+  font-size: 14.5px;
+  font-variant-numeric: tabular-nums;
+}
+.market .rtrow .num.dim {
+  color: var(--ink-soft);
+  font-weight: 600;
+}
+.market .minibar {
+  height: 6px;
+  background: var(--surface-2);
+  border-radius: 4px;
+  overflow: hidden;
+  margin-top: 5px;
+}
+.market .minibar i {
+  display: block;
+  height: 100%;
+  background: var(--primary);
+  border-radius: 4px;
+}
+
+/* small stat trio */
+.market .trio {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1px;
+  background: var(--line-soft);
+  border-radius: 12px;
+  overflow: hidden;
+}
+.market .trio .t {
+  background: var(--surface);
+  padding: 16px 18px;
+}
+.market .trio .t .v {
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+.market .trio .t .v.accent {
+  color: var(--primary);
+}
+.market .trio .t .l {
+  font-size: 12.5px;
+  color: var(--ink-soft);
+  margin-top: 2px;
+}
+
+/* opportunity cards */
+.market .oppgrid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 16px;
+}
+.market .opp {
+  display: grid;
+  grid-template-columns: 46px 1fr auto;
+  gap: 14px;
+  align-items: center;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 16px 18px;
+  transition:
+    border-color 0.15s,
+    transform 0.15s;
+}
+.market .opp:hover {
+  border-color: var(--primary-soft);
+  transform: translateY(-2px);
+}
+.market .opp .score-ring {
+  width: 46px;
+  height: 46px;
+  flex-shrink: 0;
+}
+.market .opp .body .t {
+  font-size: 15.5px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+.market .opp .body .loc {
+  font-size: 12.5px;
+  color: var(--ink-soft);
+  margin-top: 1px;
+}
+.market .opp .body .facts {
+  display: flex;
+  gap: 12px;
+  margin-top: 7px;
+  font-size: 12px;
+  color: var(--ink-soft);
+}
+.market .opp .body .facts b {
+  color: var(--ink);
+  font-weight: 600;
+}
+.market .opp .price {
+  text-align: right;
+}
+.market .opp .price .now {
+  font-size: 17px;
+  font-weight: 700;
+  color: var(--primary);
+  letter-spacing: -0.01em;
+}
+.market .opp .price .was {
+  font-size: 11.5px;
+  color: var(--ink-faint);
+  text-decoration: line-through;
+}
+.market .opp .price .disc {
+  display: inline-block;
+  margin-top: 5px;
+  background: var(--primary-wash);
+  color: var(--primary);
+  font-weight: 700;
+  font-size: 11.5px;
+  border-radius: 7px;
+  padding: 3px 8px;
+}
+
+.market .note {
+  font-size: 12.5px;
+  color: var(--ink-soft);
+  background: var(--surface-2);
+  border: 1px solid var(--line-soft);
+  border-radius: 11px;
+  padding: 12px 14px;
+  margin-top: 16px;
+  line-height: 1.5;
+}
+.market .note b {
+  color: var(--ink);
+}
+
+@media (max-width: 1080px) {
+  .market .insights,
+  .market .grid3 {
+    grid-template-columns: 1fr;
+  }
+  .market .grid2,
+  .market .grid2.wide {
+    grid-template-columns: 1fr;
+  }
+  .market .oppgrid {
+    grid-template-columns: 1fr;
+  }
+}
