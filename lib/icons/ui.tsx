@@ -20,6 +20,12 @@ export const IconSliders = (p: P) => (
     <circle cx="16" cy="18" r="2" />
   </svg>
 );
+export const IconChart = (p: P) => (
+  <svg {...base(p)}>
+    <path d="M3 3v18h18" />
+    <path d="m7 15 3-4 3 2 4-6" />
+  </svg>
+);
 export const IconBuilding = (p: P) => (
   <svg {...base(p)}>
     <path d="M4 21V7l8-4 8 4v14" />

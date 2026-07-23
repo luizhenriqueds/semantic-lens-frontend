@@ -1,7 +1,8 @@
+import { cache } from "react";
 import { supabase } from "@/lib/supabase";
 import { deriveTitle, titleCase } from "@/lib/format";
 import type { ProfileKey, Property } from "@/lib/types";
-import { cached, CLUSTER_RUN, fetchAllRows, num } from "./client";
+import { CLUSTER_RUN, fetchAllRows, num } from "./client";
 
 const PROPERTY_COLS = [
   "property_id,property_type,uf,city,neighborhood,raw_address",
@@ -19,13 +20,32 @@ const LISTING_COLS = [
 const SCORE_COLS =
   "property_id,flip,liquidity,airbnb,student,family,commercial,convenience,investment";
 
-// property_id -> { category: nearest distance in metres }, aggregated in Postgres.
+// property_id -> { category: nearest distance in metres }. Capped and not retried
+// on timeout so a slow response degrades to {} instead of blocking every page.
 async function loadNearestPoi(): Promise<Map<string, Record<string, number>>> {
-  const list = await fetchAllRows<{ property_id: string; nearest: Record<string, number> | null }>(
-    "property_nearest_poi",
-    (from, to) => supabase.rpc("property_nearest_poi").order("property_id").range(from, to),
-  );
-  return new Map(list.map((r) => [r.property_id, r.nearest ?? {}]));
+  const map = new Map<string, Record<string, number>>();
+  for (let from = 0; ; from += 1000) {
+    const res = await supabase
+      .rpc("property_nearest_poi")
+      .order("property_id")
+      .range(from, from + 999)
+      .abortSignal(AbortSignal.timeout(6000))
+      .then(
+        (r) => r,
+        (e) => ({ data: null, error: { message: String(e) } }),
+      );
+    if (res.error) {
+      console.error(`[data] query "property_nearest_poi" failed: ${res.error.message}`);
+      break;
+    }
+    const batch = (res.data ?? []) as {
+      property_id: string;
+      nearest: Record<string, number> | null;
+    }[];
+    for (const r of batch) map.set(r.property_id, r.nearest ?? {});
+    if (batch.length < 1000) break;
+  }
+  return map;
 }
 
 function pickImage(p: {
@@ -155,7 +175,8 @@ async function loadProperties(): Promise<Property[]> {
   });
 }
 
-export const getAllProperties = cached(loadProperties, "properties");
+// Request-scoped: the full dataset exceeds unstable_cache's 2MB per-entry limit.
+export const getAllProperties = cache(loadProperties);
 
 // Browsable: still on offer, and scored (a missing score means the pipeline failed on it).
 export const isListable = (p: Property): boolean => !p.inactive && p.scores.investment != null;
