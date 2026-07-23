@@ -43,6 +43,26 @@ async function loadScoreExplain(id: string): Promise<ScoreExplain | null> {
 
 export const getScoreExplain = cached(loadScoreExplain, "property-score-explain");
 
+// Heavy text kept out of property_list_mv, fetched per-id on the detail page.
+async function loadPropertyDetailText(
+  id: string,
+): Promise<{ description: string | null; visualNote: string | null }> {
+  const res = await withRetry(() =>
+    supabase
+      .from("properties")
+      .select("canonical_description,visual_note")
+      .eq("property_id", id)
+      .limit(1),
+  );
+  const row = rows<any>("property-detail-text", res)[0];
+  return {
+    description: row?.canonical_description || null,
+    visualNote: row?.visual_note || null,
+  };
+}
+
+export const getPropertyDetailText = cached(loadPropertyDetailText, "property-detail-text");
+
 async function loadPriceHistory(id: string): Promise<PriceHistoryPoint[]> {
   const res = await withRetry(() =>
     supabase

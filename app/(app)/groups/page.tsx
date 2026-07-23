@@ -1,12 +1,10 @@
 import CollectionCard from "@/components/groups/CollectionCard";
 import EmptyState from "@/components/ui/EmptyState";
-import { clusterStats } from "@/lib/clusters";
-import { getClusters, getProperties } from "@/lib/data";
+import { clusterStatsFor, getClusters, getClusterStatsAll } from "@/lib/data";
 import { IconGroups } from "@/lib/icons";
 
 export default async function GroupsPage() {
-  const [clusters, properties] = await Promise.all([getClusters(), getProperties()]);
-  const activeProperties = properties.filter((p) => !p.inactive);
+  const [clusters, clusterStats] = await Promise.all([getClusters(), getClusterStatsAll()]);
   return (
     <section className="view">
       <div className="pagehead">
@@ -27,7 +25,7 @@ export default async function GroupsPage() {
             <CollectionCard
               key={c.clusterId}
               c={c}
-              stats={clusterStats(activeProperties, c.clusterId)}
+              stats={clusterStatsFor(clusterStats, c.clusterId)}
             />
           ))}
         </div>

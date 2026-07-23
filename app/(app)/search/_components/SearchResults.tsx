@@ -1,14 +1,21 @@
 import Link from "next/link";
 import PagedCards from "./PagedCards";
 import EmptyState from "@/components/ui/EmptyState";
-import { getProperties, hybridSearch } from "@/lib/data";
+import {
+  getPropertiesByIds,
+  getPropertiesPage,
+  hasUpcomingAuction,
+  hybridSearch,
+  isListable,
+} from "@/lib/data";
 import { goalFromQuery } from "@/lib/facets";
 import { GOAL_PROFILE } from "@/lib/format";
 import { IconSearch } from "@/lib/icons";
 import type { Property } from "@/lib/types";
 
+const BROWSE_LIMIT = 60;
+
 export default async function SearchResults({ query }: { query: string }) {
-  const all = await getProperties();
   const goal = query ? goalFromQuery(query) : null;
   const highlightGoal = goal ? GOAL_PROFILE[goal] : null;
 
@@ -19,16 +26,18 @@ export default async function SearchResults({ query }: { query: string }) {
   if (query) {
     try {
       const result = await hybridSearch(query);
-      const byId = new Map(all.map((p) => [p.id, p]));
-      items = result.hits
-        .map((h) => byId.get(h.id))
-        .filter((p): p is Property => p != null && !p.inactive);
+      const found = await getPropertiesByIds(result.hits.map((h) => h.id));
+      const byId = new Map(
+        found.filter((p) => isListable(p) && hasUpcomingAuction(p)).map((p) => [p.id, p]),
+      );
+      items = result.hits.map((h) => byId.get(h.id)).filter((p): p is Property => p != null);
       if (result.fallback && items.length) fallbackNote = result.fallbackNote;
     } catch {
       failed = true;
     }
   } else {
-    items = all.filter((p) => !p.inactive).sort((a, b) => (b.discount ?? 0) - (a.discount ?? 0));
+    const page = await getPropertiesPage({ sort: "desconto", pageSize: BROWSE_LIMIT });
+    items = page.items;
   }
 
   const heading =

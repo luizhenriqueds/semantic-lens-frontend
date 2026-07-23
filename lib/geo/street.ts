@@ -1,5 +1,4 @@
 import { titleCase } from "@/lib/format";
-import type { Property } from "@/lib/types";
 
 const STREET_ABBR: Record<string, string> = {
   avenida: "Av.",
@@ -24,7 +23,7 @@ function streetOf(rawAddress: string | null | undefined): string | null {
 }
 
 // Most common street among a cell's properties, to disambiguate same-named regions.
-export function dominantStreet(properties: Property[]): string | null {
+export function dominantStreet(properties: { rawAddress: string | null }[]): string | null {
   const counts = new Map<string, number>();
   for (const p of properties) {
     const s = streetOf(p.rawAddress);

@@ -1,7 +1,7 @@
 import { addressKey } from "@/lib/market";
 import { supabase } from "@/lib/supabase";
 import type { MarketHistoryPoint, MarketStats } from "@/lib/types";
-import { cached, num, rows, withRetry } from "./client";
+import { cached, fetchAllRows, num, rows, withRetry } from "./client";
 
 const HISTORY_COLS = "address_key,computed_at,price_median,price_m2_median,sample_size";
 
@@ -29,8 +29,10 @@ async function loadMarketHistory(addressKey: string): Promise<MarketHistoryPoint
 }
 
 async function loadMarketStats(): Promise<MarketStats[]> {
-  const res = await withRetry(() => supabase.from("market_address_stats").select(STATS_COLS));
-  return rows<any>("market_address_stats", res).map((r) => ({
+  const all = await fetchAllRows<any>("market_address_stats", (f, t) =>
+    supabase.from("market_address_stats").select(STATS_COLS).order("address_key").range(f, t),
+  );
+  return all.map((r) => ({
     addressKey: r.address_key,
     uf: r.uf ?? null,
     city: r.city ?? null,

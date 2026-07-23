@@ -5,3 +5,4 @@ export * from "./region";
 export * from "./cluster";
 export * from "./recommendation";
 export * from "./alert";
+export * from "./propertyFilters";

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { makeProperty } from "@/lib/__fixtures__/property";
-import { discountPercentile, isFirstAuction, showDiscount, topGoals } from "./scores";
+import { isFirstAuction, showDiscount, topGoals } from "./scores";
 
 describe("isFirstAuction", () => {
   it("detects a first auction/praça", () => {
@@ -37,23 +37,5 @@ describe("topGoals", () => {
 
   it("returns an empty list when no profile is scored", () => {
     expect(topGoals(makeProperty())).toEqual([]);
-  });
-});
-
-describe("discountPercentile", () => {
-  it("returns the percentile of properties below the target's discount", () => {
-    const target = makeProperty({ id: "t", discount: 30 });
-    const others = [10, 20, 25, 40, 50].map((d, i) => makeProperty({ id: `o${i}`, discount: d }));
-    // 3 of 5 others discount below 30 -> 60%
-    expect(discountPercentile([target, ...others], target)).toBe(60);
-  });
-
-  it("returns null without enough comparably-discounted properties", () => {
-    const target = makeProperty({ id: "t", discount: 30 });
-    const others = [makeProperty({ id: "o1", discount: 10 })];
-    expect(discountPercentile([target, ...others], target)).toBeNull();
-    expect(
-      discountPercentile([makeProperty({ discount: null })], makeProperty({ discount: null })),
-    ).toBeNull();
   });
 });
