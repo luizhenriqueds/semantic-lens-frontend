@@ -1,8 +1,7 @@
-import { cache } from "react";
 import { supabase } from "@/lib/supabase";
 import { deriveTitle, titleCase } from "@/lib/format";
 import type { ProfileKey, Property } from "@/lib/types";
-import { CLUSTER_RUN, fetchAllRows, num } from "./client";
+import { CLUSTER_RUN, fetchAllRows, num, REVALIDATE } from "./client";
 
 const PROPERTY_COLS = [
   "property_id,property_type,uf,city,neighborhood,raw_address",
@@ -175,8 +174,22 @@ async function loadProperties(): Promise<Property[]> {
   });
 }
 
-// Request-scoped: the full dataset exceeds unstable_cache's 2MB per-entry limit.
-export const getAllProperties = cache(loadProperties);
+// Process-level TTL cache: the full dataset is too big for unstable_cache (2MB
+// limit) and cache() is per-request (reloads for every prerendered page at build,
+// overwhelming the DB). One shared load per process, refreshed after REVALIDATE.
+let propertiesCache: { at: number; promise: Promise<Property[]> } | null = null;
+
+export function getAllProperties(): Promise<Property[]> {
+  const now = Date.now();
+  if (!propertiesCache || now - propertiesCache.at > REVALIDATE * 1000) {
+    const promise = loadProperties().catch((e) => {
+      propertiesCache = null; // never cache a failed load
+      throw e;
+    });
+    propertiesCache = { at: now, promise };
+  }
+  return propertiesCache.promise;
+}
 
 // Browsable: still on offer, and scored (a missing score means the pipeline failed on it).
 export const isListable = (p: Property): boolean => !p.inactive && p.scores.investment != null;

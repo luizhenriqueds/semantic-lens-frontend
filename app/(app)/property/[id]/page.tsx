@@ -39,9 +39,10 @@ import {
 
 export const revalidate = 120;
 
+// On-demand ISR instead of prerendering 30k+ pages at build (each fires several
+// per-property queries). dynamicParams defaults to true.
 export async function generateStaticParams() {
-  const all = await getProperties();
-  return all.map((p) => ({ id: p.id }));
+  return [];
 }
 
 export default async function PropertyPage({ params }: { params: Promise<{ id: string }> }) {
