@@ -1,8 +1,12 @@
 import PortfolioClient from "./_components/PortfolioClient";
-import { getAllProperties } from "@/lib/data";
+import { getPropertiesByIds } from "@/lib/data";
+import { getFavoriteIds } from "@/lib/data/favorites";
+import { getUser } from "@/lib/supabase/server";
 
 export default async function PortfolioPage() {
-  const properties = await getAllProperties();
+  const { supabase, user } = await getUser();
+  const ids = user ? await getFavoriteIds(supabase) : [];
+  const properties = ids.length ? await getPropertiesByIds(ids) : [];
   return (
     <section className="view">
       <div className="pagehead">

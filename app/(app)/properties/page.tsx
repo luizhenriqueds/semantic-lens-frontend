@@ -1,38 +1,65 @@
 import PropertiesClient from "./_components/PropertiesClient";
-import { getClusters, getProperties, getRegion } from "@/lib/data";
+import {
+  getAnalysis,
+  getAuctionCalendar,
+  getClusters,
+  getFilterOptions,
+  getMapPoints,
+  getPropertiesPage,
+  getRegionLabel,
+} from "@/lib/data";
+import { parsePropertySearchParams } from "@/lib/filters/propertiesUrl";
+import type { AnalysisData } from "@/lib/facets/analysis";
+import type { MapPoint, Property } from "@/lib/types";
 
-const VALID_VIEWS = ["list", "analysis", "calendar", "map"] as const;
-type View = (typeof VALID_VIEWS)[number];
+const CALENDAR_DAY_LIMIT = 500;
 
 export default async function PropertiesPage({
   searchParams,
 }: {
-  searchParams: Promise<{
-    cluster?: string;
-    city?: string;
-    h3?: string;
-    view?: string;
-  }>;
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
-  const [properties, clusters, sp] = await Promise.all([
-    getProperties(),
+  const sp = await searchParams;
+  const { filters, sort, page, view, day } = parsePropertySearchParams(sp);
+
+  const [clusters, filterOptions, h3Label, list, analysis, calendar, map] = await Promise.all([
     getClusters(),
-    searchParams,
+    getFilterOptions(),
+    filters.h3 ? getRegionLabel(filters.h3) : Promise.resolve(null),
+    view === "list" ? getPropertiesPage({ filters, sort, page }) : Promise.resolve(undefined),
+    view === "analysis" ? getAnalysis(filters) : Promise.resolve(undefined),
+    view === "calendar"
+      ? (async () => {
+          const [counts, dayPage] = await Promise.all([
+            getAuctionCalendar(filters),
+            day
+              ? getPropertiesPage({
+                  filters: { ...filters, auctionOn: day },
+                  sort,
+                  pageSize: CALENDAR_DAY_LIMIT,
+                })
+              : Promise.resolve(null),
+          ]);
+          return { counts, day, dayItems: (dayPage?.items ?? []) as Property[] };
+        })()
+      : Promise.resolve(undefined),
+    view === "map" ? getMapPoints(filters) : Promise.resolve(undefined),
   ]);
-  const cluster = sp.cluster ? Number(sp.cluster) : undefined;
-  const region = sp.h3 ? await getRegion(sp.h3) : null;
-  const initialView = VALID_VIEWS.includes(sp.view as View) ? (sp.view as View) : undefined;
 
   return (
     <section className="view">
       <PropertiesClient
-        properties={properties}
         clusters={clusters}
-        initialCluster={cluster != null && Number.isNaN(cluster) ? undefined : cluster}
-        initialCity={sp.city}
-        initialView={initialView}
-        h3={sp.h3}
-        h3Label={region ? `${region.name} · ${region.city}` : undefined}
+        filterOptions={filterOptions}
+        filters={filters}
+        sort={sort}
+        page={page}
+        view={view}
+        h3Label={h3Label ?? undefined}
+        list={list}
+        analysis={analysis as AnalysisData | undefined}
+        calendar={calendar}
+        map={map as { points: MapPoint[]; total: number } | undefined}
       />
     </section>
   );

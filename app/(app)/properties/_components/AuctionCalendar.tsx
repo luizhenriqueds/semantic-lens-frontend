@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import EmptyState from "@/components/ui/EmptyState";
 import PropertyRow from "@/components/property/PropertyRow";
 import type { Property } from "@/lib/types";
@@ -24,22 +24,19 @@ const MONTHS = [
 
 const AUCTION_DAY_CLOSE_UTC_HOUR = 15;
 
-function parseAuctionDate(iso: string): Date | null {
-  const m = iso.match(/^(\d{4})-(\d{2})-(\d{2})/);
-  if (m) return new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]));
-  const d = new Date(iso);
-  return isNaN(d.getTime()) ? null : d;
-}
-
 const keyOf = (d: Date) =>
   `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 
 export default function AuctionCalendar({
-  items,
-  onDayOpen,
+  counts,
+  day,
+  dayItems,
+  onSelectDay,
 }: {
-  items: Property[];
-  onDayOpen?: (open: boolean) => void;
+  counts: Record<string, number>;
+  day: string | null;
+  dayItems: Property[];
+  onSelectDay: (day: string | null) => void;
 }) {
   const today = useMemo(() => {
     const d = new Date();
@@ -53,19 +50,14 @@ export default function AuctionCalendar({
     return closed ? new Date(today.getFullYear(), today.getMonth(), today.getDate() + 1) : today;
   }, [today]);
 
+  const cutoffKey = keyOf(cutoff);
   const byDay = useMemo(() => {
-    const map = new Map<string, Property[]>();
-    for (const p of items) {
-      if (!p.auctionDate) continue;
-      const d = parseAuctionDate(p.auctionDate);
-      if (!d || d < cutoff) continue;
-      const k = keyOf(d);
-      const list = map.get(k);
-      if (list) list.push(p);
-      else map.set(k, [p]);
+    const map = new Map<string, number>();
+    for (const [k, n] of Object.entries(counts)) {
+      if (k >= cutoffKey && n > 0) map.set(k, n);
     }
     return map;
-  }, [items, cutoff]);
+  }, [counts, cutoffKey]);
 
   const firstMonth = useMemo(() => {
     const keys = [...byDay.keys()].sort();
@@ -74,14 +66,13 @@ export default function AuctionCalendar({
   }, [byDay, today]);
 
   const [month, setMonth] = useState(firstMonth);
-  const [selected, setSelected] = useState<string | null>(null);
 
   const minMonth = new Date(today.getFullYear(), today.getMonth(), 1);
   const canPrev = month > minMonth;
 
   const shiftMonth = (delta: number) => {
     setMonth((m) => new Date(m.getFullYear(), m.getMonth() + delta, 1));
-    setSelected(null);
+    onSelectDay(null);
   };
 
   const daysInMonth = new Date(month.getFullYear(), month.getMonth() + 1, 0).getDate();
@@ -94,12 +85,8 @@ export default function AuctionCalendar({
     ),
   ];
 
-  const selectedItems = selected ? (byDay.get(selected) ?? []) : [];
-
-  useEffect(() => {
-    onDayOpen?.(selectedItems.length > 0);
-    return () => onDayOpen?.(false);
-  }, [selectedItems.length, onDayOpen]);
+  const selected = day && byDay.has(day) ? day : null;
+  const selectedItems = selected ? dayItems : [];
 
   return (
     <div className="calwrap">
@@ -135,7 +122,7 @@ export default function AuctionCalendar({
         {cells.map((d, i) => {
           if (!d) return <div className="calcell empty" key={`e${i}`} />;
           const k = keyOf(d);
-          const count = byDay.get(k)?.length ?? 0;
+          const count = byDay.get(k) ?? 0;
           const past = d < cutoff;
           const cls = `calcell${past ? " past" : ""}${count ? " has" : ""}${selected === k ? " sel" : ""}`;
           return (
@@ -144,7 +131,7 @@ export default function AuctionCalendar({
               className={cls}
               key={k}
               disabled={!count}
-              onClick={() => setSelected((s) => (s === k ? null : k))}
+              onClick={() => onSelectDay(selected === k ? null : k)}
             >
               <span className="dnum">{d.getDate()}</span>
               {count > 0 && <span className="calcount">{count}</span>}
@@ -160,7 +147,7 @@ export default function AuctionCalendar({
         </EmptyState>
       )}
 
-      {selected && (
+      {selected && selectedItems.length > 0 && (
         <div className="calday">
           <div className="calday-h">
             {selectedItems.length} leilã{selectedItems.length > 1 ? "es" : "o"} em{" "}

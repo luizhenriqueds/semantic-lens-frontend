@@ -1,46 +1,31 @@
 import { fmtDist, moneyShort, SCORE_LABEL } from "@/lib/format";
 import { POI_LABEL } from "@/lib/pois";
-import type { AlertFilters, Property } from "@/lib/types";
+import type { AlertFilters, PropertyFilters } from "@/lib/types";
 
-export function matchesText(p: Property, term: string): boolean {
-  const hay = `${p.title} ${p.neighborhood} ${p.city} ${p.uf} ${p.propertyType}`.toLowerCase();
-  return hay.includes(term.trim().toLowerCase());
-}
-
-export function matchesFilters(p: Property, f: AlertFilters): boolean {
-  const q = f.q?.trim();
-  if (q && !matchesText(p, q)) return false;
-  if (f.uf && p.uf !== f.uf) return false;
-  if (f.city && p.city !== f.city) return false;
-  if (f.propertyType && p.propertyType !== f.propertyType) return false;
-  if (f.modalities?.length && !(p.modality != null && f.modalities.includes(p.modality)))
-    return false;
-  if (f.minDiscount != null && (p.discount ?? 0) < f.minDiscount) return false;
-  if (f.maxPrice != null && (p.saleValue ?? Infinity) > f.maxPrice) return false;
-  if (f.minBedrooms != null && (p.bedrooms ?? 0) < f.minBedrooms) return false;
-  if (f.minArea != null && (p.area ?? 0) < f.minArea) return false;
+// Bridge to the server-side filter contract used by countProperties().
+export function alertToPropertyFilters(f: AlertFilters): PropertyFilters {
+  const out: PropertyFilters = {};
+  if (f.q?.trim()) out.q = f.q.trim();
+  if (f.uf) out.uf = f.uf;
+  if (f.city) out.city = f.city;
+  if (f.propertyType) out.type = f.propertyType;
+  if (f.modalities?.length) out.modalities = f.modalities;
+  if (f.minDiscount != null) out.minDiscount = f.minDiscount;
+  if (f.maxPrice != null) out.maxPrice = f.maxPrice;
+  if (f.minBedrooms != null) out.minBedrooms = f.minBedrooms;
+  if (f.minArea != null) out.minArea = f.minArea;
   if (f.poiCats?.length) {
-    const r = f.poiRadius ?? 2000;
-    for (const c of f.poiCats) {
-      const d = p.nearestPoi[c];
-      if (d == null || d > r) return false;
-    }
+    out.poiCats = f.poiCats;
+    out.poiRadiusM = f.poiRadius ?? 2000;
   }
-  if (f.maxCenter != null && (p.centerProximity == null || p.centerProximity > f.maxCenter)) {
-    return false;
-  }
+  if (f.maxCenter != null) out.maxCenterM = f.maxCenter;
   if (f.minScore != null) {
-    // A minimum score applies to the chosen objetivo, or to Investimento when none is set.
-    const s = p.scores[f.scoreKey ?? "investment"];
-    if (s == null || s < f.minScore) return false;
-  } else if (f.scoreKey && p.scores[f.scoreKey] == null) {
-    return false;
+    out.scoreKey = f.scoreKey ?? "investment";
+    out.scoreMin = f.minScore;
+  } else if (f.scoreKey) {
+    out.scoreKey = f.scoreKey;
   }
-  return true;
-}
-
-export function countMatches(properties: Property[], f: AlertFilters): number {
-  return properties.reduce((n, p) => (matchesFilters(p, f) ? n + 1 : n), 0);
+  return out;
 }
 
 export function hasAnyFilter(f: AlertFilters): boolean {

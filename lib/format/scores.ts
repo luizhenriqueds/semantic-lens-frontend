@@ -127,11 +127,3 @@ export function isFirstAuction(modalidade: string | null | undefined): boolean {
 export function showDiscount(p: Property): boolean {
   return p.discount != null && p.discount > 0 && !isFirstAuction(p.modality);
 }
-
-export function discountPercentile(all: Property[], p: Property): number | null {
-  if (p.discount == null) return null;
-  const others = all.filter((x) => x.id !== p.id && x.discount != null);
-  if (others.length < 5) return null;
-  const below = others.filter((x) => x.discount! < p.discount!).length;
-  return Math.round((below / others.length) * 100);
-}

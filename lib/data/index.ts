@@ -1,4 +1,17 @@
-export { getAllProperties, getProperties, getProperty, isListable } from "./properties";
+export {
+  isListable,
+  hasUpcomingAuction,
+  getPropertiesPage,
+  countProperties,
+  getPropertiesByIds,
+  getPropertyById,
+  getMapPoints,
+  getFilterOptions,
+  getAnalysis,
+  getAuctionCalendar,
+  getClusterStatsAll,
+  clusterStatsFor,
+} from "./propertyList";
 export { getPoisNear, getPropertyPois, getRegionPois } from "./pois";
 export { getMarketStats, getMarketHistory, getMarketComparables } from "./market";
 export {
@@ -11,6 +24,11 @@ export {
   type MarketOpp,
 } from "./dashboard";
 export { getClusters } from "./clusters";
-export { getRegions, getRegion } from "./regions";
-export { getScoreExplain, getPriceHistory, getRecommendations } from "./details";
-export { getCities, hybridSearch, RESULT_LIMIT, type SearchHit, type SearchResult } from "./search";
+export { getRegions, getRegion, getRegionLabel } from "./regions";
+export {
+  getScoreExplain,
+  getPriceHistory,
+  getRecommendations,
+  getPropertyDetailText,
+} from "./details";
+export { hybridSearch, RESULT_LIMIT, type SearchHit, type SearchResult } from "./search";

@@ -1,61 +1,31 @@
 "use client";
 
-import { useMemo } from "react";
 import Link from "next/link";
 import EmptyState from "@/components/ui/EmptyState";
-import { dimValue, fmtBucket, fmtValue, rangeHref, type RangeDim } from "@/lib/facets/range";
+import { fmtBucket, fmtValue, rangeHref, type RangeDim } from "@/lib/facets/range";
+import { ANALYSIS_EDGES, type AnalysisData } from "@/lib/facets/analysis";
 import { money, moneyShort, SCORE_LABEL } from "@/lib/format";
 import { moneyM2 } from "@/lib/market";
-import type { Property, Scores } from "@/lib/types";
 import { IconBuilding } from "@/lib/icons";
-
-const nums = (arr: (number | null)[]) => arr.filter((v): v is number => v != null && !isNaN(v));
-
-function median(v: number[]): number | null {
-  return quantile(v, 0.5);
-}
-function quantile(values: number[], q: number): number | null {
-  if (!values.length) return null;
-  const s = [...values].sort((a, b) => a - b);
-  const pos = (s.length - 1) * q;
-  const lo = Math.floor(pos);
-  const hi = Math.ceil(pos);
-  if (lo === hi) return s[lo];
-  return s[lo] + (s[hi] - s[lo]) * (pos - lo);
-}
-function mean(v: number[]): number | null {
-  return v.length ? v.reduce((a, b) => a + b, 0) / v.length : null;
-}
 
 // Histogram over fixed `edges` (length = bins + 1); last bucket open-ended when its edge is Infinity.
 function Histogram({
-  values,
+  counts,
   edges,
   tickFmt,
   unit = "imóveis",
   dim,
   onPick,
 }: {
-  values: number[];
+  counts: number[];
   edges: number[];
   tickFmt?: (v: number) => string;
   unit?: string;
   dim: RangeDim;
   onPick: (dim: RangeDim, from: number, to: number) => void;
 }) {
-  const { bars, max } = useMemo(() => {
-    const nb = edges.length - 1;
-    const counts = Array.from({ length: nb }, () => 0);
-    for (const v of values) {
-      let idx = 0;
-      while (idx < nb - 1 && v >= edges[idx + 1]) idx++;
-      counts[idx]++;
-    }
-    const max = Math.max(...counts, 1);
-    const bars = counts.map((c, i) => ({ c, from: edges[i], to: edges[i + 1] }));
-    return { bars, max };
-  }, [values, edges]);
-
+  const bars = counts.map((c, i) => ({ c, from: edges[i], to: edges[i + 1] ?? Infinity }));
+  const max = Math.max(...counts, 1);
   const H = 130;
   const tick = (v: number) => (tickFmt ? tickFmt(v) : fmtValue(dim, v));
 
@@ -102,20 +72,8 @@ function Histogram({
   );
 }
 
-const PRICE_EDGES = [0, 100_000, 200_000, 300_000, 400_000, 500_000, 750_000, 1_000_000, Infinity];
-const DISCOUNT_EDGES = [0, 10, 20, 30, 40, 50, 60, 70, Infinity];
-const AREA_EDGES = [0, 40, 60, 80, 100, 150, 200, 300, Infinity];
-const INVEST_EDGES = [0, 30, 40, 50, 60, 70, 80, 90, Infinity];
-
 // ── Scatter: area × price, tinted by discount ───────────────────────
-function Scatter({ items }: { items: Property[] }) {
-  const pts = useMemo(
-    () =>
-      items
-        .filter((p) => p.area != null && p.area > 0 && p.saleValue != null)
-        .map((p) => ({ x: p.area!, y: p.saleValue!, d: p.discount ?? 0 })),
-    [items],
-  );
+function Scatter({ pts }: { pts: { x: number; y: number; d: number }[] }) {
   if (pts.length < 3) return <div className="anempty">Poucos imóveis com área e preço</div>;
 
   const W = 300;
@@ -170,7 +128,7 @@ function Rank({
   rows,
   fmt,
 }: {
-  rows: { label: string; value: number; sub?: string }[];
+  rows: { label: string; value: number }[];
   fmt: (v: number) => string;
 }) {
   if (!rows.length) return <div className="anempty">Sem dados</div>;
@@ -192,79 +150,14 @@ function Rank({
   );
 }
 
-function topCounts(items: Property[], key: (p: Property) => string, limit = 6) {
-  const m = new Map<string, number>();
-  for (const p of items) {
-    const k = key(p);
-    if (k) m.set(k, (m.get(k) ?? 0) + 1);
-  }
-  return [...m.entries()]
-    .sort((a, b) => b[1] - a[1])
-    .slice(0, limit)
-    .map(([label, value]) => ({ label, value }));
-}
-
 export default function PropertiesAnalysis({
-  items,
+  data,
   onPickRange,
 }: {
-  items: Property[];
+  data: AnalysisData;
   onPickRange: (dim: RangeDim, from: number, to: number) => void;
 }) {
-  const stats = useMemo(() => {
-    const prices = nums(items.map((p) => dimValue("price", p)));
-    const discounts = nums(items.map((p) => dimValue("discount", p)));
-    const areas = nums(items.map((p) => dimValue("area", p)));
-    const m2 = nums(
-      items.map((p) => (p.area && p.area > 0 && p.saleValue != null ? p.saleValue / p.area : null)),
-    );
-    // Not profileScore(): it returns a different dimension per property, so averaging it would
-    // mix airbnb with commercial with family.
-    const invScores = nums(items.map((p) => dimValue("invest", p)));
-
-    const scoreDims: (keyof Scores)[] = [
-      "investment",
-      "liquidity",
-      "flip",
-      "airbnb",
-      "student",
-      "family",
-      "commercial",
-      "convenience",
-    ];
-    const scoreAvgs = scoreDims
-      .map((d) => ({
-        dim: d,
-        avg: mean(d === "investment" ? invScores : nums(items.map((p) => p.scores[d]))),
-      }))
-      .filter((s) => s.avg != null)
-      .sort((a, b) => (b.avg ?? 0) - (a.avg ?? 0));
-
-    return {
-      count: items.length,
-      prices,
-      discounts,
-      areas,
-      invScores,
-      m2,
-      medianPrice: median(prices),
-      p25: quantile(prices, 0.25),
-      p75: quantile(prices, 0.75),
-      medianDiscount: median(discounts),
-      medianArea: median(areas),
-      medianM2: median(m2),
-      avgScore: invScores.length ? Math.round(mean(invScores)!) : null,
-      scoredCount: invScores.length,
-      financing: items.filter((p) => p.acceptsFinancing).length,
-      fgts: items.filter((p) => p.acceptsFgts).length,
-      scoreAvgs,
-      topCities: topCounts(items, (p) => p.city),
-      topTypes: topCounts(items, (p) => p.propertyType),
-      topHoods: topCounts(items, (p) => (p.neighborhood ? `${p.neighborhood} · ${p.city}` : "")),
-    };
-  }, [items]);
-
-  if (!items.length) {
+  if (!data.count) {
     return (
       <EmptyState icon={<IconBuilding />} title="Nada para analisar">
         Ajuste os filtros para ver estatísticas sobre os imóveis selecionados.
@@ -273,33 +166,33 @@ export default function PropertiesAnalysis({
   }
 
   const tiles: { k: string; v: string; s?: string }[] = [
-    { k: "Imóveis", v: stats.count.toLocaleString("pt-BR") },
-    { k: "Preço mediano", v: moneyShort(stats.medianPrice) },
+    { k: "Imóveis", v: data.count.toLocaleString("pt-BR") },
+    { k: "Preço mediano", v: moneyShort(data.medianPrice) },
     {
       k: "Faixa (p25–p75)",
       v:
-        stats.p25 != null && stats.p75 != null
-          ? `${moneyShort(stats.p25)} – ${moneyShort(stats.p75)}`
+        data.p25Price != null && data.p75Price != null
+          ? `${moneyShort(data.p25Price)} – ${moneyShort(data.p75Price)}`
           : "—",
     },
     {
       k: "Desconto mediano",
-      v: stats.medianDiscount != null ? `−${Math.round(stats.medianDiscount)}%` : "—",
+      v: data.medianDiscount != null ? `−${Math.round(data.medianDiscount)}%` : "—",
     },
-    { k: "Área mediana", v: stats.medianArea != null ? `${Math.round(stats.medianArea)} m²` : "—" },
-    { k: "R$/m² mediano", v: moneyM2(stats.medianM2) },
+    { k: "Área mediana", v: data.medianArea != null ? `${Math.round(data.medianArea)} m²` : "—" },
+    { k: "R$/m² mediano", v: moneyM2(data.medianM2) },
     {
       k: "Nota média",
-      v: stats.avgScore != null ? String(stats.avgScore) : "—",
+      v: data.avgScore != null ? String(data.avgScore) : "—",
       s:
-        stats.avgScore != null
-          ? `de investimento · ${stats.scoredCount} com nota`
+        data.avgScore != null
+          ? `de investimento · ${data.scoredCount} com nota`
           : "nenhum imóvel com nota",
     },
     {
       k: "Aceitam financiamento",
-      v: `${stats.financing}`,
-      s: stats.count ? `${Math.round((stats.financing / stats.count) * 100)}% do total` : undefined,
+      v: `${data.financing}`,
+      s: data.count ? `${Math.round((data.financing / data.count) * 100)}% do total` : undefined,
     },
   ];
 
@@ -320,8 +213,8 @@ export default function PropertiesAnalysis({
           <h3>Distribuição de preços</h3>
           <p className="ansub">Quantos imóveis em cada faixa de valor de venda.</p>
           <Histogram
-            values={stats.prices}
-            edges={PRICE_EDGES}
+            counts={data.hist.price}
+            edges={ANALYSIS_EDGES.price}
             tickFmt={(v) =>
               v >= 1_000_000 ? `R$${v / 1_000_000}mi` : `R$${Math.round(v / 1000)}k`
             }
@@ -333,8 +226,8 @@ export default function PropertiesAnalysis({
           <h3>Distribuição de descontos</h3>
           <p className="ansub">Percentual de desconto sobre a avaliação.</p>
           <Histogram
-            values={stats.discounts}
-            edges={DISCOUNT_EDGES}
+            counts={data.hist.discount}
+            edges={ANALYSIS_EDGES.discount}
             dim="discount"
             onPick={onPickRange}
           />
@@ -343,8 +236,8 @@ export default function PropertiesAnalysis({
           <h3>Distribuição de áreas</h3>
           <p className="ansub">Quantos imóveis em cada faixa de área útil.</p>
           <Histogram
-            values={stats.areas}
-            edges={AREA_EDGES}
+            counts={data.hist.area}
+            edges={ANALYSIS_EDGES.area}
             tickFmt={(v) => `${Math.round(v)}m²`}
             dim="area"
             onPick={onPickRange}
@@ -354,8 +247,8 @@ export default function PropertiesAnalysis({
           <h3>Distribuição de notas</h3>
           <p className="ansub">Nota geral de investimento, de 0 a 100.</p>
           <Histogram
-            values={stats.invScores}
-            edges={INVEST_EDGES}
+            counts={data.hist.invest}
+            edges={ANALYSIS_EDGES.invest}
             dim="invest"
             onPick={onPickRange}
           />
@@ -366,7 +259,7 @@ export default function PropertiesAnalysis({
         <div className="ancard">
           <h3>Preço × área</h3>
           <p className="ansub">Cada ponto é um imóvel; tons mais fortes têm maior desconto.</p>
-          <Scatter items={items} />
+          <Scatter pts={data.scatter} />
         </div>
         <div className="ancard">
           <h3>Nota média por objetivo</h3>
@@ -375,8 +268,8 @@ export default function PropertiesAnalysis({
             imóvel ficam de fora da média.
           </p>
           <div className="scorebars anscores">
-            {stats.scoreAvgs.map((s) => {
-              const v = Math.round(s.avg ?? 0);
+            {data.scoreAvgs.map((s) => {
+              const v = Math.round(s.avg);
               return (
                 <div className={`sb${v < 55 ? " dim" : ""}`} key={s.dim}>
                   <div className="top">
@@ -397,17 +290,17 @@ export default function PropertiesAnalysis({
         <div className="ancard">
           <h3>Cidades</h3>
           <p className="ansub">Onde estão os imóveis.</p>
-          <Rank rows={stats.topCities} fmt={(v) => String(v)} />
+          <Rank rows={data.topCities} fmt={(v) => String(v)} />
         </div>
         <div className="ancard">
           <h3>Tipos de imóvel</h3>
           <p className="ansub">Composição por tipo.</p>
-          <Rank rows={stats.topTypes} fmt={(v) => String(v)} />
+          <Rank rows={data.topTypes} fmt={(v) => String(v)} />
         </div>
         <div className="ancard">
           <h3>Bairros em destaque</h3>
           <p className="ansub">Maior concentração de imóveis.</p>
-          <Rank rows={stats.topHoods} fmt={(v) => String(v)} />
+          <Rank rows={data.topHoods} fmt={(v) => String(v)} />
         </div>
       </div>
     </div>

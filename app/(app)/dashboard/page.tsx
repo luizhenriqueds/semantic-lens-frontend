@@ -2,17 +2,15 @@ import Link from "next/link";
 import CollectionCard from "@/components/groups/CollectionCard";
 import SearchHero from "@/components/search/SearchHero";
 import { accountFrom, shortName } from "@/lib/account";
-import { clusterStats } from "@/lib/clusters";
-import { getClusters, getProperties } from "@/lib/data";
-import { getUser } from "@/lib/supabase/server";
+import { clusterStatsFor, getClusters, getClusterStatsAll } from "@/lib/data";
+import { getSessionUser } from "@/lib/supabase/server";
 
 export default async function HomePage() {
-  const [clusters, properties, { user }] = await Promise.all([
+  const [clusters, clusterStats, { user }] = await Promise.all([
     getClusters(),
-    getProperties(),
-    getUser(),
+    getClusterStatsAll(),
+    getSessionUser(),
   ]);
-  const activeProperties = properties.filter((p) => !p.inactive);
   const { name } = accountFrom(user);
   const greeting = user ? `Olá, ${shortName(name)}.` : "Olá!";
 
@@ -68,7 +66,7 @@ export default async function HomePage() {
               <CollectionCard
                 key={c.clusterId}
                 c={c}
-                stats={clusterStats(activeProperties, c.clusterId)}
+                stats={clusterStatsFor(clusterStats, c.clusterId)}
               />
             ))}
           </div>

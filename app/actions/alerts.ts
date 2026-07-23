@@ -1,9 +1,15 @@
 "use server";
 
 import * as data from "@/lib/data/alerts";
-import { hybridSearch, RESULT_LIMIT } from "@/lib/data";
+import { countProperties, hybridSearch, RESULT_LIMIT } from "@/lib/data";
+import { alertToPropertyFilters } from "@/lib/alerts/filters";
 import { requireUser } from "@/lib/supabase/server";
 import type { Alert, AlertFilters, AlertPatch } from "@/lib/types";
+
+export async function countAlertMatches(filters: AlertFilters): Promise<number> {
+  await requireUser();
+  return countProperties(alertToPropertyFilters(filters));
+}
 
 export async function countDescriptionMatches(
   query: string,

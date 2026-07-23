@@ -25,6 +25,16 @@ export async function createClient() {
   );
 }
 
+// Cookie-only session read (no network). Safe for display-only use: middleware
+// has already verified the user for every matched request.
+export async function getSessionUser() {
+  const supabase = await createClient();
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
+  return { supabase, user: session?.user ?? null };
+}
+
 export async function getUser() {
   const supabase = await createClient();
   const {

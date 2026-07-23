@@ -17,16 +17,18 @@ import Ring from "@/components/ui/Ring";
 import {
   getMarketComparables,
   getPriceHistory,
-  getProperties,
-  getProperty,
+  getPropertiesByIds,
+  getPropertyById,
+  getPropertyDetailText,
   getPropertyPois,
   getRecommendations,
   getRegion,
   getScoreExplain,
+  hasUpcomingAuction,
+  isListable,
 } from "@/lib/data";
 import Hint from "@/components/ui/Hint";
 import {
-  discountPercentile,
   fmtDate,
   fmtDist,
   money,
@@ -47,31 +49,38 @@ export async function generateStaticParams() {
 
 export default async function PropertyPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const p = await getProperty(id);
-  if (!p) notFound();
+  const base = await getPropertyById(id);
+  if (!base) notFound();
 
-  const [all, region, market, priceHistory, recs, propertyPois, scoreExplain] = await Promise.all([
-    getProperties(),
-    p.h3 ? getRegion(p.h3) : Promise.resolve(null),
-    getMarketComparables(p.uf, p.city, p.neighborhood, p.propertyType, p.area),
-    getPriceHistory(p.id),
-    getRecommendations(p.id),
-    getPropertyPois(p.id),
-    getScoreExplain(p.id),
+  const [text, region, market, priceHistory, recs, propertyPois, scoreExplain] = await Promise.all([
+    getPropertyDetailText(id),
+    base.h3 ? getRegion(base.h3) : Promise.resolve(null),
+    getMarketComparables(base.uf, base.city, base.neighborhood, base.propertyType, base.area),
+    getPriceHistory(base.id),
+    getRecommendations(base.id),
+    getPropertyPois(base.id),
+    getScoreExplain(base.id),
   ]);
+  const p = { ...base, description: text.description, visualNote: text.visualNote };
   const nearby = propertyPois;
 
-  const propById = new Map(all.map((x) => [x.id, x]));
   // Only surface recommendations that are a strong match (≥ 75%).
+  const strongRecs = recs.filter((r) => Math.round((r.similarity ?? 0) * 100) >= 75);
+  const recProps = strongRecs.length
+    ? await getPropertiesByIds([...new Set(strongRecs.map((r) => r.recId))])
+    : [];
+  const propById = new Map(
+    recProps.filter((x) => isListable(x) && hasUpcomingAuction(x)).map((x) => [x.id, x]),
+  );
   const toItems = (kind: "visual" | "similar"): RecItem[] =>
-    recs
+    strongRecs
       .filter((r) => r.kind === kind)
       .map((r) => {
         const rp = propById.get(r.recId);
         if (!rp) return null;
         return { p: rp, match: Math.min(100, Math.round((r.similarity ?? 0) * 100)) };
       })
-      .filter((x): x is RecItem => x !== null && x.match >= 75);
+      .filter((x): x is RecItem => x !== null);
   const recVisual = toItems("visual");
   const recSemantic = toItems("similar");
 
@@ -82,7 +91,7 @@ export default async function PropertyPage({ params }: { params: Promise<{ id: s
       : p.title;
 
   const data = fmtDate(p.auctionDate);
-  const discPct = showDiscount(p) ? discountPercentile(all, p) : null;
+  const discPct = showDiscount(p) ? p.discountPercentile : null;
 
   return (
     <section className="view">

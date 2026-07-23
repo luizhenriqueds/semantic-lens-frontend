@@ -4,7 +4,7 @@ import Sidebar from "@/components/layout/Sidebar";
 import Topbar from "@/components/layout/Topbar";
 import ToastProvider from "@/components/ui/Toaster";
 import { accountFrom } from "@/lib/account";
-import { getUser } from "@/lib/supabase/server";
+import { getSessionUser } from "@/lib/supabase/server";
 
 export const metadata: Metadata = {
   title: "Lavra — Painel de leilões",
@@ -13,7 +13,7 @@ export const metadata: Metadata = {
 };
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
-  const { user } = await getUser();
+  const { user } = await getSessionUser();
   const account = accountFrom(user);
 
   return (

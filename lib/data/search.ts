@@ -3,9 +3,9 @@ import { EMBEDDING_MODEL, embedQuery, rerank } from "@/lib/embed";
 import { normalize, parseFacets, type GoalKey, type PoiQuery } from "@/lib/facets";
 import { semanticCached } from "@/lib/semanticCache";
 import { titleCase } from "@/lib/format";
-import type { Poi, Property } from "@/lib/types";
+import type { Poi } from "@/lib/types";
 import { cached, rows, withRetry } from "./client";
-import { getProperties } from "./properties";
+import { getFilterOptions } from "./propertyList";
 import { mapPoi, POI_FIELDS } from "./pois";
 
 export type SearchHit = { id: string; score: number };
@@ -14,19 +14,10 @@ export type SearchHit = { id: string; score: number };
 // place we couldn't match nearby) wasn't honoured.
 export type SearchResult = { hits: SearchHit[]; fallback: boolean; fallbackNote: string | null };
 
-async function loadCities(): Promise<string[]> {
-  const res = await withRetry(() =>
-    supabase.from("properties").select("city").eq("is_active", true),
-  );
-  return [
-    ...new Set(
-      rows<any>("cities", res)
-        .map((r) => r.city)
-        .filter(Boolean),
-    ),
-  ];
+async function getCities(): Promise<string[]> {
+  const { cities } = await getFilterOptions();
+  return [...new Set(cities.map((c) => c.city).filter(Boolean))];
 }
-export const getCities = cached(loadCities, "cities");
 
 const SEARCH_INSTRUCTION =
   "Given a Portuguese real-estate search, retrieve auction property listings that best match the described property type, location and characteristics.";
@@ -77,29 +68,19 @@ function rankNorm(i: number, n: number): number {
 }
 
 // Re-rank by 0.4·recall + 0.6·(corpus percentile of the goal score).
-function goalRerank(pool: PoolRow[], props: Property[], goal: GoalKey): SearchHit[] {
-  const scoreOf = new Map(props.map((p) => [p.id, p.scores[goal]]));
-  const values = props
-    .map((p) => p.scores[goal])
-    .filter((v): v is number => v != null)
-    .sort((a, b) => a - b);
-  const percentile = (v: number | null | undefined): number => {
-    if (v == null || !values.length) return 0;
-    let lo = 0;
-    let hi = values.length;
-    while (lo < hi) {
-      const mid = (lo + hi) >> 1;
-      if (values[mid] <= v) lo = mid + 1;
-      else hi = mid;
-    }
-    return lo / values.length;
-  };
+async function goalRerank(pool: PoolRow[], goal: GoalKey): Promise<SearchHit[]> {
+  const res = await withRetry(() =>
+    supabase.rpc("goal_percentiles", { p_goal: goal, p_ids: pool.map((p) => p.id) }),
+  );
+  const pct = new Map(
+    rows<any>("goal_percentiles", res).map((r) => [String(r.property_id), Number(r.pct)]),
+  );
 
   const n = pool.length;
   return pool
     .map((p, i) => ({
       id: p.id,
-      score: 0.4 * rankNorm(i, n) + 0.6 * percentile(scoreOf.get(p.id)),
+      score: 0.4 * rankNorm(i, n) + 0.6 * (pct.get(p.id) ?? 0),
     }))
     .sort((a, b) => b.score - a.score)
     .slice(0, RESULT_LIMIT);
@@ -254,8 +235,7 @@ async function runHybridSearch(query: string): Promise<SearchResult> {
       }
 
       if (facets.goal) {
-        const props = await getProperties();
-        return ok(goalRerank(pool, props, facets.goal));
+        return ok(await goalRerank(pool, facets.goal));
       }
 
       return ok(await semanticRank(pool, facets.normalized, !!facets.type));

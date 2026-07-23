@@ -8,7 +8,13 @@ import RegionMapTabs from "@/components/region/RegionMapTabs";
 import SameAddressGroups from "@/components/region/SameAddressGroups";
 import RegionScoreBars from "@/components/region/RegionScoreBars";
 import RegionMarket from "@/components/market/RegionMarket";
-import { getMarketStats, getPoisNear, getProperties, getRegion, getRegionPois } from "@/lib/data";
+import {
+  getMarketStats,
+  getPoisNear,
+  getPropertiesPage,
+  getRegion,
+  getRegionPois,
+} from "@/lib/data";
 import { hasReliableMarket, statsForRegion } from "@/lib/market";
 import { nearbyPois, regionHighlights } from "@/lib/pois";
 import { IconBack, IconPin } from "@/lib/icons";
@@ -38,9 +44,9 @@ export async function generateStaticParams() {
 
 export default async function RegionPage({ params }: { params: Promise<{ h3: string }> }) {
   const { h3 } = await params;
-  const [region, all, marketStats, cellPois] = await Promise.all([
+  const [region, cellPage, marketStats, cellPois] = await Promise.all([
     getRegion(h3),
-    getProperties(),
+    getPropertiesPage({ filters: { h3 }, sort: "leilao", pageSize: 500 }),
     getMarketStats(),
     getRegionPois(h3),
   ]);
@@ -49,7 +55,7 @@ export default async function RegionPage({ params }: { params: Promise<{ h3: str
   const highlights = regionHighlights(cellPois);
 
   // Must match what /properties?h3= lists, which drops inactive listings.
-  const here = all.filter((p) => p.h3 === h3 && !p.inactive);
+  const here = cellPage.items;
   const tags = regionTags(region);
   const market = statsForRegion(marketStats, region).filter(hasReliableMarket);
 

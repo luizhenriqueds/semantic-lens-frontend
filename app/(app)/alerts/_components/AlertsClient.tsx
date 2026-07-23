@@ -1,23 +1,16 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { countDescriptionMatches } from "@/app/actions/alerts";
+import { countAlertMatches, countDescriptionMatches } from "@/app/actions/alerts";
 import ConfirmDialog from "@/components/ui/ConfirmDialog";
 import EmptyState from "@/components/ui/EmptyState";
 import SkeletonText from "@/components/ui/SkeletonText";
 import { useToast } from "@/components/ui/Toaster";
-import {
-  countMatches,
-  describeFilters,
-  filterChips,
-  hasAnyFilter,
-  type Alert,
-  useAlerts,
-} from "@/lib/alerts";
+import { describeFilters, filterChips, hasAnyFilter, type Alert, useAlerts } from "@/lib/alerts";
 import { FREQS } from "@/lib/alerts/cadence";
-import { SCORE_DIMS, SCORE_LABEL } from "@/lib/format";
+import { SCORE_DIMS, SCORE_LABEL, titleCase } from "@/lib/format";
 import { IconBell, IconPencil, IconPlus, IconTrash } from "@/lib/icons";
-import type { AlertFilters, Property, Scores } from "@/lib/types";
+import type { AlertFilters, FilterOptions, Scores } from "@/lib/types";
 
 type Confirm = {
   title: string;
@@ -36,7 +29,7 @@ const precoLabel = (n: number) => (n >= 1_000_000 ? "R$ 1 mi" : `R$ ${n / 1000} 
 type Mode = "filtros" | "descricao";
 type DescCount = { count: number; capped: boolean };
 
-export default function AlertsClient({ properties }: { properties: Property[] }) {
+export default function AlertsClient({ options }: { options: FilterOptions }) {
   const { alerts, add, toggle, update, remove } = useAlerts();
   const toast = useToast();
   const [creating, setCreating] = useState(false);
@@ -57,21 +50,15 @@ export default function AlertsClient({ properties }: { properties: Property[] })
   // but preserved on edit rather than dropped.
   const [extra, setExtra] = useState<Partial<AlertFilters>>({});
 
-  const ufs = useMemo(
-    () => Array.from(new Set(properties.map((p) => p.uf).filter(Boolean))).sort(),
-    [properties],
-  );
+  const ufs = options.ufs;
   const cidades = useMemo(
     () =>
-      Array.from(new Set(properties.filter((p) => !uf || p.uf === uf).map((p) => p.city)))
-        .filter(Boolean)
-        .sort((a, b) => a.localeCompare(b, "pt-BR")),
-    [properties, uf],
+      Array.from(
+        new Set(options.cities.filter((c) => !uf || c.uf === uf).map((c) => titleCase(c.city))),
+      ).sort((a, b) => a.localeCompare(b, "pt-BR")),
+    [options.cities, uf],
   );
-  const tipos = useMemo(
-    () => Array.from(new Set(properties.map((p) => p.propertyType))).sort(),
-    [properties],
-  );
+  const tipos = options.types;
 
   const draft = useMemo<AlertFilters>(() => {
     const f: AlertFilters = { ...extra };
@@ -85,7 +72,41 @@ export default function AlertsClient({ properties }: { properties: Property[] })
     return f;
   }, [extra, scoreKey, minScore, uf, cidade, tipo, minDesconto, maxPreco]);
 
-  const draftCount = useMemo(() => countMatches(properties, draft), [properties, draft]);
+  const [draftCount, setDraftCount] = useState<number | null>(null);
+  useEffect(() => {
+    if (!hasAnyFilter(draft)) {
+      setDraftCount(null);
+      return;
+    }
+    let cancelled = false;
+    const t = setTimeout(() => {
+      countAlertMatches(draft)
+        .then((n) => {
+          if (!cancelled) setDraftCount(n);
+        })
+        .catch(() => {});
+    }, 300);
+    return () => {
+      cancelled = true;
+      clearTimeout(t);
+    };
+  }, [draft]);
+
+  const [filterCounts, setFilterCounts] = useState<Record<string, number | null>>({});
+  const filterKey = JSON.stringify(alerts.filter((a) => a.filters).map((a) => [a.id, a.filters]));
+  useEffect(() => {
+    const items: [string, AlertFilters][] = JSON.parse(filterKey);
+    if (!items.length) return;
+    let cancelled = false;
+    Promise.all(
+      items.map(async ([id, f]) => [id, await countAlertMatches(f).catch(() => null)] as const),
+    ).then((entries) => {
+      if (!cancelled) setFilterCounts(Object.fromEntries(entries));
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [filterKey]);
 
   const [descCounts, setDescCounts] = useState<Record<string, DescCount | null>>({});
   const descKey = JSON.stringify(
@@ -387,11 +408,15 @@ export default function AlertsClient({ properties }: { properties: Property[] })
 
               <div className="apreview">
                 {hasAnyFilter(draft) ? (
-                  <>
-                    <b>{draftCount}</b>{" "}
-                    {draftCount === 1 ? "imóvel corresponde" : "imóveis correspondem"} hoje
-                    <span className="apreview-sum"> · {describeFilters(draft)}</span>
-                  </>
+                  draftCount == null ? (
+                    <SkeletonText width={148} />
+                  ) : (
+                    <>
+                      <b>{draftCount}</b>{" "}
+                      {draftCount === 1 ? "imóvel corresponde" : "imóveis correspondem"} hoje
+                      <span className="apreview-sum"> · {describeFilters(draft)}</span>
+                    </>
+                  )
                 ) : (
                   "Escolha ao menos um filtro para criar o alerta."
                 )}
@@ -442,8 +467,9 @@ export default function AlertsClient({ properties }: { properties: Property[] })
         alerts.map((a) => {
           const isDesc = !a.filters && Boolean(a.name.trim());
           const desc = isDesc ? descCounts[a.id] : null;
-          const counting = isDesc && desc === undefined;
-          const count = a.filters ? countMatches(properties, a.filters) : (desc?.count ?? null);
+          const counting =
+            (isDesc && desc === undefined) || (!!a.filters && filterCounts[a.id] === undefined);
+          const count = a.filters ? (filterCounts[a.id] ?? null) : (desc?.count ?? null);
           const chips = a.filters ? filterChips(a.filters) : [];
           return (
             <div className="alertrow" key={a.id}>

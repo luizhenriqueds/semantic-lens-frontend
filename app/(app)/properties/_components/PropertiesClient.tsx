@@ -1,9 +1,9 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { createPortal } from "react-dom";
 import dynamic from "next/dynamic";
-import { useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import EmptyState from "@/components/ui/EmptyState";
 import Pagination from "@/components/ui/Pagination";
@@ -12,34 +12,33 @@ import SearchableSelect from "@/components/ui/SearchableSelect";
 import AuctionCalendar from "./AuctionCalendar";
 import PropertiesAnalysis from "./PropertiesAnalysis";
 import { useToast } from "@/components/ui/Toaster";
-import { fmtDist, investmentScore, moneyShort, profileScore, SCORE_LABEL } from "@/lib/format";
-import {
-  describeFilters,
-  hasAnyFilter,
-  matchesFilters,
-  matchesText,
-  useAlerts,
-} from "@/lib/alerts";
-import { useSaved } from "@/lib/saved";
-import { matchesRange, parseRange, rangeLabel, type RangeDim } from "@/lib/facets/range";
-import type { AlertFilters, Cluster, Property, Scores } from "@/lib/types";
+import { fmtDist, moneyShort, SCORE_LABEL } from "@/lib/format";
+import { describeFilters, hasAnyFilter, useAlerts } from "@/lib/alerts";
+import { mapPointToProperty } from "@/lib/mapPoints";
+import { rangeLabel, type RangeDim } from "@/lib/facets/range";
+import type { AnalysisData } from "@/lib/facets/analysis";
+import type {
+  AlertFilters,
+  Cluster,
+  FilterOptions,
+  MapPoint,
+  Property,
+  PropertyFilters,
+  PropertySort,
+  Scores,
+} from "@/lib/types";
 import { IconArrow, IconBell, IconBuilding, IconSearch, IconSliders, POI_ICON } from "@/lib/icons";
 import { MAX_NEAR_M, POI_LABEL, POI_ORDER } from "@/lib/pois";
+import type { PropertiesView } from "@/lib/filters/propertiesUrl";
 
 const PropertiesMap = dynamic(() => import("@/components/property/PropertiesMap"), {
   ssr: false,
   loading: () => <div className="lmap propmap loading">Carregando mapa…</div>,
 });
 
-type View = "list" | "analysis" | "calendar" | "map";
+const PAGE_SIZE = 24;
 
-const VIEWS_BY_KEY = new Set<string>(["list", "analysis", "calendar", "map"]);
-
-const PAGE_SIZE = 25;
-
-type Sort = "investimento" | "desconto" | "score" | "leilao" | "menor" | "maior";
-
-const SORTS: { key: Sort; label: string }[] = [
+const SORTS: { key: PropertySort; label: string }[] = [
   { key: "leilao", label: "Data do leilão (mais próxima)" },
   { key: "investimento", label: "Melhor investimento" },
   { key: "desconto", label: "Maior desconto" },
@@ -77,13 +76,7 @@ const PRAZOS: { days: number; label: string }[] = [
   { days: 60, label: "Próximos 60 dias" },
 ];
 
-const auctionTime = (iso: string | null): number => {
-  if (!iso) return Infinity;
-  const t = new Date(iso).getTime();
-  return isNaN(t) ? Infinity : t;
-};
-
-const nImoveis = (n: number) => `${n} ${n === 1 ? "imóvel" : "imóveis"}`;
+const nImoveis = (n: number) => `${n.toLocaleString("pt-BR")} ${n === 1 ? "imóvel" : "imóveis"}`;
 
 function Chip({
   active,
@@ -209,153 +202,134 @@ function ModalityFilter({
 }
 
 export default function PropertiesClient({
-  properties,
   clusters,
-  initialCluster,
-  initialCity,
-  initialView = "list",
-  h3,
+  filterOptions,
+  filters,
+  sort,
+  page,
+  view,
   h3Label,
+  list,
+  analysis,
+  calendar,
+  map,
 }: {
-  properties: Property[];
   clusters: Cluster[];
-  initialCluster?: number;
-  initialCity?: string;
-  initialView?: View;
-  h3?: string;
+  filterOptions: FilterOptions;
+  filters: PropertyFilters;
+  sort: PropertySort;
+  page: number;
+  view: PropertiesView;
   h3Label?: string;
+  list?: { items: Property[]; total: number };
+  analysis?: AnalysisData;
+  calendar?: { counts: Record<string, number>; day: string | null; dayItems: Property[] };
+  map?: { points: MapPoint[]; total: number };
 }) {
-  const [q, setQ] = useState("");
-  const [uf, setUf] = useState("all");
-  const [cidade, setCidade] = useState(initialCity ?? "all");
-  const [tipo, setTipo] = useState("all");
-  const [cluster, setCluster] = useState<number | "all">(initialCluster ?? "all");
+  const router = useRouter();
+  const [isPending, startTransition] = useTransition();
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [openSecs, setOpenSecs] = useState<Set<string>>(new Set(["grupo", "imovel", "poi"]));
-  const [minQuartos, setMinQuartos] = useState(0);
-  const [maxPreco, setMaxPreco] = useState(0); // 0 = sem limite
-  const [precoInput, setPrecoInput] = useState("");
-  const [minArea, setMinArea] = useState(0);
-  const [poiCats, setPoiCats] = useState<string[]>([]);
-  const [poiRadius, setPoiRadius] = useState(2000);
   const [poiExpanded, setPoiExpanded] = useState(false);
-  const [maxCenter, setMaxCenter] = useState(0);
-  const [minDesconto, setMinDesconto] = useState(0);
-  const [minInvest, setMinInvest] = useState(0);
-  const [scoreKey, setScoreKey] = useState<keyof Scores | "none">("none");
-  const [scoreMin, setScoreMin] = useState(0);
-  const [financiamento, setFinanciamento] = useState(false);
-  const [fgts, setFgts] = useState(false);
-  const [modalidade, setModalidade] = useState<string[]>([]);
-  const [prazoLeilao, setPrazoLeilao] = useState(0);
-  const [sort, setSort] = useState<Sort>("leilao");
-  const [page, setPage] = useState(1);
-  const [calDayOpen, setCalDayOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
-  const [restored, setRestored] = useState(false);
-  const stateKey = useRef("");
+  useEffect(() => setMounted(true), []);
 
-  // Tab and drill-down bucket are URL-owned, so they survive reload and sharing.
-  const params = useSearchParams();
-  const view = VIEWS_BY_KEY.has(params.get("view") ?? "")
-    ? (params.get("view") as View)
-    : initialView;
-  const range = useMemo(
-    () => parseRange(params.get("dim"), params.get("from"), params.get("to")) ?? null,
-    [params],
+  // Filter state lives in the URL; every change re-queries the server component.
+  const setParams = useCallback(
+    (patch: Record<string, string | null>) => {
+      const sp = new URLSearchParams(window.location.search);
+      for (const [k, v] of Object.entries(patch)) {
+        if (v == null) sp.delete(k);
+        else sp.set(k, v);
+      }
+      const qs = sp.toString();
+      startTransition(() => {
+        router.replace(qs ? `?${qs}` : window.location.pathname, { scroll: false });
+      });
+    },
+    [router],
   );
 
-  // replaceState syncs useSearchParams without re-running the server component.
-  const setParams = useCallback((patch: Record<string, string | null>) => {
-    const sp = new URLSearchParams(window.location.search);
-    for (const [k, v] of Object.entries(patch)) {
-      if (v == null) sp.delete(k);
-      else sp.set(k, v);
-    }
-    const qs = sp.toString();
-    window.history.replaceState(null, "", qs ? `?${qs}` : window.location.pathname);
-  }, []);
-
-  const setView = useCallback((v: View) => setParams({ view: v }), [setParams]);
-  const clearRange = useCallback(() => setParams({ dim: null, from: null, to: null }), [setParams]);
-
-  const pickRange = useCallback(
-    (dim: RangeDim, from: number, to: number) =>
-      setParams({ dim, from: String(from), to: to === Infinity ? "" : String(to), view: "list" }),
+  // Filter mutations reset pagination.
+  const patch = useCallback(
+    (p: Record<string, string | null>) => setParams({ ...p, page: null }),
     [setParams],
   );
 
-  // Restore the previous search on return. Keyed only by the params that scope the
-  // dataset, so switching tab or bucket keeps one filter set.
+  const uf = filters.uf ?? "all";
+  const cidade = filters.city ?? "all";
+  const tipo = filters.type ?? "all";
+  const cluster = filters.clusterId ?? ("all" as const);
+  const minQuartos = filters.minBedrooms ?? 0;
+  const maxPreco = filters.maxPrice ?? 0;
+  const minArea = filters.minArea ?? 0;
+  const poiCats = useMemo(() => filters.poiCats ?? [], [filters.poiCats]);
+  const poiRadius = filters.poiRadiusM ?? 2000;
+  const maxCenter = filters.maxCenterM ?? 0;
+  const minDesconto = filters.minDiscount ?? 0;
+  const minInvest = filters.minInvestment ?? 0;
+  const scoreKey = filters.scoreKey && filters.scoreMin ? filters.scoreKey : ("none" as const);
+  const scoreMin = filters.scoreMin ?? 0;
+  const financiamento = !!filters.financing;
+  const fgts = !!filters.fgts;
+  const modalidade = filters.modalities ?? [];
+  const prazoLeilao = filters.auctionWithinDays ?? 0;
+  const range = filters.range ?? null;
+
+  const [qInput, setQInput] = useState(filters.q ?? "");
   useEffect(() => {
-    setMounted(true);
-    const sp = new URLSearchParams(window.location.search);
-    stateKey.current = `properties:v2:${["cluster", "city", "h3"]
-      .map((k) => `${k}=${sp.get(k) ?? ""}`)
-      .join("&")}`;
-    try {
-      const raw = sessionStorage.getItem(stateKey.current);
-      if (raw) {
-        const s = JSON.parse(raw);
-        if (s.q != null) setQ(s.q);
-        if (s.uf != null) setUf(s.uf);
-        if (s.cidade != null) setCidade(s.cidade);
-        if (s.tipo != null) setTipo(s.tipo);
-        if (s.cluster != null) setCluster(s.cluster);
-        if (s.minQuartos != null) setMinQuartos(s.minQuartos);
-        if (s.maxPreco != null) setMaxPreco(s.maxPreco);
-        if (s.precoInput != null) setPrecoInput(s.precoInput);
-        if (s.minArea != null) setMinArea(s.minArea);
-        if (Array.isArray(s.poiCats)) setPoiCats(s.poiCats);
-        if (s.poiRadius != null) setPoiRadius(s.poiRadius);
-        if (s.maxCenter != null) setMaxCenter(s.maxCenter);
-        if (s.minDesconto != null) setMinDesconto(s.minDesconto);
-        if (s.minInvest != null) setMinInvest(s.minInvest);
-        if (s.scoreKey != null) setScoreKey(s.scoreKey);
-        if (s.scoreMin != null) setScoreMin(s.scoreMin);
-        if (s.financiamento != null) setFinanciamento(s.financiamento);
-        if (s.fgts != null) setFgts(s.fgts);
-        if (Array.isArray(s.modalidade)) setModalidade(s.modalidade);
-        if (s.prazoLeilao != null) setPrazoLeilao(s.prazoLeilao);
-        if (s.sort != null) setSort(s.sort);
-      }
-    } catch {}
-    setRestored(true);
-  }, []);
+    if (qInput === (filters.q ?? "")) return;
+    const t = setTimeout(() => patch({ q: qInput.trim() || null }), 300);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [qInput]);
+
+  const [precoInput, setPrecoInput] = useState(maxPreco ? String(maxPreco) : "");
+  useEffect(() => {
+    const target = Math.max(0, Number(precoInput) || 0);
+    if (target === maxPreco) return;
+    const t = setTimeout(() => patch({ preco: target ? String(target) : null }), 400);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [precoInput]);
+
+  const setView = useCallback(
+    (v: PropertiesView) => setParams({ view: v === "list" ? null : v, day: null }),
+    [setParams],
+  );
+  const clearRange = useCallback(() => patch({ dim: null, from: null, to: null }), [patch]);
+  const pickRange = useCallback(
+    (dim: RangeDim, from: number, to: number) =>
+      patch({ dim, from: String(from), to: to === Infinity ? "" : String(to), view: "list" }),
+    [patch],
+  );
+
+  const setPreco = (v: number) => {
+    setPrecoInput(v ? String(v) : "");
+    patch({ preco: v ? String(v) : null });
+  };
+  const toggleCat = (c: string) => {
+    const next = poiCats.includes(c) ? poiCats.filter((x) => x !== c) : [...poiCats, c];
+    patch({ poi: next.join(",") || null, raio: next.length ? String(poiRadius) : null });
+  };
 
   const { alerts, add: addAlert } = useAlerts();
-  const { ids: savedIds } = useSaved();
   const toast = useToast();
 
-  const ufs = useMemo(
-    () => Array.from(new Set(properties.map((p) => p.uf).filter(Boolean))).sort(),
-    [properties],
-  );
+  const ufs = filterOptions.ufs;
   const cidades = useMemo(
     () =>
-      Array.from(new Set(properties.filter((p) => uf === "all" || p.uf === uf).map((p) => p.city)))
-        .filter(Boolean)
-        .sort((a, b) => a.localeCompare(b, "pt-BR")),
-    [properties, uf],
+      Array.from(
+        new Set(filterOptions.cities.filter((c) => uf === "all" || c.uf === uf).map((c) => c.city)),
+      ).sort((a, b) => a.localeCompare(b, "pt-BR")),
+    [filterOptions.cities, uf],
   );
-  const tipos = useMemo(
-    () => Array.from(new Set(properties.map((p) => p.propertyType))).sort(),
-    [properties],
+  const tipos = filterOptions.types;
+  const modalidades = filterOptions.modalities;
+  const poiCategories = useMemo(
+    () => POI_ORDER.filter((c) => filterOptions.poiCategories.includes(c)),
+    [filterOptions.poiCategories],
   );
-  const modalidades = useMemo(
-    () =>
-      Array.from(new Set(properties.map((p) => p.modality).filter((m): m is string => !!m))).sort(
-        (a, b) => a.localeCompare(b, "pt-BR"),
-      ),
-    [properties],
-  );
-  // POI categories that actually occur in the dataset, in the canonical order.
-  const poiCategories = useMemo(() => {
-    const present = new Set<string>();
-    for (const p of properties) for (const c of Object.keys(p.nearestPoi)) present.add(c);
-    return POI_ORDER.filter((c) => present.has(c));
-  }, [properties]);
-  // Collapsed to the top categories; selected ones beyond the cut stay visible.
   const visiblePoiCats = useMemo(() => {
     if (poiExpanded || poiCategories.length <= POI_VISIBLE) return poiCategories;
     const top = poiCategories.slice(0, POI_VISIBLE);
@@ -366,168 +340,14 @@ export default function PropertiesClient({
   const clusterLabel =
     cluster !== "all" ? clusters.find((c) => c.clusterId === cluster)?.label : undefined;
 
-  const items = useMemo(() => {
-    const term = q.trim().toLowerCase();
-    const now = new Date();
-    const startToday = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
-    const auctionMax = prazoLeilao ? now.getTime() + prazoLeilao * 86_400_000 : 0;
-    const list = properties.filter((p) => {
-      if (
-        p.inactive &&
-        !savedIds.includes(p.id) &&
-        !alerts.some((a) => a.filters && matchesFilters(p, a.filters))
-      ) {
-        return false;
-      }
-      if (h3 && p.h3 !== h3) return false;
-      if (range && !matchesRange(p, range)) return false;
-      if (cluster !== "all" && p.clusterId !== cluster) return false;
-      if (uf !== "all" && p.uf !== uf) return false;
-      if (cidade !== "all" && p.city !== cidade) return false;
-      if (tipo !== "all" && p.propertyType !== tipo) return false;
-      if (modalidade.length > 0 && !(p.modality != null && modalidade.includes(p.modality)))
-        return false;
-      if (prazoLeilao) {
-        if (!p.auctionDate) return false;
-        const t = new Date(p.auctionDate).getTime();
-        if (isNaN(t) || t < startToday || t > auctionMax) return false;
-      }
-      if (minQuartos && (p.bedrooms ?? 0) < minQuartos) return false;
-      if (maxPreco && (p.saleValue ?? Infinity) > maxPreco) return false;
-      if (minArea && (p.area ?? 0) < minArea) return false;
-      if (poiCats.length) {
-        for (const c of poiCats) {
-          const d = p.nearestPoi[c];
-          if (d == null || d > poiRadius) return false;
-        }
-      }
-      if (maxCenter && (p.centerProximity == null || p.centerProximity > maxCenter)) return false;
-      if (minDesconto && (p.discount ?? 0) < minDesconto) return false;
-      if (minInvest && (p.scores.investment ?? 0) < minInvest) return false;
-      if (scoreKey !== "none" && scoreMin && (p.scores[scoreKey] ?? 0) < scoreMin) return false;
-      if (financiamento && !p.acceptsFinancing) return false;
-      if (fgts && !p.acceptsFgts) return false;
-      if (term && !matchesText(p, term)) return false;
-      return true;
-    });
-    list.sort((a, b) => {
-      if (sort === "investimento") return (investmentScore(b) ?? 0) - (investmentScore(a) ?? 0);
-      if (sort === "desconto") return (b.discount ?? 0) - (a.discount ?? 0);
-      if (sort === "score") return (profileScore(b) ?? 0) - (profileScore(a) ?? 0);
-      if (sort === "leilao") return auctionTime(a.auctionDate) - auctionTime(b.auctionDate);
-      if (sort === "menor") return (a.saleValue ?? Infinity) - (b.saleValue ?? Infinity);
-      return (b.saleValue ?? 0) - (a.saleValue ?? 0);
-    });
-    return list;
-  }, [
-    properties,
-    alerts,
-    savedIds,
-    q,
-    uf,
-    cidade,
-    tipo,
-    cluster,
-    sort,
-    h3,
-    range,
-    minQuartos,
-    maxPreco,
-    minArea,
-    poiCats,
-    poiRadius,
-    maxCenter,
-    minDesconto,
-    minInvest,
-    scoreKey,
-    scoreMin,
-    financiamento,
-    fgts,
-    modalidade,
-    prazoLeilao,
-  ]);
-
-  useEffect(
-    () => setPage(1),
-    [
-      q,
-      uf,
-      cidade,
-      tipo,
-      cluster,
-      sort,
-      h3,
-      minQuartos,
-      maxPreco,
-      minArea,
-      poiCats,
-      poiRadius,
-      maxCenter,
-      minDesconto,
-      minInvest,
-      scoreKey,
-      scoreMin,
-      financiamento,
-      fgts,
-      modalidade,
-      prazoLeilao,
-    ],
-  );
-
-  useEffect(() => {
-    if (!restored) return;
-    try {
-      sessionStorage.setItem(
-        stateKey.current,
-        JSON.stringify({
-          q,
-          uf,
-          cidade,
-          tipo,
-          cluster,
-          minQuartos,
-          maxPreco,
-          precoInput,
-          minArea,
-          poiCats,
-          poiRadius,
-          maxCenter,
-          minDesconto,
-          minInvest,
-          scoreKey,
-          scoreMin,
-          financiamento,
-          fgts,
-          modalidade,
-          prazoLeilao,
-          sort,
-        }),
-      );
-    } catch {}
-  }, [
-    restored,
-    q,
-    uf,
-    cidade,
-    tipo,
-    cluster,
-    minQuartos,
-    maxPreco,
-    precoInput,
-    minArea,
-    poiCats,
-    poiRadius,
-    maxCenter,
-    minDesconto,
-    minInvest,
-    scoreKey,
-    scoreMin,
-    financiamento,
-    fgts,
-    modalidade,
-    prazoLeilao,
-    sort,
-  ]);
+  const resultTotal =
+    view === "list"
+      ? (list?.total ?? 0)
+      : view === "map"
+        ? (map?.total ?? 0)
+        : view === "analysis"
+          ? (analysis?.count ?? 0)
+          : Object.values(calendar?.counts ?? {}).reduce((s, n) => s + n, 0);
 
   // Lock body scroll while the drawer is open.
   useEffect(() => {
@@ -546,7 +366,7 @@ export default function PropertiesClient({
 
   const alertFilters = useMemo<AlertFilters>(() => {
     const f: AlertFilters = {};
-    if (q.trim()) f.q = q.trim();
+    if (filters.q?.trim()) f.q = filters.q.trim();
     if (uf !== "all") f.uf = uf;
     if (cidade !== "all") f.city = cidade;
     if (tipo !== "all") f.propertyType = tipo;
@@ -567,24 +387,8 @@ export default function PropertiesClient({
       f.minScore = minInvest; // no scoreKey → applies to Investimento
     }
     return f;
-  }, [
-    q,
-    uf,
-    cidade,
-    tipo,
-    modalidade,
-    minDesconto,
-    priceCapped,
-    maxPreco,
-    minQuartos,
-    minArea,
-    poiCats,
-    poiRadius,
-    maxCenter,
-    scoreKey,
-    scoreMin,
-    minInvest,
-  ]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filters]);
 
   const canAlert = hasAnyFilter(alertFilters);
   const alertLabel = useMemo(() => describeFilters(alertFilters), [alertFilters]);
@@ -597,9 +401,8 @@ export default function PropertiesClient({
     toast(ok ? "Alerta criado" : "Você já tem um alerta com estes filtros");
   };
 
-  const pageItems = items.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
   const goTo = (p: number) => {
-    setPage(p);
+    setParams({ page: p === 1 ? null : String(p) });
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
@@ -609,24 +412,20 @@ export default function PropertiesClient({
       next.has(id) ? next.delete(id) : next.add(id);
       return next;
     });
-  const toggleCat = (c: string) =>
-    setPoiCats((prev) => (prev.includes(c) ? prev.filter((x) => x !== c) : [...prev, c]));
 
-  const setPreco = (v: number) => {
-    setMaxPreco(v);
-    setPrecoInput(v ? String(v) : "");
-  };
-
-  // Active advanced filters, driving the badge, the applied-chips row and the
-  // per-section counts. Each carries the action that removes it.
   const activeFilters = useMemo(() => {
     const f: { key: string; label: string; clear: () => void }[] = [];
     if (range) f.push({ key: "range", label: rangeLabel(range), clear: clearRange });
     if (maxPreco > 0)
       f.push({ key: "preco", label: `Até ${moneyShort(maxPreco)}`, clear: () => setPreco(0) });
     if (minQuartos > 0)
-      f.push({ key: "quartos", label: `${minQuartos}+ quartos`, clear: () => setMinQuartos(0) });
-    if (minArea > 0) f.push({ key: "area", label: `${minArea}+ m²`, clear: () => setMinArea(0) });
+      f.push({
+        key: "quartos",
+        label: `${minQuartos}+ quartos`,
+        clear: () => patch({ quartos: null }),
+      });
+    if (minArea > 0)
+      f.push({ key: "area", label: `${minArea}+ m²`, clear: () => patch({ area: null }) });
     for (const c of poiCats)
       f.push({
         key: `poi-${c}`,
@@ -637,55 +436,46 @@ export default function PropertiesClient({
       f.push({
         key: "center",
         label: `Até ${fmtDist(maxCenter)} do centro`,
-        clear: () => setMaxCenter(0),
+        clear: () => patch({ centro: null }),
       });
     if (minDesconto > 0)
-      f.push({ key: "desc", label: `Desconto ≥ ${minDesconto}%`, clear: () => setMinDesconto(0) });
+      f.push({
+        key: "desc",
+        label: `Desconto ≥ ${minDesconto}%`,
+        clear: () => patch({ desconto: null }),
+      });
     if (minInvest > 0)
-      f.push({ key: "inv", label: `Investimento ≥ ${minInvest}`, clear: () => setMinInvest(0) });
+      f.push({
+        key: "inv",
+        label: `Investimento ≥ ${minInvest}`,
+        clear: () => patch({ invest: null }),
+      });
     if (scoreKey !== "none" && scoreMin > 0)
       f.push({
         key: "goal",
         label: `${SCORE_LABEL[scoreKey]} ≥ ${scoreMin}`,
-        clear: () => {
-          setScoreKey("none");
-          setScoreMin(0);
-        },
+        clear: () => patch({ goal: null, goalMin: null }),
       });
     if (cluster !== "all") {
       const cl = clusters.find((c) => c.clusterId === cluster);
-      f.push({ key: "cluster", label: cl?.label ?? "Grupo", clear: () => setCluster("all") });
+      f.push({
+        key: "cluster",
+        label: cl?.label ?? "Grupo",
+        clear: () => patch({ cluster: null }),
+      });
     }
     if (prazoLeilao > 0)
       f.push({
         key: "prazo",
         label: PRAZOS.find((p) => p.days === prazoLeilao)?.label ?? `${prazoLeilao} dias`,
-        clear: () => setPrazoLeilao(0),
+        clear: () => patch({ prazo: null }),
       });
     if (financiamento)
-      f.push({ key: "fin", label: "Aceita financiamento", clear: () => setFinanciamento(false) });
-    if (fgts) f.push({ key: "fgts", label: "Aceita FGTS", clear: () => setFgts(false) });
+      f.push({ key: "fin", label: "Aceita financiamento", clear: () => patch({ fin: null }) });
+    if (fgts) f.push({ key: "fgts", label: "Aceita FGTS", clear: () => patch({ fgts: null }) });
     return f;
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [
-    range,
-    clearRange,
-    maxPreco,
-    minQuartos,
-    minArea,
-    poiCats,
-    poiRadius,
-    maxCenter,
-    minDesconto,
-    minInvest,
-    scoreKey,
-    scoreMin,
-    cluster,
-    clusters,
-    prazoLeilao,
-    financiamento,
-    fgts,
-  ]);
+  }, [filters, clusters]);
 
   const advCount = activeFilters.length;
   const advActive = advCount > 0;
@@ -697,31 +487,35 @@ export default function PropertiesClient({
   ).length;
   const leilaoCount = [prazoLeilao > 0, financiamento, fgts].filter(Boolean).length;
 
+  const ADVANCED_NULL: Record<string, string | null> = {
+    dim: null,
+    from: null,
+    to: null,
+    quartos: null,
+    preco: null,
+    area: null,
+    poi: null,
+    raio: null,
+    centro: null,
+    desconto: null,
+    invest: null,
+    goal: null,
+    goalMin: null,
+    fin: null,
+    fgts: null,
+    prazo: null,
+    cluster: null,
+  };
+
   const clearAdvanced = () => {
-    clearRange();
-    setMinQuartos(0);
-    setPreco(0);
-    setMinArea(0);
-    setPoiCats([]);
-    setPoiRadius(2000);
-    setMaxCenter(0);
-    setMinDesconto(0);
-    setMinInvest(0);
-    setScoreKey("none");
-    setScoreMin(0);
-    setFinanciamento(false);
-    setFgts(false);
-    setPrazoLeilao(0);
-    setCluster("all");
+    setPrecoInput("");
+    patch(ADVANCED_NULL);
   };
 
   const clearAll = () => {
-    setQ("");
-    setUf("all");
-    setCidade("all");
-    setTipo("all");
-    setModalidade([]);
-    clearAdvanced();
+    setQInput("");
+    setPrecoInput("");
+    patch({ ...ADVANCED_NULL, q: null, uf: null, city: null, tipo: null, mod: null });
   };
 
   const filtered =
@@ -730,18 +524,21 @@ export default function PropertiesClient({
     cidade !== "all" ||
     tipo !== "all" ||
     modalidade.length > 0 ||
-    q.trim() ||
+    !!filters.q?.trim() ||
     advActive;
   const title = h3Label
     ? `Imóveis em ${h3Label}`
-    : (clusterLabel ?? (filtered ? `${nImoveis(items.length)} encontrados` : "Todos os imóveis"));
+    : (clusterLabel ?? (filtered ? `${nImoveis(resultTotal)} encontrados` : "Todos os imóveis"));
 
-  const VIEWS: { key: View; label: string }[] = [
+  const VIEWS: { key: PropertiesView; label: string }[] = [
     { key: "list", label: "Lista" },
     { key: "analysis", label: "Análise" },
     { key: "calendar", label: "Calendário" },
     { key: "map", label: "Mapa" },
   ];
+
+  const calDayOpen = !!calendar?.day && (calendar?.dayItems.length ?? 0) > 0;
+  const mapProperties = useMemo(() => (map ? map.points.map(mapPointToProperty) : []), [map]);
 
   return (
     <>
@@ -784,8 +581,8 @@ export default function PropertiesClient({
         <div className="searchmini">
           <IconSearch width={17} height={17} strokeWidth={1.7} />
           <input
-            value={q}
-            onChange={(e) => setQ(e.target.value)}
+            value={qInput}
+            onChange={(e) => setQInput(e.target.value)}
             placeholder="Buscar por bairro, cidade ou tipo"
           />
         </div>
@@ -794,19 +591,20 @@ export default function PropertiesClient({
           allLabel="todos"
           value={uf}
           options={ufs.map((u) => ({ value: u, label: u }))}
-          onChange={(v) => {
-            setUf(v);
-            setCidade("all");
-          }}
+          onChange={(v) => patch({ uf: v === "all" ? null : v, city: null })}
         />
         <SearchableSelect
           label="Cidade"
           allLabel="todas"
           value={cidade}
           options={cidades.map((c) => ({ value: c, label: c }))}
-          onChange={setCidade}
+          onChange={(v) => patch({ city: v === "all" ? null : v })}
         />
-        <select className="selectish" value={tipo} onChange={(e) => setTipo(e.target.value)}>
+        <select
+          className="selectish"
+          value={tipo}
+          onChange={(e) => patch({ tipo: e.target.value === "all" ? null : e.target.value })}
+        >
           <option value="all">Tipo: todos</option>
           {tipos.map((t) => (
             <option key={t} value={t}>
@@ -814,7 +612,11 @@ export default function PropertiesClient({
             </option>
           ))}
         </select>
-        <ModalityFilter options={modalidades} selected={modalidade} onChange={setModalidade} />
+        <ModalityFilter
+          options={modalidades}
+          selected={modalidade}
+          onChange={(v) => patch({ mod: v.join(",") || null })}
+        />
         <button
           className={`selectish${advActive ? " on" : ""}`}
           type="button"
@@ -880,7 +682,7 @@ export default function PropertiesClient({
                     className="selectish fwide"
                     value={cluster === "all" ? "all" : String(cluster)}
                     onChange={(e) =>
-                      setCluster(e.target.value === "all" ? "all" : Number(e.target.value))
+                      patch({ cluster: e.target.value === "all" ? null : e.target.value })
                     }
                   >
                     <option value="all">Todos os grupos</option>
@@ -899,11 +701,15 @@ export default function PropertiesClient({
                 >
                   <div className="flabel">Quartos (mínimo)</div>
                   <div className="fchiprow">
-                    <Chip active={!minQuartos} onClick={() => setMinQuartos(0)}>
+                    <Chip active={!minQuartos} onClick={() => patch({ quartos: null })}>
                       Qualquer
                     </Chip>
                     {QUARTOS_STEPS.map((v) => (
-                      <Chip key={v} active={minQuartos === v} onClick={() => setMinQuartos(v)}>
+                      <Chip
+                        key={v}
+                        active={minQuartos === v}
+                        onClick={() => patch({ quartos: String(v) })}
+                      >
                         {v}+
                       </Chip>
                     ))}
@@ -929,20 +735,21 @@ export default function PropertiesClient({
                       step={10_000}
                       placeholder="R$"
                       value={precoInput}
-                      onChange={(e) => {
-                        setPrecoInput(e.target.value);
-                        setMaxPreco(Math.max(0, Number(e.target.value) || 0));
-                      }}
+                      onChange={(e) => setPrecoInput(e.target.value)}
                     />
                   </div>
 
                   <div className="flabel">Área mínima</div>
                   <div className="fchiprow">
-                    <Chip active={!minArea} onClick={() => setMinArea(0)}>
+                    <Chip active={!minArea} onClick={() => patch({ area: null })}>
                       Qualquer
                     </Chip>
                     {AREA_STEPS.map((v) => (
-                      <Chip key={v} active={minArea === v} onClick={() => setMinArea(v)}>
+                      <Chip
+                        key={v}
+                        active={minArea === v}
+                        onClick={() => patch({ area: String(v) })}
+                      >
                         {v}+ m²
                       </Chip>
                     ))}
@@ -990,7 +797,7 @@ export default function PropertiesClient({
                         key={v}
                         type="button"
                         className={poiRadius === v ? "on" : ""}
-                        onClick={() => setPoiRadius(v)}
+                        onClick={() => poiCats.length && patch({ raio: String(v) })}
                       >
                         {fmtDist(v)}
                       </button>
@@ -1003,11 +810,15 @@ export default function PropertiesClient({
 
                   <div className="flabel">Distância do centro (máx.)</div>
                   <div className="fchiprow">
-                    <Chip active={!maxCenter} onClick={() => setMaxCenter(0)}>
+                    <Chip active={!maxCenter} onClick={() => patch({ centro: null })}>
                       Qualquer
                     </Chip>
                     {CENTER_STEPS.map((v) => (
-                      <Chip key={v} active={maxCenter === v} onClick={() => setMaxCenter(v)}>
+                      <Chip
+                        key={v}
+                        active={maxCenter === v}
+                        onClick={() => patch({ centro: String(v) })}
+                      >
                         ≤ {fmtDist(v)}
                       </Chip>
                     ))}
@@ -1022,11 +833,15 @@ export default function PropertiesClient({
                 >
                   <div className="flabel">Desconto mínimo</div>
                   <div className="fchiprow">
-                    <Chip active={!minDesconto} onClick={() => setMinDesconto(0)}>
+                    <Chip active={!minDesconto} onClick={() => patch({ desconto: null })}>
                       Qualquer
                     </Chip>
                     {DESCONTO_STEPS.map((v) => (
-                      <Chip key={v} active={minDesconto === v} onClick={() => setMinDesconto(v)}>
+                      <Chip
+                        key={v}
+                        active={minDesconto === v}
+                        onClick={() => patch({ desconto: String(v) })}
+                      >
                         ≥ {v}%
                       </Chip>
                     ))}
@@ -1034,11 +849,15 @@ export default function PropertiesClient({
 
                   <div className="flabel">Nota de investimento</div>
                   <div className="fchiprow">
-                    <Chip active={!minInvest} onClick={() => setMinInvest(0)}>
+                    <Chip active={!minInvest} onClick={() => patch({ invest: null })}>
                       Qualquer
                     </Chip>
                     {INVEST_STEPS.map((v) => (
-                      <Chip key={v} active={minInvest === v} onClick={() => setMinInvest(v)}>
+                      <Chip
+                        key={v}
+                        active={minInvest === v}
+                        onClick={() => patch({ invest: String(v) })}
+                      >
                         ≥ {v}
                       </Chip>
                     ))}
@@ -1050,9 +869,8 @@ export default function PropertiesClient({
                     value={scoreKey}
                     onChange={(e) => {
                       const v = e.target.value as keyof Scores | "none";
-                      setScoreKey(v);
-                      if (v !== "none" && scoreMin === 0) setScoreMin(70);
-                      if (v === "none") setScoreMin(0);
+                      if (v === "none") patch({ goal: null, goalMin: null });
+                      else patch({ goal: v, goalMin: String(scoreMin || 70) });
                     }}
                   >
                     <option value="none">Escolha um objetivo…</option>
@@ -1067,7 +885,11 @@ export default function PropertiesClient({
                       <div className="flabel">Nota mínima · {SCORE_LABEL[scoreKey]}</div>
                       <div className="fchiprow">
                         {GOAL_STEPS.map((v) => (
-                          <Chip key={v} active={scoreMin === v} onClick={() => setScoreMin(v)}>
+                          <Chip
+                            key={v}
+                            active={scoreMin === v}
+                            onClick={() => patch({ goalMin: String(v) })}
+                          >
                             ≥ {v}
                           </Chip>
                         ))}
@@ -1084,14 +906,14 @@ export default function PropertiesClient({
                 >
                   <div className="flabel">Data do leilão</div>
                   <div className="fchiprow">
-                    <Chip active={!prazoLeilao} onClick={() => setPrazoLeilao(0)}>
+                    <Chip active={!prazoLeilao} onClick={() => patch({ prazo: null })}>
                       Qualquer data
                     </Chip>
                     {PRAZOS.map((pr) => (
                       <Chip
                         key={pr.days}
                         active={prazoLeilao === pr.days}
-                        onClick={() => setPrazoLeilao(pr.days)}
+                        onClick={() => patch({ prazo: String(pr.days) })}
                       >
                         {pr.days} dias
                       </Chip>
@@ -1103,7 +925,7 @@ export default function PropertiesClient({
                     <input
                       type="checkbox"
                       checked={financiamento}
-                      onChange={(e) => setFinanciamento(e.target.checked)}
+                      onChange={(e) => patch({ fin: e.target.checked ? "1" : null })}
                     />
                     Aceita financiamento
                   </label>
@@ -1111,7 +933,7 @@ export default function PropertiesClient({
                     <input
                       type="checkbox"
                       checked={fgts}
-                      onChange={(e) => setFgts(e.target.checked)}
+                      onChange={(e) => patch({ fgts: e.target.checked ? "1" : null })}
                     />
                     Aceita FGTS
                   </label>
@@ -1131,9 +953,13 @@ export default function PropertiesClient({
                   type="button"
                   className="btn solid dshow"
                   onClick={() => setDrawerOpen(false)}
-                  disabled={!items.length}
+                  disabled={!resultTotal}
                 >
-                  {items.length ? `Mostrar ${nImoveis(items.length)}` : "Nenhum imóvel"}
+                  {isPending
+                    ? "Atualizando…"
+                    : resultTotal
+                      ? `Mostrar ${nImoveis(resultTotal)}`
+                      : "Nenhum imóvel"}
                 </button>
               </div>
             </aside>
@@ -1158,7 +984,7 @@ export default function PropertiesClient({
           <select
             className="selectish"
             value={sort}
-            onChange={(e) => setSort(e.target.value as Sort)}
+            onChange={(e) => patch({ sort: e.target.value === "leilao" ? null : e.target.value })}
           >
             {SORTS.map((s) => (
               <option key={s.key} value={s.key}>
@@ -1169,32 +995,50 @@ export default function PropertiesClient({
         )}
       </div>
 
-      {view === "map" ? (
-        items.length ? (
-          <PropertiesMap properties={items} />
+      <div style={isPending ? { opacity: 0.55, pointerEvents: "none" } : undefined}>
+        {view === "map" ? (
+          map && map.points.length ? (
+            <>
+              {map.total > map.points.length && (
+                <p className="fhint" style={{ margin: "0 0 10px" }}>
+                  Mostrando os {map.points.length.toLocaleString("pt-BR")} imóveis com melhor nota
+                  de investimento de {map.total.toLocaleString("pt-BR")}. Refine os filtros para ver
+                  todos no mapa.
+                </p>
+              )}
+              <PropertiesMap properties={mapProperties} />
+            </>
+          ) : (
+            <EmptyState icon={<IconBuilding />} title="Nenhum imóvel para mostrar no mapa">
+              Tente remover um filtro ou limpar a busca para ver imóveis no mapa.
+            </EmptyState>
+          )
+        ) : view === "analysis" ? (
+          analysis && <PropertiesAnalysis data={analysis} onPickRange={pickRange} />
+        ) : view === "calendar" ? (
+          calendar && (
+            <AuctionCalendar
+              counts={calendar.counts}
+              day={calendar.day}
+              dayItems={calendar.dayItems}
+              onSelectDay={(d) => setParams({ day: d })}
+            />
+          )
+        ) : list && list.items.length ? (
+          <>
+            <div className="wlist">
+              {list.items.map((p) => (
+                <PropertyRow key={p.id} p={p} poiCats={poiCats} poiRadius={poiRadius} />
+              ))}
+            </div>
+            <Pagination page={page} total={list.total} pageSize={PAGE_SIZE} onChange={goTo} />
+          </>
         ) : (
-          <EmptyState icon={<IconBuilding />} title="Nenhum imóvel para mostrar no mapa">
-            Tente remover um filtro ou limpar a busca para ver imóveis no mapa.
+          <EmptyState icon={<IconBuilding />} title="Nenhum imóvel encontrado com esses filtros">
+            Tente remover um filtro ou limpar a busca para ver mais resultados.
           </EmptyState>
-        )
-      ) : view === "analysis" ? (
-        <PropertiesAnalysis items={items} onPickRange={pickRange} />
-      ) : view === "calendar" ? (
-        <AuctionCalendar items={items} onDayOpen={setCalDayOpen} />
-      ) : items.length ? (
-        <>
-          <div className="wlist">
-            {pageItems.map((p) => (
-              <PropertyRow key={p.id} p={p} poiCats={poiCats} poiRadius={poiRadius} />
-            ))}
-          </div>
-          <Pagination page={page} total={items.length} pageSize={PAGE_SIZE} onChange={goTo} />
-        </>
-      ) : (
-        <EmptyState icon={<IconBuilding />} title="Nenhum imóvel encontrado com esses filtros">
-          Tente remover um filtro ou limpar a busca para ver mais resultados.
-        </EmptyState>
-      )}
+        )}
+      </div>
     </>
   );
 }
