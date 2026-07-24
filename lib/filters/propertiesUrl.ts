@@ -92,7 +92,7 @@ export function parsePropertySearchParams(sp: SP): PropertiesQuery {
   const dayRaw = one(sp.day) ?? "";
   return {
     filters,
-    sort: (SORTS.has(sortRaw) ? sortRaw : "leilao") as PropertySort,
+    sort: (SORTS.has(sortRaw) ? sortRaw : "desconto") as PropertySort,
     page: posInt(one(sp.page)) ?? 1,
     view: (VIEWS.has(viewRaw) ? viewRaw : "list") as PropertiesView,
     day: /^\d{4}-\d{2}-\d{2}$/.test(dayRaw) ? dayRaw : null,

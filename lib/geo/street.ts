@@ -12,7 +12,7 @@ const STREET_ABBR: Record<string, string> = {
 };
 
 // Logradouro from a "RUA X, N. 12 ..." address, title-cased and abbreviated.
-function streetOf(rawAddress: string | null | undefined): string | null {
+export function streetOf(rawAddress: string | null | undefined): string | null {
   if (!rawAddress) return null;
   const head = rawAddress.split(",")[0].trim();
   if (!head || head.length < 3) return null;

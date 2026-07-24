@@ -1,3 +1,3 @@
 export { normalize } from "./normalize";
-export { goalFromQuery, parseFacets } from "./parse";
+export { goalFromQuery, parseFacets, isPoiCategoryOnly } from "./parse";
 export type { Facets, GoalKey, PoiQuery } from "./keywords";

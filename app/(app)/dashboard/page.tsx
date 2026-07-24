@@ -3,13 +3,13 @@ import CollectionCard from "@/components/groups/CollectionCard";
 import SearchHero from "@/components/search/SearchHero";
 import { accountFrom, shortName } from "@/lib/account";
 import { clusterStatsFor, getClusters, getClusterStatsAll } from "@/lib/data";
-import { getSessionUser } from "@/lib/supabase/server";
+import { getUser } from "@/lib/supabase/server";
 
 export default async function HomePage() {
   const [clusters, clusterStats, { user }] = await Promise.all([
     getClusters(),
     getClusterStatsAll(),
-    getSessionUser(),
+    getUser(),
   ]);
   const { name } = accountFrom(user);
   const greeting = user ? `Olá, ${shortName(name)}.` : "Olá!";

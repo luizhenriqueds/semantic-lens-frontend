@@ -1,11 +1,23 @@
 import { supabase } from "@/lib/supabase";
 import { EMBEDDING_MODEL, embedQuery, rerank } from "@/lib/embed";
-import { normalize, parseFacets, type GoalKey, type PoiQuery } from "@/lib/facets";
+import {
+  isPoiCategoryOnly,
+  normalize,
+  parseFacets,
+  type Facets,
+  type GoalKey,
+  type PoiQuery,
+} from "@/lib/facets";
 import { semanticCached } from "@/lib/semanticCache";
 import { titleCase } from "@/lib/format";
 import type { Poi } from "@/lib/types";
 import { cached, rows, withRetry } from "./client";
-import { getFilterOptions } from "./propertyList";
+import {
+  getFilterOptions,
+  getPropertiesByIds,
+  getPropertiesPage,
+  isListable,
+} from "./propertyList";
 import { mapPoi, POI_FIELDS } from "./pois";
 
 export type SearchHit = { id: string; score: number };
@@ -105,19 +117,55 @@ async function searchPoisByName(q: PoiQuery): Promise<Poi[]> {
   return cands;
 }
 
-// property_id → min dist_m over the given POIs (from property_poi, the same
-// "nearby" source the detail page uses), within POI_NEAR_M.
+const CATEGORY_LIMIT = 200;
+const CENTER_NEAR_M = 15000;
+
+// Center-proximity filter: properties ranked by distance to the city centre.
+async function centerProximityHits(facets: Facets): Promise<SearchHit[]> {
+  const { items } = await getPropertiesPage({
+    filters: {
+      type: facets.type ?? undefined,
+      city: facets.city ?? undefined,
+      minBedrooms: facets.bedroomsMin ?? undefined,
+      maxPrice: facets.priceMax ?? undefined,
+      maxCenterM: CENTER_NEAR_M,
+    },
+    sort: "desconto",
+    pageSize: CATEGORY_LIMIT,
+  });
+  const ranked = items
+    .filter((p) => p.centerProximity != null)
+    .sort((a, b) => a.centerProximity! - b.centerProximity!)
+    .slice(0, CATEGORY_LIMIT);
+  return ranked.map((p, i) => ({ id: p.id, score: 1 - i / Math.max(1, ranked.length) }));
+}
+
+// Category proximity is a filter, not a ranked search: return the dense poi_cats set.
+async function categoryProximityHits(facets: Facets): Promise<SearchHit[]> {
+  const { items } = await getPropertiesPage({
+    filters: {
+      type: facets.type ?? undefined,
+      city: facets.city ?? undefined,
+      minBedrooms: facets.bedroomsMin ?? undefined,
+      maxPrice: facets.priceMax ?? undefined,
+      poiCats: [facets.poi!.category!],
+      poiRadiusM: POI_NEAR_M,
+    },
+    sort: "desconto",
+    pageSize: CATEGORY_LIMIT,
+  });
+  return items.map((p, i) => ({ id: p.id, score: 1 - i / Math.max(1, items.length) }));
+}
+
+// property_id → distance to the nearest of the given POIs, within POI_NEAR_M,
+// via the spatial properties_near_pois RPC.
 async function nearestByPoi(poiIds: number[]): Promise<Map<string, number>> {
   if (!poiIds.length) return new Map();
   const res = await withRetry(() =>
-    supabase
-      .from("property_poi")
-      .select("property_id,dist_m")
-      .in("poi_id", poiIds)
-      .lte("dist_m", POI_NEAR_M),
+    supabase.rpc("properties_near_pois", { p_poi_ids: poiIds, p_radius_m: POI_NEAR_M }),
   );
   const near = new Map<string, number>();
-  for (const r of rows<any>("property_poi", res)) {
+  for (const r of rows<any>("properties_near_pois", res)) {
     const id = String(r.property_id);
     const d = Number(r.dist_m);
     if (!near.has(id) || d < near.get(id)!) near.set(id, d);
@@ -125,17 +173,19 @@ async function nearestByPoi(poiIds: number[]): Promise<Map<string, number>> {
   return near;
 }
 
-// Re-rank by 0.4·recall + 0.6·exp(-dist/2500), keeping only pooled properties
-// that list the POI among their precomputed neighbours.
-function poiRerank(pool: PoolRow[], near: Map<string, number>): SearchHit[] {
-  const n = pool.length;
-  const hits: SearchHit[] = [];
-  pool.forEach((p, i) => {
-    const dist = near.get(p.id);
-    if (dist == null) return;
-    hits.push({ id: p.id, score: 0.4 * rankNorm(i, n) + 0.6 * Math.exp(-dist / 2500) });
-  });
-  return hits.sort((a, b) => b.score - a.score).slice(0, RESULT_LIMIT);
+// All properties near the resolved POIs, type-filtered and distance-ranked
+// (comprehensive), rather than gated by the semantic pool.
+async function nearProximityHits(near: Map<string, number>, facets: Facets): Promise<SearchHit[]> {
+  const ids = [...near.entries()]
+    .sort((a, b) => a[1] - b[1])
+    .slice(0, 500)
+    .map(([id]) => id);
+  const props = await getPropertiesByIds(ids);
+  const ranked = props
+    .filter((p) => isListable(p) && (!facets.type || p.propertyType === facets.type))
+    .sort((a, b) => (near.get(a.id) ?? Infinity) - (near.get(b.id) ?? Infinity))
+    .slice(0, CATEGORY_LIMIT);
+  return ranked.map((p, i) => ({ id: p.id, score: 1 - i / Math.max(1, ranked.length) }));
 }
 
 async function semanticRank(
@@ -174,6 +224,15 @@ function poiPlaceLabel(poi: PoiQuery): string {
 async function runHybridSearch(query: string): Promise<SearchResult> {
   const cities = await getCities();
   const facets = parseFacets(query, cities);
+
+  // Proximity queries are filters (comprehensive), not ranked semantic searches.
+  if (facets.center) {
+    return { hits: await centerProximityHits(facets), fallback: false, fallbackNote: null };
+  }
+  if (facets.poi?.category && isPoiCategoryOnly(facets.poi.name)) {
+    return { hits: await categoryProximityHits(facets), fallback: false, fallbackNote: null };
+  }
+
   const embedding = await embedQuery(facets.normalized, SEARCH_INSTRUCTION);
 
   return semanticCached<SearchResult>({
@@ -225,8 +284,11 @@ async function runHybridSearch(query: string): Promise<SearchResult> {
 
       if (facets.poi) {
         const cands = await searchPoisByName(facets.poi);
-        const near = poiRerank(pool, await nearestByPoi(cands.map((p) => p.id)));
-        if (near.length) return ok(near);
+        const near = await nearestByPoi(cands.map((p) => p.id));
+        if (near.size) {
+          const hits = await nearProximityHits(near, facets);
+          if (hits.length) return ok(hits);
+        }
         return {
           hits: await semanticRank(pool, facets.normalized, !!facets.type),
           fallback: true,

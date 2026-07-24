@@ -24,7 +24,6 @@ import {
   getRecommendations,
   getRegion,
   getScoreExplain,
-  hasUpcomingAuction,
   isListable,
 } from "@/lib/data";
 import Hint from "@/components/ui/Hint";
@@ -39,13 +38,8 @@ import {
   showDiscount,
 } from "@/lib/format";
 
-export const revalidate = 120;
-
-// On-demand ISR instead of prerendering 30k+ pages at build (each fires several
-// per-property queries). dynamicParams defaults to true.
-export async function generateStaticParams() {
-  return [];
-}
+// Dynamic: the app layout reads the auth cookie, so this route can't be static.
+export const dynamic = "force-dynamic";
 
 export default async function PropertyPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -69,9 +63,7 @@ export default async function PropertyPage({ params }: { params: Promise<{ id: s
   const recProps = strongRecs.length
     ? await getPropertiesByIds([...new Set(strongRecs.map((r) => r.recId))])
     : [];
-  const propById = new Map(
-    recProps.filter((x) => isListable(x) && hasUpcomingAuction(x)).map((x) => [x.id, x]),
-  );
+  const propById = new Map(recProps.filter((x) => isListable(x)).map((x) => [x.id, x]));
   const toItems = (kind: "visual" | "similar"): RecItem[] =>
     strongRecs
       .filter((r) => r.kind === kind)

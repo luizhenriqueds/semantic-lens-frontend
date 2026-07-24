@@ -23,19 +23,27 @@ export function goalFromQuery(query: string): GoalKey | null {
   return findGoal(normalize(query).split(" ").filter(Boolean));
 }
 
-function findPoi(
+const POI_CATEGORY_WORDS = new Set(POI_CATEGORY_KEYWORDS.flatMap(([kws]) => kws));
+
+// True when the POI phrase is only a category word (e.g. a university type) with
+// no specific place name — "near any of this kind" vs a named place.
+export function isPoiCategoryOnly(name: string): boolean {
+  const words = normalize(name).split(" ").filter(Boolean);
+  return words.length > 0 && words.every((w) => POI_CATEGORY_WORDS.has(w));
+}
+
+const PROXIMITY_RE = /\b(?:perto|proxim[ao]s?|vizinh[ao]s?|junt[ao]|colad[ao]|lado)\s+(.+)$/;
+
+// Words left in the proximity phrase once leading stopwords and the city name
+// are removed (city is filtered separately, the neighbourhood semantically).
+function proximityWords(
   normalized: string,
   cityList: { raw: string; words: string[] }[],
-): PoiQuery | null {
-  const m = normalized.match(
-    /\b(?:perto|proxim[ao]s?|vizinh[ao]s?|junt[ao]|colad[ao]|lado)\s+(.+)$/,
-  );
-  if (!m) return null;
+): string[] {
+  const m = normalized.match(PROXIMITY_RE);
+  if (!m) return [];
   const words = m[1].split(" ").filter(Boolean);
   while (words.length && POI_STOPWORDS.has(words[0])) words.shift();
-
-  // Drop a city name from the phrase ("perto do centro corumba" is a place, not
-  // a POI) - the city is filtered separately, the neighbourhood semantically.
   for (const c of cityList) {
     for (let i = 0; i + c.words.length <= words.length; i++) {
       if (c.words.every((w, j) => words[i + j] === w)) {
@@ -44,8 +52,14 @@ function findPoi(
       }
     }
   }
+  return words.filter((w) => !POI_STOPWORDS.has(w));
+}
 
-  const significant = words.filter((w) => !POI_STOPWORDS.has(w) && !LOCALITY_WORDS.has(w));
+function findPoi(
+  normalized: string,
+  cityList: { raw: string; words: string[] }[],
+): PoiQuery | null {
+  const significant = proximityWords(normalized, cityList).filter((w) => !LOCALITY_WORDS.has(w));
   const name = significant.join(" ").trim();
   if (name.length < 2) return null;
 
@@ -57,6 +71,15 @@ function findPoi(
     }
   }
   return { name, category };
+}
+
+// Proximity to the city centre (ranked by center_proximity_m), not a POI match.
+function isCenterProximity(
+  normalized: string,
+  cityList: { raw: string; words: string[] }[],
+): boolean {
+  const words = proximityWords(normalized, cityList);
+  return words.length > 0 && words.every((w) => w === "centro");
 }
 
 export function parseFacets(raw: string, cities: string[]): Facets {
@@ -88,7 +111,12 @@ export function parseFacets(raw: string, cities: string[]): Facets {
       for (let i = 0; i + c.words.length <= tokens.length; i++) {
         let ok = true;
         for (let j = 0; j < c.words.length; j++) {
-          if (used.has(i + j) || !match(tokens[i + j], c.words[j], exact)) {
+          // Never let a locality word ("centro"…) fuzzy-match a city (e.g. "Central").
+          if (
+            used.has(i + j) ||
+            LOCALITY_WORDS.has(tokens[i + j]) ||
+            !match(tokens[i + j], c.words[j], exact)
+          ) {
             ok = false;
             break;
           }
@@ -133,5 +161,6 @@ export function parseFacets(raw: string, cities: string[]): Facets {
     priceMax,
     goal: findGoal(tokens),
     poi: findPoi(normalized, cityList),
+    center: isCenterProximity(normalized, cityList),
   };
 }

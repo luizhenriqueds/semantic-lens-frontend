@@ -1,13 +1,7 @@
 import Link from "next/link";
 import PagedCards from "./PagedCards";
 import EmptyState from "@/components/ui/EmptyState";
-import {
-  getPropertiesByIds,
-  getPropertiesPage,
-  hasUpcomingAuction,
-  hybridSearch,
-  isListable,
-} from "@/lib/data";
+import { getPropertiesByIds, getPropertiesPage, hybridSearch, isListable } from "@/lib/data";
 import { goalFromQuery } from "@/lib/facets";
 import { GOAL_PROFILE } from "@/lib/format";
 import { IconSearch } from "@/lib/icons";
@@ -27,9 +21,7 @@ export default async function SearchResults({ query }: { query: string }) {
     try {
       const result = await hybridSearch(query);
       const found = await getPropertiesByIds(result.hits.map((h) => h.id));
-      const byId = new Map(
-        found.filter((p) => isListable(p) && hasUpcomingAuction(p)).map((p) => [p.id, p]),
-      );
+      const byId = new Map(found.filter((p) => isListable(p)).map((p) => [p.id, p]));
       items = result.hits.map((h) => byId.get(h.id)).filter((p): p is Property => p != null);
       if (result.fallback && items.length) fallbackNote = result.fallbackNote;
     } catch {

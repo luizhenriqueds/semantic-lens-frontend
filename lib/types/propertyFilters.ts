@@ -28,8 +28,6 @@ export type PropertyFilters = {
   auctionWithinDays?: number;
   auctionOn?: string;
   includeInactive?: boolean;
-  // Past-auction properties are hidden by default; set to true to keep them.
-  includePastAuctions?: boolean;
   ids?: string[];
 };
 

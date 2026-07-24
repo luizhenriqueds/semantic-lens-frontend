@@ -21,9 +21,11 @@
     "@ai-sdk/deepinfra": "^3.0.5",
     "@supabase/ssr": "^0.12.3",
     "@supabase/supabase-js": "^2.45.4",
+    "@types/leaflet.markercluster": "^1.5.6",
     "@upstash/vector": "^1.2.3",
     "ai": "^7.0.15",
     "leaflet": "^1.9.4",
+    "leaflet.markercluster": "^1.5.3",
     "next": "15.5.20",
     "react": "19.0.0",
     "react-dom": "19.0.0"
