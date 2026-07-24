@@ -17,11 +17,16 @@ const TRANSIENT =
 // Retries transient failures (e.g. Postgres `statement timeout` under load).
 // The queries are normally sub-100ms, so a couple of short backoffs recover
 // from load spikes without poisoning the request cache with an empty result.
+// `retryTimeouts: false` for calls where a timeout means the query itself is too
+// slow (not load) - retrying only multiplies the wait.
 export async function withRetry<T>(
   build: () => PromiseLike<QueryResult<T>>,
+  { retryTimeouts = true }: { retryTimeouts?: boolean } = {},
 ): Promise<QueryResult<T>> {
+  const canRetry = (msg: string) =>
+    TRANSIENT.test(msg) && (retryTimeouts || !/timeout|canceling/i.test(msg));
   let res = await build();
-  for (let i = 0; i < 3 && res.error && TRANSIENT.test(res.error.message); i++) {
+  for (let i = 0; i < 3 && res.error && canRetry(res.error.message); i++) {
     await new Promise((r) => setTimeout(r, 250 * (i + 1)));
     res = await build();
   }

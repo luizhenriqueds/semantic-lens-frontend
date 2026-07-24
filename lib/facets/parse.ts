@@ -1,8 +1,10 @@
 import { fuzzy, normalize } from "./normalize";
 import {
   GOAL_KEYWORDS,
+  LEXICAL_NOISE,
   LOCALITY_WORDS,
   POI_CATEGORY_KEYWORDS,
+  POI_PHRASE_END,
   POI_STOPWORDS,
   TYPE_KEYWORDS,
   type Facets,
@@ -34,32 +36,42 @@ export function isPoiCategoryOnly(name: string): boolean {
 
 const PROXIMITY_RE = /\b(?:perto|proxim[ao]s?|vizinh[ao]s?|junt[ao]|colad[ao]|lado)\s+(.+)$/;
 
-// Words left in the proximity phrase once leading stopwords and the city name
-// are removed (city is filtered separately, the neighbourhood semantically).
-function proximityWords(
-  normalized: string,
-  cityList: { raw: string; words: string[] }[],
-): string[] {
+// Edges only - interior stopwords belong to the name ("hospital das clínicas").
+function trimEdges(words: string[]): string[] {
+  const out = [...words];
+  while (out.length && POI_STOPWORDS.has(out[0])) out.shift();
+  while (out.length && POI_STOPWORDS.has(out[out.length - 1])) out.pop();
+  return out;
+}
+
+// Everything after the proximity word, cut where the next facet starts.
+function proximityPhrase(normalized: string): string[] {
   const m = normalized.match(PROXIMITY_RE);
   if (!m) return [];
   const words = m[1].split(" ").filter(Boolean);
-  while (words.length && POI_STOPWORDS.has(words[0])) words.shift();
+  const end = words.findIndex((w) => POI_PHRASE_END.has(w));
+  return trimEdges(end === -1 ? words : words.slice(0, end));
+}
+
+function withoutCity(words: string[], cityList: { raw: string; words: string[] }[]): string[] {
   for (const c of cityList) {
     for (let i = 0; i + c.words.length <= words.length; i++) {
       if (c.words.every((w, j) => words[i + j] === w)) {
-        words.splice(i, c.words.length);
-        break;
+        const out = [...words];
+        out.splice(i, c.words.length);
+        return trimEdges(out);
       }
     }
   }
-  return words.filter((w) => !POI_STOPWORDS.has(w));
+  return words;
 }
 
 function findPoi(
   normalized: string,
   cityList: { raw: string; words: string[] }[],
 ): PoiQuery | null {
-  const significant = proximityWords(normalized, cityList).filter((w) => !LOCALITY_WORDS.has(w));
+  const phrase = proximityPhrase(normalized).filter((w) => !LOCALITY_WORDS.has(w));
+  const significant = withoutCity(phrase, cityList);
   const name = significant.join(" ").trim();
   if (name.length < 2) return null;
 
@@ -70,7 +82,11 @@ function findPoi(
       break;
     }
   }
-  return { name, category };
+  // The city-qualified spelling is only worth a lookup when it reads as a name
+  // ("shopping campo grande"), not as a sentence ("ufms em campo grande").
+  const full = phrase.join(" ").trim();
+  const isName = full && !phrase.some((w) => POI_STOPWORDS.has(w));
+  return { name, fullName: isName ? full : name, category };
 }
 
 // Proximity to the city centre (ranked by center_proximity_m), not a POI match.
@@ -78,8 +94,21 @@ function isCenterProximity(
   normalized: string,
   cityList: { raw: string; words: string[] }[],
 ): boolean {
-  const words = proximityWords(normalized, cityList);
+  const words = withoutCity(proximityPhrase(normalized), cityList);
   return words.length > 0 && words.every((w) => w === "centro");
+}
+
+const BEDROOM_WORD = /^(?:quarto|quartos|dormitorio|dormitorios|dorm|suite|suites)$/;
+
+// Keeps only tokens that can plausibly appear in a listing document - see LEXICAL_NOISE.
+function buildLexical(normalized: string, priceMatch: string | null): string {
+  const words = (priceMatch ? normalized.replace(priceMatch, " ") : normalized)
+    .split(" ")
+    .filter(Boolean)
+    .filter((w) => !LEXICAL_NOISE.has(w));
+  return words
+    .filter((w, i) => !/^\d+([.,]\d+)?$/.test(w) || BEDROOM_WORD.test(words[i + 1] ?? ""))
+    .join(" ");
 }
 
 export function parseFacets(raw: string, cities: string[]): Facets {
@@ -108,6 +137,9 @@ export function parseFacets(raw: string, cities: string[]): Facets {
 
   const findCity = (exact: boolean): string | null => {
     for (const c of cityList) {
+      // Fuzzy on a single-word city turns "para"/"dinheiro"/"revender" into
+      // Paraí/Pinheiro/Resende. Multi-word names keep typo tolerance.
+      if (!exact && c.words.length === 1) continue;
       for (let i = 0; i + c.words.length <= tokens.length; i++) {
         let ok = true;
         for (let j = 0; j < c.words.length; j++) {
@@ -153,8 +185,16 @@ export function parseFacets(raw: string, cities: string[]): Facets {
     if (!isNaN(n) && n > 0) priceMax = Math.round(n);
   }
 
+  const lexical = buildLexical(normalized, pm ? pm[0] : null);
+  const lexicalCore = [...used]
+    .sort((a, b) => a - b)
+    .map((i) => tokens[i])
+    .join(" ");
+
   return {
     normalized,
+    lexical: lexical || lexicalCore || normalized,
+    lexicalCore,
     type,
     city,
     bedroomsMin,

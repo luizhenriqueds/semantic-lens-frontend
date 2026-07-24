@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { fuzzy, normalize } from "./normalize";
+import { escapeLike, fuzzy, normalize } from "./normalize";
 
 describe("normalize", () => {
   it("lowercases, strips accents and collapses whitespace", () => {
@@ -11,6 +11,13 @@ describe("normalize", () => {
   it("is idempotent", () => {
     const once = normalize("Três Corações");
     expect(normalize(once)).toBe(once);
+  });
+});
+
+describe("escapeLike", () => {
+  it("neutralises LIKE metacharacters", () => {
+    expect(escapeLike("_a%")).toBe("\\_a\\%");
+    expect(escapeLike("hospital das clinicas")).toBe("hospital das clinicas");
   });
 });
 

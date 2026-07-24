@@ -2,6 +2,11 @@ export function normalize(s: string): string {
   return s.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/\s+/g, " ").trim();
 }
 
+// Keeps user input from turning into a LIKE wildcard.
+export function escapeLike(s: string): string {
+  return s.replace(/[\\%_]/g, (c) => `\\${c}`);
+}
+
 // Damerau-Levenshtein distance (edits + adjacent transpositions).
 function editDistance(a: string, b: string): number {
   const m = a.length;

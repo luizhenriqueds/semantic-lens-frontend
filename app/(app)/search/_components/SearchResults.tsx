@@ -2,6 +2,7 @@ import Link from "next/link";
 import PagedCards from "./PagedCards";
 import EmptyState from "@/components/ui/EmptyState";
 import { getPropertiesByIds, getPropertiesPage, hybridSearch, isListable } from "@/lib/data";
+import { spreadByLocality } from "@/lib/diversify";
 import { goalFromQuery } from "@/lib/facets";
 import { GOAL_PROFILE } from "@/lib/format";
 import { IconSearch } from "@/lib/icons";
@@ -23,6 +24,7 @@ export default async function SearchResults({ query }: { query: string }) {
       const found = await getPropertiesByIds(result.hits.map((h) => h.id));
       const byId = new Map(found.filter((p) => isListable(p)).map((p) => [p.id, p]));
       items = result.hits.map((h) => byId.get(h.id)).filter((p): p is Property => p != null);
+      items = spreadByLocality(items);
       if (result.fallback && items.length) fallbackNote = result.fallbackNote;
     } catch {
       failed = true;
