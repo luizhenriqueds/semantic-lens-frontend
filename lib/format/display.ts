@@ -12,6 +12,18 @@ export function moneyShort(n: number | null | undefined): string {
   return BRL + Math.round(n / 1000) + " mil";
 }
 
+// Compact counts for headline figures: 33.347 -> "33,3 mil". Stays exact below
+// 10 mil so counts like 1.517 keep their thousands separator instead of
+// collapsing into a vague "1,5 mil".
+export function countShort(n: number | null | undefined): string {
+  if (n == null) return EMPTY;
+  if (n >= 1_000_000)
+    return (n / 1_000_000).toLocaleString("pt-BR", { maximumFractionDigits: 1 }) + " mi";
+  if (n >= 10_000)
+    return (n / 1_000).toLocaleString("pt-BR", { maximumFractionDigits: 1 }) + " mil";
+  return n.toLocaleString("pt-BR");
+}
+
 export function titleCase(s: string): string {
   return s
     .toLowerCase()
