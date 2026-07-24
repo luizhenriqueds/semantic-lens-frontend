@@ -2,6 +2,22 @@ import Image from "next/image";
 import Link from "next/link";
 import LandingEffects from "@/app/(marketing)/_components/LandingEffects";
 import ApiWaitlist from "@/app/(marketing)/_components/ApiWaitlist";
+import Hint from "@/components/ui/Hint";
+import {
+  SpotCommercial,
+  SpotFamily,
+  SpotFlip,
+  SpotLiquidity,
+  SpotSeason,
+  SpotStudent,
+} from "@/app/(marketing)/_components/UseSpots";
+import { IconCalendar, IconChart, IconHouse, IconSliders, POI_ICON } from "@/lib/icons";
+import Rail from "@/app/(marketing)/_components/Rail";
+import ShowcaseGallery from "@/app/(marketing)/_components/ShowcaseGallery";
+import { SHOWCASE_CAPTURED } from "@/app/(marketing)/_data/showcase";
+import { SIMILAR, SIMILAR_SEED } from "@/app/(marketing)/_data/similar";
+import { getLandingStats } from "@/lib/data/landingStats";
+import { countShort, fmtDay, money } from "@/lib/format";
 import { getUser } from "@/lib/supabase/server";
 
 function ScoreBars({ items }: { items: { k: string; v: number }[] }) {
@@ -22,8 +38,48 @@ function ScoreBars({ items }: { items: { k: string; v: number }[] }) {
   );
 }
 
+type StatTile = { v: string; suffix?: string; k: string; note: string; accent?: boolean };
+
 export default async function LandingPage() {
-  const { user } = await getUser();
+  const [{ user }, stats] = await Promise.all([getUser(), getLandingStats()]);
+  const updatedAt = fmtDay(stats?.computedAt);
+
+  const tiles: StatTile[] = stats
+    ? [
+        {
+          v: countShort(stats.activeProperties),
+          k: "imóveis ativos",
+          note: "de leilão e venda direta da Caixa",
+        },
+        {
+          v: countShort(stats.pois),
+          k: "pontos de referência",
+          note: `medidos em ${stats.poiCategories} categorias`,
+        },
+        {
+          v: countShort(stats.regions),
+          k: "regiões analisadas",
+          note: `em ${stats.ufs} estados`,
+        },
+        {
+          v: countShort(stats.clusters),
+          k: "famílias de imóveis",
+          note: "grupos de imóveis parecidos",
+        },
+        ...(stats.discountMedian != null
+          ? [
+              {
+                v: stats.discountMedian.toLocaleString("pt-BR", { maximumFractionDigits: 1 }),
+                suffix: "%",
+                k: "desconto mediano",
+                note: "sobre a avaliação da Caixa",
+                accent: true,
+              },
+            ]
+          : []),
+      ]
+    : [];
+
   return (
     <>
       <header className="lp-nav">
@@ -71,10 +127,6 @@ export default async function LandingPage() {
           <div className="lp-navmenu" id="navmenu">
             <nav>
               <a href="#recursos">Recursos</a>
-              <a className="lp-m-hide" href="#painel">
-                O painel
-              </a>
-              <a href="#analise">Como funciona</a>
               <a href="#exemplo">Exemplo real</a>
               <a href="#planos">Planos</a>
               <a href="#faq">Dúvidas</a>
@@ -139,9 +191,6 @@ export default async function LandingPage() {
         </div>
         <div className="lp-wrap">
           <div>
-            <span className="lp-eyebrow">
-              <span className="lp-tag">Novo</span> Leilões de imóveis, analisados um a um
-            </span>
             <h1>
               O leilão certo,
               <br />
@@ -155,9 +204,9 @@ export default async function LandingPage() {
               </span>
             </h1>
             <p className="lp-lede">
-              A Lavra reúne milhares de leilões em um painel só e dá a cada imóvel notas fáceis de
-              comparar - preço, região e potencial. Você descreve o que procura; a gente encontra a
-              oportunidade.
+              A Lavra reúne os imóveis de leilão da Caixa em um painel só e dá a cada um notas de 0
+              a 100 para preço, região e melhor uso. Você descreve o que procura em português; as
+              melhores oportunidades sobem para o topo.
             </p>
             <div className="lp-actions">
               <Link className="lp-btn lp-solid lp-big" href="/dashboard">
@@ -166,20 +215,16 @@ export default async function LandingPage() {
                   <path d="M5 12h14m0 0-6-6m6 6-6 6" />
                 </svg>
               </Link>
-              <a className="lp-btn lp-ghost lp-big" href="#analise">
-                Como funciona a análise
+              <a className="lp-btn lp-ghost lp-big" href="#exemplo">
+                Ver um imóvel real analisado
               </a>
             </div>
-            <div className="lp-micro">
-              <span className="lp-mono">378</span> imóveis analisados ·{" "}
-              <span className="lp-mono">19</span> estados ·{" "}
-              <span className="lp-mono">400 mil+</span> POIs no Brasil todo
-            </div>
+            <div className="lp-micro">Sem cadastro para explorar · base atualizada diariamente</div>
           </div>
 
           <div className="lp-heromock lp-reveal" aria-hidden="true">
             <div className="lp-photo">
-              <span className="lp-disc">40% abaixo da avaliação</span>
+              <span className="lp-disc">Desconto sobre a avaliação</span>
               <svg
                 className="lp-photo-illus"
                 viewBox="0 0 360 180"
@@ -221,18 +266,15 @@ export default async function LandingPage() {
                 <circle className="lp-il-pin-dot" cx="181" cy="52" r="4" />
               </svg>
               <div className="lp-uses">
-                <span>🏠 Moradia 88</span>
-                <span>💰 Liquidez 81</span>
+                <span>Moradia</span>
+                <span>Temporada</span>
+                <span>Revenda</span>
               </div>
             </div>
             <div className="lp-mrow">
               <div className="lp-info">
-                <b>Apartamento 72 m²</b>
-                <span className="lp-loc">Vila Mariana · São Paulo, SP</span>
-              </div>
-              <div className="lp-price">
-                <div className="lp-now">R$ 312.000</div>
-                <div className="lp-was">R$ 520.000</div>
+                <b>Lance inicial</b>
+                <span className="lp-loc">Avaliação Caixa · preço vs. mercado do bairro</span>
               </div>
             </div>
             <div className="lp-scorebar">
@@ -249,224 +291,85 @@ export default async function LandingPage() {
                   data-off="18.8"
                   transform="rotate(-90 28 28)"
                 />
-                <text x="28" y="33" textAnchor="middle" fontSize="17">
-                  87
+                <text x="28" y="32" textAnchor="middle" fontSize="12">
+                  0-100
                 </text>
               </svg>
               <div className="lp-lbl">
-                Nota de Investimento<b>Melhor que 87% dos imóveis semelhantes</b>
+                Nota de investimento<b>Cada imóvel chega com essa leitura pronta</b>
               </div>
             </div>
           </div>
         </div>
       </section>
 
-      <div className="lp-trust">
-        <div className="lp-wrap">
-          <span className="lp-chip">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
-              <path d="m5 13 4 4L19 7" />
-            </svg>
-            <span>
-              <b>Sem cadastro</b> para explorar
-            </span>
-          </span>
-          <span className="lp-chip">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
-              <path d="M8 4h9a1 1 0 0 1 1 1v15l-5-3-5 3V5a1 1 0 0 1 1-1z" />
-            </svg>
-            <span>
-              <b>Editais públicos</b>, sempre atualizados
-            </span>
-          </span>
-          <span className="lp-chip">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
-              <circle cx="12" cy="12" r="9" />
-              <path d="M12 16v-4m0-4h.01" />
-            </svg>
-            <span>
-              <b>Notas explicáveis</b>, sem caixa-preta
-            </span>
-          </span>
-          <span className="lp-chip">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
-              <path d="M3 3v18h18" />
-              <path d="M7 13l3-3 3 2 5-5" />
-            </svg>
-            <span>
-              Comparados com o <b>mercado aberto</b>
-            </span>
-          </span>
-        </div>
-      </div>
+      {stats && (
+        <section className="lp-statsband" aria-label="A base da Lavra hoje">
+          <div className="lp-wrap">
+            <div className="lp-stats">
+              {tiles.map((s) => (
+                <div className={`lp-stat${s.accent ? " lp-accent" : ""}`} key={s.k}>
+                  <div className="lp-v">
+                    {s.v}
+                    {s.suffix ? <small>{s.suffix}</small> : null}
+                  </div>
+                  <div className="lp-k">{s.k}</div>
+                  <div className="lp-note">{s.note}</div>
+                </div>
+              ))}
+            </div>
+            <p className="lp-stats-foot">
+              Sem cadastro para explorar · toda nota vem com o porquê, fator a fator
+              {updatedAt ? ` · base atualizada em ${updatedAt}` : ""}
+            </p>
+          </div>
+        </section>
+      )}
 
-      <section className="lp-band lp-alt lp-showband" id="exemplo">
+      <section className="lp-band lp-chapter lp-alt lp-showband" id="exemplo">
         <div className="lp-wrap">
           <div className="lp-sechead lp-reveal">
-            <span className="lp-seclabel">// um leilão de verdade, agora</span>
-            <h2>Veja a Lavra analisando um imóvel real</h2>
+            <span className="lp-seclabel">imóveis reais, notas reais</span>
+            <h2>Veja a Lavra analisando um imóvel de verdade</h2>
             <p>
-              Nada de tela de exemplo. Este apartamento está em leilão neste momento - abaixo,
-              exatamente o que a plataforma mostra sobre ele:{" "}
-              <b>nota, melhores usos e leitura da região</b>.
+              Nada de tela de exemplo. Abaixo está exatamente o que a plataforma mostra sobre um
+              imóvel da base: <b>nota, melhores usos e leitura da região</b>.
             </p>
           </div>
 
-          <div className="lp-showcase">
-            <article className="lp-sc-card lp-reveal">
-              <div className="lp-sc-photo">
-                <Image
-                  src="/showcase/porto-canoa.jpg"
-                  alt="Fachada do condomínio Vista Mata da Serra, em Porto Canoa, Serra/ES"
-                  width={1200}
-                  height={600}
-                  sizes="(max-width: 900px) 100vw, 620px"
-                />
-                <span className="lp-tag">Apartamento</span>
-                <span className="lp-simi">1º Leilão</span>
-              </div>
-              <div className="lp-sc-body">
-                <span className="lp-sc-kicker mono">Matrícula Caixa 1787702095171</span>
-                <b className="lp-sc-title">Apartamento 2 dormitórios - Porto Canoa</b>
-                <div className="lp-loc">Serra/ES · a 4,2 km do centro</div>
-
-                <div className="lp-sc-attrs">
-                  {[
-                    { k: "Área útil", v: "44 m²" },
-                    { k: "Quartos", v: "2" },
-                    { k: "Vagas", v: "1" },
-                    { k: "Situação", v: "Ocupado" },
-                  ].map((a) => (
-                    <div key={a.k}>
-                      <span>{a.k}</span>
-                      <b>{a.v}</b>
-                    </div>
-                  ))}
-                </div>
-
-                <div className="lp-sc-price">
-                  <div>
-                    <span>Lance inicial</span>
-                    <b>R$ 274.000</b>
-                  </div>
-                  <div className="lp-sc-visual">
-                    <i>77</i> avaliação visual da fachada
-                  </div>
-                </div>
-              </div>
-            </article>
-
-            <div className="lp-sc-side lp-reveal lp-d1">
-              <div className="lp-sc-ring">
-                <svg className="lp-ring" width="92" height="92" viewBox="0 0 56 56">
-                  <circle className="lp-track" cx="28" cy="28" r="23" strokeWidth="6" />
-                  <circle
-                    className="lp-bar"
-                    cx="28"
-                    cy="28"
-                    r="23"
-                    strokeWidth="6"
-                    strokeDasharray="144.5"
-                    strokeDashoffset="144.5"
-                    data-off="28.9"
-                    transform="rotate(-90 28 28)"
-                  />
-                  <text x="28" y="33" textAnchor="middle" fontSize="17">
-                    80
-                  </text>
-                </svg>
-                <div>
-                  <b>Nota geral de investimento</b>
-                  <span>combina desconto, região e liquidez em uma nota de 0 a 100.</span>
-                </div>
-              </div>
-
-              <div className="lp-sc-uses">
-                <span className="lp-seclabel lp-sc-lbl">Melhores usos</span>
-                <ScoreBars
-                  items={[
-                    { k: "Aluguel por temporada", v: 98 },
-                    { k: "Comercial", v: 95 },
-                    { k: "Moradia familiar", v: 77 },
-                    { k: "Venda rápida", v: 67 },
-                  ]}
-                />
-              </div>
-
-              <div className="lp-whybox">
-                <b>Por quê?</b> fica a 299 m de supermercado e 234 m de parque, com universidade e
-                shopping a menos de 800 m - perfil que sustenta temporada e uso comercial.
-              </div>
-            </div>
-          </div>
-
-          <div className="lp-sc-region lp-reveal lp-d2">
-            <div className="lp-sc-reghead">
-              <div>
-                <span className="lp-seclabel lp-sc-lbl">A região</span>
-                <b>Porto Canoa · Serra/ES</b>
-              </div>
-              <div className="lp-sc-chips">
-                <span>Temporada</span>
-                <span>Familiar</span>
-              </div>
-            </div>
-            <div className="lp-sc-reggrid">
-              <div className="lp-sc-regscores">
-                <ScoreBars
-                  items={[
-                    { k: "Familiar", v: 88 },
-                    { k: "Caminhabilidade", v: 88 },
-                    { k: "Conveniência", v: 85 },
-                    { k: "Temporada", v: 83 },
-                  ]}
-                />
-              </div>
-              <div className="lp-sc-pois">
-                {[
-                  { k: "Parque", v: "234 m" },
-                  { k: "Supermercado", v: "299 m" },
-                  { k: "Restaurante", v: "471 m" },
-                  { k: "Shopping", v: "514 m" },
-                  { k: "Universidade", v: "749 m" },
-                  { k: "Hospital", v: "928 m" },
-                ].map((p) => (
-                  <div className="lp-sc-poi" key={p.k}>
-                    <span>{p.k}</span>
-                    <b>{p.v}</b>
-                  </div>
-                ))}
-              </div>
-            </div>
-            <div className="lp-sc-foot">
-              Distância até o serviço mais próximo, a partir de dados de mapa (OpenStreetMap).
-            </div>
-          </div>
+          <ShowcaseGallery />
 
           <div className="lp-sc-cta lp-reveal lp-d3">
-            <Link className="lp-btn lp-solid lp-big" href={user ? "/dashboard" : "/register"}>
+            <Link className="lp-btn lp-solid lp-big" href="/dashboard">
               Ver imóveis como este
             </Link>
-            <span>Dados reais do leilão da Caixa, coletados em jul. de 2026.</span>
+            <span>
+              Imóveis reais da base pública da Caixa, com dados de {fmtDay(SHOWCASE_CAPTURED)}. A
+              oferta muda todo dia - um imóvel pode ser arrematado ou sair do ar a qualquer momento.
+            </span>
           </div>
         </div>
       </section>
 
-      <section className="lp-band" id="recursos">
+      <section className="lp-band lp-chapter" id="recursos">
         <div className="lp-wrap">
           <div className="lp-sechead lp-reveal">
-            <span className="lp-seclabel">// recursos exclusivos da Lavra</span>
-            <h2>Tudo o que você precisa para decidir com confiança</h2>
-            <p>Da busca à hora do lance, cada etapa fica mais simples - e mais clara.</p>
+            <span className="lp-seclabel">o que a Lavra faz por você</span>
+            <h2>Da busca ao lance, com número em cada passo</h2>
+            <p>
+              Quatro coisas que a Lavra faz automaticamente, todo dia, em cima de toda a base ativa.
+            </p>
           </div>
 
           <div className="lp-stack lp-m-slide">
             <div className="lp-layer">
               <div className="lp-lcard">
                 <div className="lp-lbody">
-                  <span className="lp-lindex">
-                    <i>1</i> busca em português
-                  </span>
+                  <div className="lp-lhead">
+                    <span className="lp-lindex">
+                      <i>1</i> busca em português
+                    </span>
+                  </div>
                   <h3>Descreva o imóvel; a gente encontra o leilão</h3>
                   <p>
                     Fale como falaria com um corretor. A Lavra entende o seu objetivo - não só
@@ -559,20 +462,23 @@ export default async function LandingPage() {
             <div className="lp-layer">
               <div className="lp-lcard">
                 <div className="lp-lbody">
-                  <span className="lp-badge-prop">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                      <rect x="4" y="10" width="16" height="11" rx="2" />
-                      <path d="M8 10V7a4 4 0 0 1 8 0v3" />
-                    </svg>{" "}
-                    Algoritmo proprietário
-                  </span>
-                  <span className="lp-lindex">
-                    <i>2</i> nota de investimento
-                  </span>
-                  <h3>Uma nota, calibrada pelo nosso algoritmo</h3>
+                  <div className="lp-lhead">
+                    <span className="lp-badge-prop">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                        <rect x="4" y="10" width="16" height="11" rx="2" />
+                        <path d="M8 10V7a4 4 0 0 1 8 0v3" />
+                      </svg>{" "}
+                      Modelo próprio da Lavra
+                    </span>
+                    <span className="lp-lindex">
+                      <i>2</i> nota de investimento
+                    </span>
+                  </div>
+                  <h3>Uma nota de 0 a 100 - e o porquê dela</h3>
                   <p>
-                    O modelo proprietário da Lavra combina desconto, preço de mercado, qualidade da
-                    região e liquidez em uma nota de 0 a 100 - sempre com o “porquê” aberto.
+                    A nota combina desconto sobre a avaliação, preço frente ao mercado do bairro,
+                    serviços no entorno e facilidade de revenda. Os pesos mudam conforme o tipo -
+                    moradia, terreno ou comercial se valorizam de formas diferentes.
                   </p>
                   <ul className="lp-lpoints">
                     <li>
@@ -585,7 +491,7 @@ export default async function LandingPage() {
                       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
                         <path d="m5 13 4 4L19 7" />
                       </svg>
-                      Explicação fator a fator, nada de caixa-preta
+                      Explicação fator a fator: o que puxou para cima e o que puxou para baixo
                     </li>
                   </ul>
                 </div>
@@ -601,16 +507,16 @@ export default async function LandingPage() {
                         strokeWidth="6"
                         strokeDasharray="144.5"
                         strokeDashoffset="144.5"
-                        data-off="18.8"
+                        data-off="15.9"
                         transform="rotate(-90 28 28)"
                       />
                       <text x="28" y="33" textAnchor="middle" fontSize="16">
-                        87
+                        89
                       </text>
                     </svg>
                     <div className="lp-info">
-                      <b>Apartamento 72 m² · Vila Mariana</b>
-                      <span>Lance R$ 312.000 · Avaliação R$ 520.000</span>
+                      <b>Apartamento 64 m² · Jardim Palma Travassos</b>
+                      <span>Lance R$ 137.390 · Avaliação R$ 228.983</span>
                     </div>
                   </div>
                   <div className="lp-bar">
@@ -651,20 +557,22 @@ export default async function LandingPage() {
             <div className="lp-layer">
               <div className="lp-lcard">
                 <div className="lp-lbody">
-                  <span className="lp-badge-prop">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                      <path d="M12 3l2 4 4 2-4 2-2 4-2-4-4-2 4-2z" />
-                    </svg>{" "}
-                    Visão computacional
-                  </span>
-                  <span className="lp-lindex">
-                    <i>3</i> score visual por IA
-                  </span>
-                  <h3>Modelos de IA avaliam a cara do imóvel</h3>
+                  <div className="lp-lhead">
+                    <span className="lp-badge-prop">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                        <path d="M12 3l2 4 4 2-4 2-2 4-2-4-4-2 4-2z" />
+                      </svg>{" "}
+                      Visão computacional
+                    </span>
+                    <span className="lp-lindex">
+                      <i>3</i> avaliação visual
+                    </span>
+                  </div>
+                  <h3>A cara do imóvel também vira nota</h3>
                   <p>
-                    A partir das fotos, nossos modelos estimam a <b>qualidade da fachada</b> e a{" "}
-                    <b>idade aparente</b> do imóvel - sinais que ajudam a prever conservação e custo
-                    de reforma.
+                    A partir da foto do anúncio, a Lavra dá uma nota de 0 a 100 para{" "}
+                    <b>fachada, acabamento e estado de conservação</b> - um sinal a mais para
+                    dimensionar a reforma antes de visitar, que entra no cálculo da nota geral.
                   </p>
                   <ul className="lp-lpoints">
                     <li>
@@ -677,7 +585,7 @@ export default async function LandingPage() {
                       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
                         <path d="m5 13 4 4L19 7" />
                       </svg>
-                      Idade estimada para dimensionar a reforma
+                      Disponível na maior parte dos imóveis com foto
                     </li>
                   </ul>
                 </div>
@@ -689,30 +597,14 @@ export default async function LandingPage() {
                       </svg>{" "}
                       IA · visão
                     </span>
-                    <svg
-                      className="lp-photo-illus2"
-                      viewBox="0 0 320 156"
-                      preserveAspectRatio="xMidYMid slice"
-                    >
-                      <path
-                        className="lp-il-ground"
-                        d="M0 120 C 90 108, 200 128, 320 116 L320 156 L0 156 Z"
-                      />
-                      <rect
-                        className="lp-il-tree-trunk"
-                        x="286"
-                        y="92"
-                        width="8"
-                        height="30"
-                        rx="2"
-                      />
-                      <circle className="lp-il-tree-top" cx="290" cy="84" r="18" />
-                      <polygon className="lp-il-roof" points="120,52 210,52 232,86 98,86" />
-                      <rect className="lp-il-wall" x="122" y="86" width="86" height="34" />
-                      <rect className="lp-il-door" x="152" y="100" width="22" height="20" rx="1" />
-                      <rect className="lp-il-win" x="132" y="94" width="14" height="14" rx="1.5" />
-                      <rect className="lp-il-win" x="184" y="94" width="14" height="14" rx="1.5" />
-                    </svg>
+                    <Image
+                      src="/showcase/apto-ribeirao-preto.jpg"
+                      alt=""
+                      width={1200}
+                      height={750}
+                      loading="lazy"
+                      sizes="420px"
+                    />
                     <div className="lp-scan">
                       <span>fachada analisada</span>
                     </div>
@@ -725,9 +617,9 @@ export default async function LandingPage() {
                       </div>
                     </div>
                     <div className="lp-vs-stat">
-                      <div className="lp-k">Idade estimada</div>
+                      <div className="lp-k">Entra na nota geral</div>
                       <div className="lp-v">
-                        ~15<small> anos</small>
+                        sim<small> · como um fator</small>
                       </div>
                     </div>
                   </div>
@@ -738,26 +630,29 @@ export default async function LandingPage() {
             <div className="lp-layer">
               <div className="lp-lcard">
                 <div className="lp-lbody">
-                  <span className="lp-lindex">
-                    <i>4</i> alertas inteligentes
-                  </span>
-                  <h3>A oportunidade chega até você</h3>
+                  <div className="lp-lhead">
+                    <span className="lp-lindex">
+                      <i>4</i> alertas e agenda
+                    </span>
+                  </div>
+                  <h3>A oportunidade chega no seu e-mail</h3>
                   <p>
-                    Salve o que procura e a Lavra te avisa <b>na hora</b> em que um imóvel
-                    compatível entra - por e-mail, WhatsApp ou push. Sem ficar atualizando a página.
+                    Salve os critérios que você procura e escolha a frequência: <b>diária</b>,{" "}
+                    <b>semanal</b> ou <b>mensal</b>. A Lavra varre a base atualizada e manda por
+                    e-mail só o que combina - com a nota já calculada.
                   </p>
                   <ul className="lp-lpoints">
                     <li>
                       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
                         <path d="m5 13 4 4L19 7" />
                       </svg>
-                      Disparo automático quando surge um match
+                      Você escolhe a cadência: diária, semanal ou mensal
                     </li>
                     <li>
                       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
                         <path d="m5 13 4 4L19 7" />
                       </svg>
-                      Datas de praça dos favoritos no calendário
+                      Datas de leilão dos seus favoritos na carteira
                     </li>
                   </ul>
                 </div>
@@ -774,11 +669,11 @@ export default async function LandingPage() {
                         <b>Casas p/ reforma · zona sul SP</b>
                         <span>seu alerta salvo</span>
                       </div>
-                      <span className="lp-when">agora</span>
+                      <span className="lp-when">aviso diário</span>
                     </div>
                     <div className="lp-msg">
-                      <b>Nova oportunidade!</b> Casa 110 m² · Saúde - nota 87, 40% abaixo da
-                      avaliação. 1ª praça em 12 dias.
+                      <b>3 imóveis novos</b> combinam com os seus critérios. O melhor: casa 127 m²,
+                      nota 94, 79% abaixo da avaliação.
                     </div>
                     <div className="lp-channels">
                       <span>
@@ -790,15 +685,10 @@ export default async function LandingPage() {
                       </span>
                       <span>
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                          <path d="M21 11.5a8.5 8.5 0 0 1-12.5 7.5L3 20l1.5-5.5A8.5 8.5 0 1 1 21 11.5z" />
+                          <rect x="3" y="5" width="18" height="16" rx="2" />
+                          <path d="M3 10h18M8 3v4M16 3v4" />
                         </svg>{" "}
-                        WhatsApp
-                      </span>
-                      <span>
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                          <path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9" />
-                        </svg>{" "}
-                        Push
+                        Agenda de leilões
                       </span>
                     </div>
                   </div>
@@ -809,1098 +699,11 @@ export default async function LandingPage() {
         </div>
       </section>
 
-      <section className="lp-band lp-alt lp-m-hide" id="painel">
-        <div className="lp-wrap">
-          <div className="lp-sechead lp-reveal">
-            <span className="lp-seclabel">// o produto por dentro</span>
-            <h2>Um painel feito para explorar leilões</h2>
-            <p>
-              Imóveis, grupos de oportunidades e regiões - explore tudo em um painel só, sempre
-              reordenado por relevância a cada busca.
-            </p>
-          </div>
-
-          <div className="lp-appframe lp-reveal lp-d1">
-            <div className="lp-winbar">
-              <span className="lp-dots">
-                <i></i>
-                <i></i>
-                <i></i>
-              </span>
-              <span className="lp-url" id="appurl">
-                app.lavra.com.br/imoveis
-              </span>
-            </div>
-            <div className="lp-appui">
-              <aside className="lp-appside">
-                <div className="lp-brand2">
-                  <span className="lp-mk">
-                    <svg viewBox="0 0 48 48" width="20" height="20">
-                      <circle cx="14" cy="9" r="3" fill="currentColor" />
-                      <path
-                        d="M14 15v15a4 4 0 0 0 4 4h13"
-                        stroke="currentColor"
-                        strokeWidth="4"
-                        strokeLinecap="round"
-                        fill="none"
-                      />
-                      <path
-                        d="M27 27.5 34 34l-7 6.5"
-                        stroke="currentColor"
-                        strokeWidth="4"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        fill="none"
-                      />
-                    </svg>
-                  </span>
-                  <span>
-                    <b>Lavra</b>
-                    <small>Leilões inteligentes</small>
-                  </span>
-                </div>
-                <div className="lp-nlabel">Menu</div>
-                <div className="lp-nav2">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                    <path d="M3 11 12 4l9 7" />
-                    <path d="M5 10v10h14V10" />
-                  </svg>{" "}
-                  Início
-                </div>
-                <div className="lp-nav2">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                    <circle cx="11" cy="11" r="7" />
-                    <path d="m20 20-3.2-3.2" />
-                  </svg>{" "}
-                  Buscar imóveis
-                </div>
-                <div className="lp-nav2 lp-on" data-nav="0">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                    <path d="M4 21V5a1 1 0 0 1 1-1h9a1 1 0 0 1 1 1v16M15 21V9h4a1 1 0 0 1 1 1v11M3 21h18M8 8h3M8 12h3M8 16h3" />
-                  </svg>{" "}
-                  Imóveis
-                </div>
-                <div className="lp-nav2" data-nav="1">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                    <rect x="4" y="4" width="7" height="7" rx="1" />
-                    <rect x="13" y="4" width="7" height="7" rx="1" />
-                    <rect x="4" y="13" width="7" height="7" rx="1" />
-                    <rect x="13" y="13" width="7" height="7" rx="1" />
-                  </svg>{" "}
-                  Grupos
-                </div>
-                <div className="lp-nav2" data-nav="2">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                    <path d="M12 22s7-6.5 7-12a7 7 0 1 0-14 0c0 5.5 7 12 7 12z" />
-                    <circle cx="12" cy="10" r="2.5" />
-                  </svg>{" "}
-                  Regiões
-                </div>
-                <div className="lp-nav2">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                    <path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9" />
-                    <path d="M13.7 21a2 2 0 0 1-3.4 0" />
-                  </svg>{" "}
-                  Alertas
-                </div>
-                <div className="lp-nav2">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                    <path d="M12 3l2.6 5.3 5.9.9-4.3 4.1 1 5.8-5.2-2.7-5.2 2.7 1-5.8L3.5 9.2l5.9-.9z" />
-                  </svg>{" "}
-                  Minha carteira
-                </div>
-              </aside>
-
-              <div className="lp-appmainwrap">
-                <div className="lp-apptrack" id="apptrack">
-                  <div className="lp-appmain lp-appslide">
-                    <div className="lp-apptop">
-                      <div className="lp-appsearch">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                          <circle cx="11" cy="11" r="7" />
-                          <path d="m20 20-3.2-3.2" />
-                        </svg>
-                        <span className="lp-txt">casa 3 quartos com quintal perto de escola</span>
-                      </div>
-                      <div className="lp-ticons">
-                        <i>
-                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                            <circle cx="12" cy="12" r="4" />
-                            <path d="M12 2v2m0 16v2M4.9 4.9l1.4 1.4m11.4 11.4 1.4 1.4M2 12h2m16 0h2M4.9 19.1l1.4-1.4m11.4-11.4 1.4-1.4" />
-                          </svg>
-                        </i>
-                        <i>
-                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                            <path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9" />
-                            <path d="M13.7 21a2 2 0 0 1-3.4 0" />
-                          </svg>
-                        </i>
-                      </div>
-                      <span className="lp-avatar">LQ</span>
-                    </div>
-
-                    <div className="lp-apptoolbar">
-                      <span className="lp-crumb">
-                        Imóveis <b>· 1.240 encontrados</b>
-                      </span>
-                      <span className="lp-sortsel">
-                        Ordenar: Relevância{" "}
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                          <path d="m6 9 6 6 6-6" />
-                        </svg>
-                      </span>
-                    </div>
-                    <div className="lp-appchips">
-                      <span>São Paulo, SP</span>
-                      <span>Casa</span>
-                      <span>3+ quartos</span>
-                      <span>até R$ 400 mil</span>
-                      <span className="lp-muted">+ Perto de: escola</span>
-                    </div>
-                    <div className="lp-relnote">
-                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                        <path d="M7 4v13m0 0-3-3m3 3 3-3M17 20V7m0 0-3 3m3-3 3 3" />
-                      </svg>
-                      <span>
-                        <b>Reordenado por relevância</b> a cada busca - algoritmo especializado da
-                        Lavra coloca as melhores oportunidades no topo.
-                      </span>
-                    </div>
-
-                    <div className="lp-appgrid">
-                      <article className="lp-appcard">
-                        <div className="lp-ap-photo">
-                          <span className="lp-ap-type">Casa</span>
-                          <span className="lp-ap-disc">−40%</span>
-                          <span className="lp-ap-fav">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                              <path d="M12 21s-7-4.5-9.5-9A5 5 0 0 1 12 6a5 5 0 0 1 9.5 6c-2.5 4.5-9.5 9-9.5 9z" />
-                            </svg>
-                          </span>
-                          <svg
-                            className="lp-photo-illus2"
-                            viewBox="0 0 284 150"
-                            preserveAspectRatio="xMidYMid slice"
-                          >
-                            <polygon
-                              className="lp-il-hex"
-                              points="250,20 262,27 262,41 250,48 238,41 238,27"
-                            />
-                            <path
-                              className="lp-il-ground"
-                              d="M0 116 C 80 106, 180 126, 284 112 L284 150 L0 150 Z"
-                            />
-                            <rect
-                              className="lp-il-tree-trunk"
-                              x="44"
-                              y="86"
-                              width="7"
-                              height="28"
-                              rx="2"
-                            />
-                            <circle className="lp-il-tree-top" cx="47.5" cy="80" r="16" />
-                            <polygon className="lp-il-roof" points="108,50 176,50 194,78 90,78" />
-                            <rect className="lp-il-wall" x="112" y="78" width="60" height="36" />
-                            <rect
-                              className="lp-il-door"
-                              x="133"
-                              y="94"
-                              width="18"
-                              height="20"
-                              rx="1"
-                            />
-                            <rect
-                              className="lp-il-win"
-                              x="120"
-                              y="84"
-                              width="11"
-                              height="11"
-                              rx="1.5"
-                            />
-                            <rect
-                              className="lp-il-win"
-                              x="153"
-                              y="84"
-                              width="11"
-                              height="11"
-                              rx="1.5"
-                            />
-                          </svg>
-                        </div>
-                        <div className="lp-ap-body">
-                          <b>Casa 110 m²</b>
-                          <div className="lp-ap-loc">Saúde · São Paulo/SP</div>
-                          <div className="lp-ap-facts">
-                            <span>
-                              <b>110</b> m²
-                            </span>
-                            <span>
-                              <b>3</b> quartos
-                            </span>
-                          </div>
-                          <div className="lp-ap-price">
-                            <div className="lp-now">R$ 385.000</div>
-                            <div className="lp-was">avaliado em R$ 640.000</div>
-                          </div>
-                          <div className="lp-ap-score">
-                            <svg className="lp-ring" width="42" height="42" viewBox="0 0 42 42">
-                              <circle className="lp-track" cx="21" cy="21" r="16" strokeWidth="5" />
-                              <circle
-                                className="lp-bar"
-                                cx="21"
-                                cy="21"
-                                r="16"
-                                strokeWidth="5"
-                                strokeDasharray="100.5"
-                                strokeDashoffset="100.5"
-                                data-off="13.1"
-                                transform="rotate(-90 21 21)"
-                              />
-                              <text x="21" y="25" textAnchor="middle" fontSize="13">
-                                87
-                              </text>
-                            </svg>
-                            <div className="lp-ap-goals">
-                              <span className="lp-k">Ideal para</span>
-                              <span className="lp-gp lp-on">Moradia</span>
-                              <span className="lp-gp">Reforma</span>
-                            </div>
-                          </div>
-                        </div>
-                      </article>
-
-                      <article className="lp-appcard">
-                        <div className="lp-ap-photo">
-                          <span className="lp-ap-type">Apartamento</span>
-                          <span className="lp-ap-disc">−40%</span>
-                          <span className="lp-ap-fav">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                              <path d="M12 21s-7-4.5-9.5-9A5 5 0 0 1 12 6a5 5 0 0 1 9.5 6c-2.5 4.5-9.5 9-9.5 9z" />
-                            </svg>
-                          </span>
-                          <svg
-                            className="lp-photo-illus2"
-                            viewBox="0 0 284 150"
-                            preserveAspectRatio="xMidYMid slice"
-                          >
-                            <polygon
-                              className="lp-il-hex"
-                              points="40,22 52,29 52,43 40,50 28,43 28,29"
-                            />
-                            <path
-                              className="lp-il-ground"
-                              d="M0 118 C 90 108, 190 128, 284 114 L284 150 L0 150 Z"
-                            />
-                            <rect
-                              className="lp-il-tree-trunk"
-                              x="228"
-                              y="84"
-                              width="7"
-                              height="30"
-                              rx="2"
-                            />
-                            <circle className="lp-il-tree-top" cx="231.5" cy="78" r="17" />
-                            <rect
-                              className="lp-il-roof-soft"
-                              x="104"
-                              y="42"
-                              width="70"
-                              height="72"
-                              rx="3"
-                            />
-                            <g className="lp-il-win">
-                              <rect x="114" y="52" width="12" height="12" rx="1.5" />
-                              <rect x="133" y="52" width="12" height="12" rx="1.5" />
-                              <rect x="152" y="52" width="12" height="12" rx="1.5" />
-                              <rect x="114" y="70" width="12" height="12" rx="1.5" />
-                              <rect x="133" y="70" width="12" height="12" rx="1.5" />
-                              <rect x="152" y="70" width="12" height="12" rx="1.5" />
-                              <rect x="114" y="88" width="12" height="12" rx="1.5" />
-                              <rect x="133" y="88" width="12" height="12" rx="1.5" />
-                              <rect x="152" y="88" width="12" height="12" rx="1.5" />
-                            </g>
-                          </svg>
-                        </div>
-                        <div className="lp-ap-body">
-                          <b>Apartamento 72 m²</b>
-                          <div className="lp-ap-loc">Vila Mariana · São Paulo/SP</div>
-                          <div className="lp-ap-facts">
-                            <span>
-                              <b>72</b> m²
-                            </span>
-                            <span>
-                              <b>2</b> quartos
-                            </span>
-                          </div>
-                          <div className="lp-ap-price">
-                            <div className="lp-now">R$ 312.000</div>
-                            <div className="lp-was">avaliado em R$ 520.000</div>
-                          </div>
-                          <div className="lp-ap-score">
-                            <svg className="lp-ring" width="42" height="42" viewBox="0 0 42 42">
-                              <circle className="lp-track" cx="21" cy="21" r="16" strokeWidth="5" />
-                              <circle
-                                className="lp-bar"
-                                cx="21"
-                                cy="21"
-                                r="16"
-                                strokeWidth="5"
-                                strokeDasharray="100.5"
-                                strokeDashoffset="100.5"
-                                data-off="16.1"
-                                transform="rotate(-90 21 21)"
-                              />
-                              <text x="21" y="25" textAnchor="middle" fontSize="13">
-                                84
-                              </text>
-                            </svg>
-                            <div className="lp-ap-goals">
-                              <span className="lp-k">Ideal para</span>
-                              <span className="lp-gp lp-on">Moradia</span>
-                              <span className="lp-gp">Temporada</span>
-                            </div>
-                          </div>
-                        </div>
-                      </article>
-
-                      <article className="lp-appcard">
-                        <div className="lp-ap-photo">
-                          <span className="lp-ap-type">Sobrado</span>
-                          <span className="lp-ap-disc">−37%</span>
-                          <span className="lp-ap-fav">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                              <path d="M12 21s-7-4.5-9.5-9A5 5 0 0 1 12 6a5 5 0 0 1 9.5 6c-2.5 4.5-9.5 9-9.5 9z" />
-                            </svg>
-                          </span>
-                          <svg
-                            className="lp-photo-illus2"
-                            viewBox="0 0 284 150"
-                            preserveAspectRatio="xMidYMid slice"
-                          >
-                            <polygon
-                              className="lp-il-hex"
-                              points="250,20 262,27 262,41 250,48 238,41 238,27"
-                            />
-                            <path
-                              className="lp-il-ground"
-                              d="M0 116 C 80 106, 180 126, 284 112 L284 150 L0 150 Z"
-                            />
-                            <rect
-                              className="lp-il-tree-trunk"
-                              x="44"
-                              y="86"
-                              width="7"
-                              height="28"
-                              rx="2"
-                            />
-                            <circle className="lp-il-tree-top" cx="47.5" cy="80" r="16" />
-                            <polygon className="lp-il-roof" points="108,50 176,50 194,78 90,78" />
-                            <rect className="lp-il-wall" x="112" y="78" width="60" height="36" />
-                            <rect
-                              className="lp-il-door"
-                              x="133"
-                              y="94"
-                              width="18"
-                              height="20"
-                              rx="1"
-                            />
-                            <rect
-                              className="lp-il-win"
-                              x="120"
-                              y="84"
-                              width="11"
-                              height="11"
-                              rx="1.5"
-                            />
-                            <rect
-                              className="lp-il-win"
-                              x="153"
-                              y="84"
-                              width="11"
-                              height="11"
-                              rx="1.5"
-                            />
-                          </svg>
-                        </div>
-                        <div className="lp-ap-body">
-                          <b>Sobrado 96 m²</b>
-                          <div className="lp-ap-loc">Jabaquara · São Paulo/SP</div>
-                          <div className="lp-ap-facts">
-                            <span>
-                              <b>96</b> m²
-                            </span>
-                            <span>
-                              <b>3</b> quartos
-                            </span>
-                          </div>
-                          <div className="lp-ap-price">
-                            <div className="lp-now">R$ 298.000</div>
-                            <div className="lp-was">avaliado em R$ 470.000</div>
-                          </div>
-                          <div className="lp-ap-score">
-                            <svg className="lp-ring" width="42" height="42" viewBox="0 0 42 42">
-                              <circle className="lp-track" cx="21" cy="21" r="16" strokeWidth="5" />
-                              <circle
-                                className="lp-bar"
-                                cx="21"
-                                cy="21"
-                                r="16"
-                                strokeWidth="5"
-                                strokeDasharray="100.5"
-                                strokeDashoffset="100.5"
-                                data-off="20.1"
-                                transform="rotate(-90 21 21)"
-                              />
-                              <text x="21" y="25" textAnchor="middle" fontSize="13">
-                                80
-                              </text>
-                            </svg>
-                            <div className="lp-ap-goals">
-                              <span className="lp-k">Ideal para</span>
-                              <span className="lp-gp lp-on">Reforma</span>
-                              <span className="lp-gp">Estudantil</span>
-                            </div>
-                          </div>
-                        </div>
-                      </article>
-                    </div>
-                  </div>
-
-                  <div className="lp-appmain lp-appslide">
-                    <div className="lp-apptop">
-                      <div className="lp-appsearch">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                          <circle cx="11" cy="11" r="7" />
-                          <path d="m20 20-3.2-3.2" />
-                        </svg>
-                        <span className="lp-txt">apartamentos populares de alta liquidez</span>
-                      </div>
-                      <div className="lp-ticons">
-                        <i>
-                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                            <circle cx="12" cy="12" r="4" />
-                            <path d="M12 2v2m0 16v2M4.9 4.9l1.4 1.4m11.4 11.4 1.4 1.4M2 12h2m16 0h2M4.9 19.1l1.4-1.4m11.4-11.4 1.4-1.4" />
-                          </svg>
-                        </i>
-                        <i>
-                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                            <path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9" />
-                            <path d="M13.7 21a2 2 0 0 1-3.4 0" />
-                          </svg>
-                        </i>
-                      </div>
-                      <span className="lp-avatar">LQ</span>
-                    </div>
-                    <div className="lp-apptoolbar">
-                      <span className="lp-crumb">
-                        Grupos <b>· 48 segmentos</b>
-                      </span>
-                      <span className="lp-sortsel">
-                        Ordenar: Liquidez{" "}
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                          <path d="m6 9 6 6 6-6" />
-                        </svg>
-                      </span>
-                    </div>
-                    <div className="lp-appclusters">
-                      <div className="lp-gcard">
-                        <div className="lp-ghex">
-                          <svg viewBox="0 0 26 30">
-                            <polygon
-                              className="lp-hf"
-                              points="13,1 25,8 25,22 13,29 1,22 1,8"
-                              fillOpacity="0.85"
-                            />
-                          </svg>
-                          <svg viewBox="0 0 26 30">
-                            <polygon
-                              className="lp-hf"
-                              points="13,1 25,8 25,22 13,29 1,22 1,8"
-                              fillOpacity="0.5"
-                            />
-                          </svg>
-                          <svg viewBox="0 0 26 30">
-                            <polygon
-                              className="lp-hf"
-                              points="13,1 25,8 25,22 13,29 1,22 1,8"
-                              fillOpacity="0.3"
-                            />
-                          </svg>
-                        </div>
-                        <b>Apartamentos populares de alta liquidez</b>
-                        <div className="lp-gmeta">São Paulo, SP · 1–2 quartos</div>
-                        <div className="lp-gcount">1.240 imóveis</div>
-                      </div>
-                      <div className="lp-gcard">
-                        <div className="lp-ghex">
-                          <svg viewBox="0 0 26 30">
-                            <polygon
-                              className="lp-hf"
-                              points="13,1 25,8 25,22 13,29 1,22 1,8"
-                              fillOpacity="0.85"
-                            />
-                          </svg>
-                          <svg viewBox="0 0 26 30">
-                            <polygon
-                              className="lp-hf"
-                              points="13,1 25,8 25,22 13,29 1,22 1,8"
-                              fillOpacity="0.5"
-                            />
-                          </svg>
-                          <svg viewBox="0 0 26 30">
-                            <polygon
-                              className="lp-hf"
-                              points="13,1 25,8 25,22 13,29 1,22 1,8"
-                              fillOpacity="0.3"
-                            />
-                          </svg>
-                        </div>
-                        <b>Terrenos compactos de valor médio</b>
-                        <div className="lp-gmeta">Grande São Paulo</div>
-                        <div className="lp-gcount">380 imóveis</div>
-                      </div>
-                      <div className="lp-gcard">
-                        <div className="lp-ghex">
-                          <svg viewBox="0 0 26 30">
-                            <polygon
-                              className="lp-hf"
-                              points="13,1 25,8 25,22 13,29 1,22 1,8"
-                              fillOpacity="0.85"
-                            />
-                          </svg>
-                          <svg viewBox="0 0 26 30">
-                            <polygon
-                              className="lp-hf"
-                              points="13,1 25,8 25,22 13,29 1,22 1,8"
-                              fillOpacity="0.5"
-                            />
-                          </svg>
-                          <svg viewBox="0 0 26 30">
-                            <polygon
-                              className="lp-hf"
-                              points="13,1 25,8 25,22 13,29 1,22 1,8"
-                              fillOpacity="0.3"
-                            />
-                          </svg>
-                        </div>
-                        <b>Sobrados para reforma e revenda</b>
-                        <div className="lp-gmeta">Zona Sul, SP</div>
-                        <div className="lp-gcount">156 imóveis</div>
-                      </div>
-                      <div className="lp-gcard">
-                        <div className="lp-ghex">
-                          <svg viewBox="0 0 26 30">
-                            <polygon
-                              className="lp-hf"
-                              points="13,1 25,8 25,22 13,29 1,22 1,8"
-                              fillOpacity="0.85"
-                            />
-                          </svg>
-                          <svg viewBox="0 0 26 30">
-                            <polygon
-                              className="lp-hf"
-                              points="13,1 25,8 25,22 13,29 1,22 1,8"
-                              fillOpacity="0.5"
-                            />
-                          </svg>
-                          <svg viewBox="0 0 26 30">
-                            <polygon
-                              className="lp-hf"
-                              points="13,1 25,8 25,22 13,29 1,22 1,8"
-                              fillOpacity="0.3"
-                            />
-                          </svg>
-                        </div>
-                        <b>Kitnets perto de universidades</b>
-                        <div className="lp-gmeta">São Paulo, SP</div>
-                        <div className="lp-gcount">92 imóveis</div>
-                      </div>
-                      <div className="lp-gcard">
-                        <div className="lp-ghex">
-                          <svg viewBox="0 0 26 30">
-                            <polygon
-                              className="lp-hf"
-                              points="13,1 25,8 25,22 13,29 1,22 1,8"
-                              fillOpacity="0.85"
-                            />
-                          </svg>
-                          <svg viewBox="0 0 26 30">
-                            <polygon
-                              className="lp-hf"
-                              points="13,1 25,8 25,22 13,29 1,22 1,8"
-                              fillOpacity="0.5"
-                            />
-                          </svg>
-                          <svg viewBox="0 0 26 30">
-                            <polygon
-                              className="lp-hf"
-                              points="13,1 25,8 25,22 13,29 1,22 1,8"
-                              fillOpacity="0.3"
-                            />
-                          </svg>
-                        </div>
-                        <b>Casas familiares com quintal</b>
-                        <div className="lp-gmeta">Região do ABC</div>
-                        <div className="lp-gcount">214 imóveis</div>
-                      </div>
-                      <div className="lp-gcard">
-                        <div className="lp-ghex">
-                          <svg viewBox="0 0 26 30">
-                            <polygon
-                              className="lp-hf"
-                              points="13,1 25,8 25,22 13,29 1,22 1,8"
-                              fillOpacity="0.85"
-                            />
-                          </svg>
-                          <svg viewBox="0 0 26 30">
-                            <polygon
-                              className="lp-hf"
-                              points="13,1 25,8 25,22 13,29 1,22 1,8"
-                              fillOpacity="0.5"
-                            />
-                          </svg>
-                          <svg viewBox="0 0 26 30">
-                            <polygon
-                              className="lp-hf"
-                              points="13,1 25,8 25,22 13,29 1,22 1,8"
-                              fillOpacity="0.3"
-                            />
-                          </svg>
-                        </div>
-                        <b>Salas comerciais de alta liquidez</b>
-                        <div className="lp-gmeta">Centro, SP</div>
-                        <div className="lp-gcount">128 imóveis</div>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="lp-appmain lp-appslide">
-                    <div className="lp-apptop">
-                      <div className="lp-appsearch">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                          <circle cx="11" cy="11" r="7" />
-                          <path d="m20 20-3.2-3.2" />
-                        </svg>
-                        <span className="lp-txt">Centro, São Paulo</span>
-                      </div>
-                      <div className="lp-ticons">
-                        <i>
-                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                            <circle cx="12" cy="12" r="4" />
-                            <path d="M12 2v2m0 16v2M4.9 4.9l1.4 1.4m11.4 11.4 1.4 1.4M2 12h2m16 0h2M4.9 19.1l1.4-1.4m11.4-11.4 1.4-1.4" />
-                          </svg>
-                        </i>
-                        <i>
-                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                            <path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9" />
-                            <path d="M13.7 21a2 2 0 0 1-3.4 0" />
-                          </svg>
-                        </i>
-                      </div>
-                      <span className="lp-avatar">LQ</span>
-                    </div>
-                    <div className="lp-apptoolbar">
-                      <span className="lp-crumb">
-                        Regiões <b>· Centro, SP</b>
-                      </span>
-                      <span className="lp-propill">⚡ Recurso Pro</span>
-                    </div>
-                    <div className="lp-appregion3">
-                      <div className="lp-rcard">
-                        <div className="lp-rcard-h">1 · Perfil da região</div>
-                        <div className="lp-rscores">
-                          <div className="lp-rrow">
-                            <div className="lp-rt">
-                              <span>Temporada</span>
-                              <b>99</b>
-                            </div>
-                            <div className="lp-rtrack">
-                              <i style={{ width: "99%" }}></i>
-                            </div>
-                          </div>
-                          <div className="lp-rrow">
-                            <div className="lp-rt">
-                              <span>Comercial</span>
-                              <b>99</b>
-                            </div>
-                            <div className="lp-rtrack">
-                              <i style={{ width: "99%" }}></i>
-                            </div>
-                          </div>
-                          <div className="lp-rrow">
-                            <div className="lp-rt">
-                              <span>Caminhabilidade</span>
-                              <b>98</b>
-                            </div>
-                            <div className="lp-rtrack">
-                              <i style={{ width: "98%" }}></i>
-                            </div>
-                          </div>
-                          <div className="lp-rrow">
-                            <div className="lp-rt">
-                              <span>Conveniência</span>
-                              <b>98</b>
-                            </div>
-                            <div className="lp-rtrack">
-                              <i style={{ width: "98%" }}></i>
-                            </div>
-                          </div>
-                          <div className="lp-rrow">
-                            <div className="lp-rt">
-                              <span>Familiar</span>
-                              <b>97</b>
-                            </div>
-                            <div className="lp-rtrack">
-                              <i style={{ width: "97%" }}></i>
-                            </div>
-                          </div>
-                          <div className="lp-rrow">
-                            <div className="lp-rt">
-                              <span>Estudantil</span>
-                              <b>97</b>
-                            </div>
-                            <div className="lp-rtrack">
-                              <i style={{ width: "97%" }}></i>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                      <div className="lp-rcard">
-                        <div className="lp-rcard-h">2 · O que existe por perto</div>
-                        <div className="lp-rpois">
-                          <div className="lp-rpoi">
-                            <i>
-                              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                                <path d="M3 9l9-4 9 4-9 4-9-4z" />
-                                <path d="M7 11v4c0 1.5 2.5 3 5 3s5-1.5 5-3v-4" />
-                              </svg>
-                            </i>
-                            <div>
-                              <b>Universidade</b>
-                              <span>327 m</span>
-                            </div>
-                          </div>
-                          <div className="lp-rpoi">
-                            <i>
-                              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                                <rect x="4" y="4" width="16" height="16" rx="2" />
-                                <path d="M12 8v8M8 12h8" />
-                              </svg>
-                            </i>
-                            <div>
-                              <b>Hospital</b>
-                              <span>601 m</span>
-                            </div>
-                          </div>
-                          <div className="lp-rpoi">
-                            <i>
-                              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                                <circle cx="9" cy="20" r="1" />
-                                <circle cx="17" cy="20" r="1" />
-                                <path d="M3 4h2l2.2 11h10l1.8-8H6.5" />
-                              </svg>
-                            </i>
-                            <div>
-                              <b>Supermercado</b>
-                              <span>451 m</span>
-                            </div>
-                          </div>
-                          <div className="lp-rpoi">
-                            <i>
-                              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                                <path d="M6 8h12l-1 12H7z" />
-                                <path d="M9 8a3 3 0 0 1 6 0" />
-                              </svg>
-                            </i>
-                            <div>
-                              <b>Shopping</b>
-                              <span>354 m</span>
-                            </div>
-                          </div>
-                          <div className="lp-rpoi">
-                            <i>
-                              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                                <path d="M12 3l5 8h-3l3 5H7l3-5H7z" />
-                                <path d="M12 16v5" />
-                              </svg>
-                            </i>
-                            <div>
-                              <b>Parque</b>
-                              <span>182 m</span>
-                            </div>
-                          </div>
-                          <div className="lp-rpoi">
-                            <i>
-                              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                                <path d="M6 3v7a2 2 0 0 0 2 2v9M6 3v5M9 3v5M17 3c-1.5 0-2 2-2 5s.5 4 2 4v9" />
-                              </svg>
-                            </i>
-                            <div>
-                              <b>Restaurante</b>
-                              <span>44 m</span>
-                            </div>
-                          </div>
-                        </div>
-                        <div className="lp-rnote">Distância até o serviço mais próximo.</div>
-                      </div>
-                      <div className="lp-rcard">
-                        <div className="lp-rcard-h">3 · DNA da região</div>
-                        <div className="lp-rdnalabel">Perfil predominante</div>
-                        <div className="lp-rchips">
-                          <span>Airbnb</span>
-                          <span>Comercial</span>
-                        </div>
-                        <div className="lp-rstar">
-                          <span>Conveniência</span>
-                          <span className="lp-stars">★★★★★</span>
-                        </div>
-                        <div className="lp-rstar">
-                          <span>Densidade comercial</span>
-                          <span className="lp-stars">★★★★★</span>
-                        </div>
-                        <div className="lp-rstar">
-                          <span>Potencial de temporada</span>
-                          <span className="lp-stars">★★★★★</span>
-                        </div>
-                        <div className="lp-rstar">
-                          <span>Demanda estudantil</span>
-                          <span className="lp-stars">★★★★★</span>
-                        </div>
-                        <div className="lp-rstar">
-                          <span>Perfil familiar</span>
-                          <span className="lp-stars">★★★★★</span>
-                        </div>
-                        <div className="lp-rstar">
-                          <span>Caminhabilidade</span>
-                          <span className="lp-stars">
-                            ★★★★<span className="lp-off">★</span>
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                    <div className="lp-rsimbar">
-                      <b>Mais indicado para:</b> <span className="lp-rs">Temporada</span>{" "}
-                      <span className="lp-rs">Comercial</span>
-                      <b style={{ marginLeft: "12px" }}>Regiões parecidas:</b>{" "}
-                      <span className="lp-rs">Sé · SP 94%</span>{" "}
-                      <span className="lp-rs">Bela Vista · SP 90%</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-            <div className="lp-appdots" id="appdots">
-              <button className="lp-on" type="button" data-i="0" aria-label="Ver imóveis"></button>
-              <button type="button" data-i="1" aria-label="Ver grupos"></button>
-              <button type="button" data-i="2" aria-label="Ver regiões"></button>
-            </div>
-          </div>
-
-          <p className="lp-appcap lp-reveal">
-            A cada busca, um <b>algoritmo especializado</b> reordena todos os imóveis para deixar as
-            oportunidades mais relevantes no topo da lista.
-          </p>
-        </div>
-      </section>
-
-      <div className="lp-scene">
-        <div className="lp-scene-cap lp-reveal">
-          <span className="lp-seclabel">// milhares de imóveis, um painel só</span>
-          <b>Do bairro à sua porta - cada oportunidade no seu contexto</b>
-        </div>
-        <svg aria-hidden="true" viewBox="0 0 1200 260" preserveAspectRatio="xMidYMax slice">
-          <polygon className="lp-il-hex" points="200,44 220,55 220,79 200,90 180,79 180,55" />
-          <polygon
-            className="lp-il-hex"
-            points="1010,60 1028,71 1028,93 1010,104 992,93 992,71"
-            opacity="0.08"
-          />
-          <polygon
-            className="lp-il-hex"
-            points="620,30 636,39 636,57 620,66 604,57 604,39"
-            opacity="0.10"
-          />
-
-          <path
-            className="lp-il-ground"
-            d="M0 196 C 160 170, 300 208, 460 190 C 640 170, 780 210, 960 192 C 1080 180, 1150 202, 1200 190 L1200 260 L0 260 Z"
-          />
-
-          <rect className="lp-il-roof-soft" x="70" y="96" width="74" height="100" rx="4" />
-          <g className="lp-il-win">
-            <rect x="82" y="108" width="12" height="12" rx="1.5" />
-            <rect x="102" y="108" width="12" height="12" rx="1.5" />
-            <rect x="122" y="108" width="12" height="12" rx="1.5" />
-            <rect x="82" y="128" width="12" height="12" rx="1.5" />
-            <rect x="102" y="128" width="12" height="12" rx="1.5" />
-            <rect x="122" y="128" width="12" height="12" rx="1.5" />
-            <rect x="82" y="148" width="12" height="12" rx="1.5" />
-            <rect x="102" y="148" width="12" height="12" rx="1.5" />
-            <rect x="122" y="148" width="12" height="12" rx="1.5" />
-            <rect x="82" y="168" width="12" height="12" rx="1.5" />
-            <rect x="102" y="168" width="12" height="12" rx="1.5" />
-            <rect x="122" y="168" width="12" height="12" rx="1.5" />
-          </g>
-
-          <rect className="lp-il-tree-trunk" x="182" y="160" width="9" height="36" rx="2" />
-          <circle className="lp-il-tree-top" cx="186" cy="150" r="24" />
-
-          <polygon className="lp-il-roof" points="238,132 300,132 316,158 222,158" />
-          <rect className="lp-il-wall" x="240" y="158" width="60" height="42" />
-          <rect className="lp-il-door" x="262" y="176" width="16" height="24" rx="1" />
-          <rect className="lp-il-win" x="247" y="166" width="12" height="12" rx="1.5" />
-          <rect className="lp-il-win" x="281" y="166" width="12" height="12" rx="1.5" />
-
-          <path
-            className="lp-il-pin"
-            d="M405 96c-8 0-14 6-14 14 0 9 14 21 14 21s14-12 14-21c0-8-6-14-14-14z"
-          />
-          <circle className="lp-il-pin-dot" cx="405" cy="110" r="5" />
-          <polygon className="lp-il-roof" points="366,146 444,146 444,158 366,158" />
-          <rect className="lp-il-wall" x="372" y="158" width="66" height="52" />
-          <rect className="lp-il-win" x="382" y="166" width="14" height="14" rx="1.5" />
-          <rect className="lp-il-win" x="414" y="166" width="14" height="14" rx="1.5" />
-          <rect className="lp-il-door" x="396" y="188" width="18" height="22" rx="1" />
-
-          <rect className="lp-il-tree-trunk" x="470" y="168" width="8" height="32" rx="2" />
-          <circle className="lp-il-tree-top" cx="474" cy="160" r="19" />
-
-          <rect className="lp-il-roof-soft" x="520" y="72" width="80" height="128" rx="4" />
-          <g className="lp-il-win">
-            <rect x="532" y="86" width="13" height="13" rx="1.5" />
-            <rect x="554" y="86" width="13" height="13" rx="1.5" />
-            <rect x="576" y="86" width="13" height="13" rx="1.5" />
-            <rect x="532" y="108" width="13" height="13" rx="1.5" />
-            <rect x="554" y="108" width="13" height="13" rx="1.5" />
-            <rect x="576" y="108" width="13" height="13" rx="1.5" />
-            <rect x="532" y="130" width="13" height="13" rx="1.5" />
-            <rect x="554" y="130" width="13" height="13" rx="1.5" />
-            <rect x="576" y="130" width="13" height="13" rx="1.5" />
-            <rect x="532" y="152" width="13" height="13" rx="1.5" />
-            <rect x="554" y="152" width="13" height="13" rx="1.5" />
-            <rect x="576" y="152" width="13" height="13" rx="1.5" />
-            <rect x="532" y="174" width="13" height="13" rx="1.5" />
-            <rect x="554" y="174" width="13" height="13" rx="1.5" />
-            <rect x="576" y="174" width="13" height="13" rx="1.5" />
-          </g>
-
-          <polygon className="lp-il-roof" points="650,140 712,140 728,166 634,166" />
-          <rect className="lp-il-wall" x="652" y="166" width="60" height="42" />
-          <rect className="lp-il-door" x="674" y="184" width="16" height="24" rx="1" />
-          <rect className="lp-il-win" x="659" y="174" width="12" height="12" rx="1.5" />
-          <rect className="lp-il-win" x="693" y="174" width="12" height="12" rx="1.5" />
-
-          <rect className="lp-il-tree-trunk" x="748" y="158" width="9" height="42" rx="2" />
-          <circle className="lp-il-tree-top" cx="752" cy="146" r="26" />
-
-          <rect className="lp-il-roof-soft" x="800" y="104" width="70" height="96" rx="4" />
-          <g className="lp-il-win">
-            <rect x="812" y="116" width="12" height="12" rx="1.5" />
-            <rect x="832" y="116" width="12" height="12" rx="1.5" />
-            <rect x="852" y="116" width="12" height="12" rx="1.5" />
-            <rect x="812" y="136" width="12" height="12" rx="1.5" />
-            <rect x="832" y="136" width="12" height="12" rx="1.5" />
-            <rect x="852" y="136" width="12" height="12" rx="1.5" />
-            <rect x="812" y="156" width="12" height="12" rx="1.5" />
-            <rect x="832" y="156" width="12" height="12" rx="1.5" />
-            <rect x="852" y="156" width="12" height="12" rx="1.5" />
-            <rect x="812" y="176" width="12" height="12" rx="1.5" />
-            <rect x="832" y="176" width="12" height="12" rx="1.5" />
-            <rect x="852" y="176" width="12" height="12" rx="1.5" />
-          </g>
-
-          <polygon className="lp-il-roof" points="912,150 966,150 980,172 898,172" />
-          <rect className="lp-il-wall" x="914" y="172" width="52" height="36" />
-          <rect className="lp-il-door" x="932" y="188" width="15" height="20" rx="1" />
-          <rect className="lp-il-win" x="920" y="178" width="11" height="11" rx="1.5" />
-
-          <rect className="lp-il-tree-trunk" x="1002" y="170" width="8" height="30" rx="2" />
-          <circle className="lp-il-tree-top" cx="1006" cy="162" r="18" />
-          <polygon className="lp-il-roof" points="1052,150 1128,150 1128,162 1052,162" />
-          <rect className="lp-il-wall" x="1058" y="162" width="64" height="46" />
-          <rect className="lp-il-win" x="1068" y="170" width="13" height="13" rx="1.5" />
-          <rect className="lp-il-win" x="1099" y="170" width="13" height="13" rx="1.5" />
-          <rect className="lp-il-door" x="1082" y="188" width="16" height="20" rx="1" />
-        </svg>
-      </div>
-
-      <section className="lp-band lp-alt" id="analise">
-        <div className="lp-wrap">
-          <div className="lp-sechead lp-reveal">
-            <span className="lp-seclabel">// como funciona a nossa análise</span>
-            <h2>Cada imóvel, traduzido em notas fáceis de comparar</h2>
-            <p>
-              Localização, preço de mercado, características e qualidade da região viram números
-              claros. Abaixo, de forma simples, como cada parte é calculada.
-            </p>
-          </div>
-
-          <div className="lp-method-intro">
-            <div className="lp-pill-explain lp-reveal">
-              <span className="lp-n">01 · comparativas</span>
-              <h4>Notas de 0 a 100</h4>
-              <p>
-                Toda nota compara o imóvel com todos os outros da base ativa. É um ranking, não uma
-                aprovação absoluta.
-              </p>
-            </div>
-            <div className="lp-pill-explain lp-reveal lp-d1">
-              <span className="lp-n">02 · transparentes</span>
-              <h4>Nada de caixa-preta</h4>
-              <p>
-                Cada nota vem com a explicação por fator: o que puxou o número para cima e o que
-                puxou para baixo.
-              </p>
-            </div>
-            <div className="lp-pill-explain lp-reveal lp-d2">
-              <span className="lp-n">03 · sob medida</span>
-              <h4>Ajustadas por tipo</h4>
-              <p>
-                Os pesos mudam conforme o imóvel - moradia, terreno ou comercial se valorizam de
-                formas diferentes.
-              </p>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <section className="lp-band lp-tint">
-        <div className="lp-wrap">
-          <div className="lp-scores-lead">
-            <div className="lp-reveal">
-              <span className="lp-seclabel">// as notas</span>
-              <h3>Uma nota 87 quer dizer: “melhor que 87% dos imóveis semelhantes”</h3>
-              <p>
-                As notas são <b>relativas</b>: comparam o imóvel com os concorrentes da base ativa.
-                Servem para ranquear oportunidades - e mostrar rapidamente onde estão as melhores
-                chances.
-              </p>
-            </div>
-            <div className="lp-rankviz lp-reveal lp-d1">
-              <div className="lp-big">
-                <span className="lp-num">87</span>
-                <span className="lp-den">/ 100</span>
-              </div>
-              <p className="lp-cap">
-                <b>Apartamento 72 m² · Vila Mariana</b> está à frente de 87% dos imóveis parecidos.
-              </p>
-              <div className="lp-rankbar">
-                <span className="lp-me" data-left="87%"></span>
-              </div>
-              <div className="lp-rankbar-labels">
-                <span>piores oportunidades</span>
-                <span>melhores oportunidades</span>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <section className="lp-band lp-alt lp-m-hide">
+      <section className="lp-band lp-beat lp-tint lp-m-hide">
         <div className="lp-wrap">
           <div className="lp-breakdown">
             <div className="lp-txt lp-reveal">
-              <span className="lp-seclabel">// a nota principal</span>
+              <span className="lp-seclabel">a nota principal</span>
               <h3>Nota de Investimento: é um bom negócio?</h3>
               <p>
                 Ela combina, com pesos calibrados, os fatores que mais importam na hora de
@@ -1979,9 +782,9 @@ export default async function LandingPage() {
               </ul>
               <div className="lp-weightnote">
                 Pesos ajustados por tipo:
-                <span className="lp-chip">🏠 Moradia</span>
-                <span className="lp-chip">🌱 Terreno</span>
-                <span className="lp-chip">🏢 Comercial</span>
+                <span className="lp-chip">Moradia</span>
+                <span className="lp-chip">Terreno</span>
+                <span className="lp-chip">Comercial</span>
               </div>
             </div>
 
@@ -1997,16 +800,16 @@ export default async function LandingPage() {
                     strokeWidth="6"
                     strokeDasharray="150.8"
                     strokeDashoffset="150.8"
-                    data-off="19.6"
+                    data-off="16.6"
                     transform="rotate(-90 30 30)"
                   />
                   <text x="30" y="35" textAnchor="middle" fontSize="17">
-                    87
+                    89
                   </text>
                 </svg>
                 <div className="lp-info">
-                  <b>Apartamento 72 m² · Vila Mariana</b>
-                  <span>Lance R$ 312.000 · Avaliação Caixa R$ 520.000</span>
+                  <b>Apartamento 64 m² · Jardim Palma Travassos</b>
+                  <span>Lance R$ 137.390 · Avaliação Caixa R$ 228.983</span>
                 </div>
               </div>
               <div className="lp-bar">
@@ -2066,7 +869,7 @@ export default async function LandingPage() {
       <section className="lp-band">
         <div className="lp-wrap">
           <div className="lp-sechead lp-reveal">
-            <span className="lp-seclabel">// para o que o imóvel serve melhor</span>
+            <span className="lp-seclabel">para o que o imóvel serve melhor</span>
             <h2>Notas de uso: o destaque de cada imóvel</h2>
             <p>
               Além da nota principal, mostramos os melhores usos - e eles só aparecem quando o
@@ -2074,53 +877,63 @@ export default async function LandingPage() {
             </p>
           </div>
           <div className="lp-uses-grid">
-            <div className="lp-usecard lp-reveal">
-              <div className="lp-emo">🏠</div>
-              <b>Moradia familiar</b>
-              <span>quartos, área, escolas e parques por perto.</span>
-              <div className="lp-score">nota 88</div>
-            </div>
-            <div className="lp-usecard lp-reveal lp-d1">
-              <div className="lp-emo">🏖️</div>
-              <b>Temporada / Airbnb</b>
-              <span>perto de centro, restaurantes, hotéis e universidades.</span>
-              <div className="lp-score">nota 74</div>
-            </div>
-            <div className="lp-usecard lp-reveal lp-d2">
-              <div className="lp-emo">🎓</div>
-              <b>Aluguel estudantil</b>
-              <span>proximidade de universidades e porte adequado.</span>
-              <div className="lp-score">nota 69</div>
-            </div>
-            <div className="lp-usecard lp-reveal lp-d1">
-              <div className="lp-emo">🔨</div>
-              <b>Reforma &amp; revenda</b>
-              <span>potencial de valorização e movimento por perto.</span>
-              <div className="lp-score">nota 82</div>
-            </div>
-            <div className="lp-usecard lp-reveal lp-d2">
-              <div className="lp-emo">💰</div>
-              <b>Liquidez na revenda</b>
-              <span>facilidade de vender rápido.</span>
-              <div className="lp-score">nota 81</div>
-            </div>
+            {[
+              {
+                Spot: SpotFamily,
+                k: "Moradia familiar",
+                d: "quartos e área, com escolas, parques e mercados por perto.",
+              },
+              {
+                Spot: SpotSeason,
+                k: "Aluguel por temporada",
+                d: "perto do centro, de restaurantes, hotéis e universidades.",
+              },
+              {
+                Spot: SpotStudent,
+                k: "Aluguel estudantil",
+                d: "universidades no entorno e imóvel compacto.",
+              },
+              {
+                Spot: SpotFlip,
+                k: "Reforma e revenda",
+                d: "desconto, preço frente ao mercado e potencial de obra.",
+              },
+              {
+                Spot: SpotLiquidity,
+                k: "Liquidez na revenda",
+                d: "quanto tempo o imóvel leva para sair naquela região.",
+              },
+              {
+                Spot: SpotCommercial,
+                k: "Comercial",
+                d: "movimento do entorno: bancos, shoppings e restaurantes.",
+              },
+            ].map((u, i) => (
+              <div className={`lp-usecard lp-reveal${i % 3 ? ` lp-d${i % 3}` : ""}`} key={u.k}>
+                <u.Spot />
+                <b>{u.k}</b>
+                <span>{u.d}</span>
+              </div>
+            ))}
           </div>
         </div>
       </section>
 
-      <section className="lp-band lp-m-hide">
+      <section className="lp-band lp-chapter lp-alt lp-m-hide">
         <div className="lp-wrap">
           <div className="lp-region">
             <div className="lp-txt lp-reveal">
-              <span className="lp-seclabel">// qualidade da região</span>
-              <h3>Conheça o entorno antes de visitar</h3>
+              <span className="lp-seclabel">a região, medida</span>
+              <h3>Você não compra só o imóvel. Compra a região.</h3>
               <p>
-                Dividimos cada cidade em pequenas células e medimos o que existe ao redor de cada
-                imóvel - mercados, escolas, hospitais, farmácias e parques, com as distâncias reais.
+                {stats
+                  ? `A Lavra divide o país em ${countShort(stats.regions)} regiões e mede, em cada uma, a distância real até ${countShort(stats.pois)} pontos de referência em ${stats.poiCategories} categorias`
+                  : "A Lavra divide o país em pequenas regiões e mede, em cada uma, a distância real até centenas de milhares de pontos de referência"}{" "}
+                - de escola e hospital a restaurante, shopping e ponto de ônibus.
               </p>
               <p>
-                Regiões mais completas e bem servidas pesam a favor da nota. Quanto mais escuro,
-                melhor a célula.
+                Regiões mais completas puxam a nota para cima. No mapa, quanto mais escura a célula,
+                mais serviço por perto.
               </p>
               <div className="lp-legend">
                 <span>Menos serviços</span>
@@ -2202,7 +1015,7 @@ export default async function LandingPage() {
                   />
                   <circle className="lp-map-pin-dot" cx="210" cy="56" r="4" />
                 </svg>
-                <span className="lp-pill">Vila Mariana · SP</span>
+                <span className="lp-pill">Ribeirão Preto · SP</span>
                 <span className="lp-coord">célula · alta densidade</span>
               </div>
               <div className="lp-pois">
@@ -2255,14 +1068,59 @@ export default async function LandingPage() {
               </div>
             </div>
           </div>
+
+          <p className="lp-region-bridge lp-reveal">Na prática, é assim que uma região aparece:</p>
+
+          <div className="lp-sc-region lp-reveal lp-d2">
+            <div className="lp-sc-reghead">
+              <div>
+                <span className="lp-seclabel lp-sc-lbl">Perfil da região</span>
+                <b>Porto Canoa · Serra/ES</b>
+              </div>
+              <div className="lp-sc-chips">
+                <span>Temporada</span>
+                <span>Familiar</span>
+              </div>
+            </div>
+            <div className="lp-sc-reggrid">
+              <div className="lp-sc-regscores">
+                <ScoreBars
+                  items={[
+                    { k: "Moradia familiar", v: 88 },
+                    { k: "Caminhabilidade", v: 88 },
+                    { k: "Conveniência", v: 85 },
+                    { k: "Temporada", v: 83 },
+                  ]}
+                />
+              </div>
+              <div className="lp-sc-pois">
+                {[
+                  { k: "Parque", v: "234 m" },
+                  { k: "Supermercado", v: "299 m" },
+                  { k: "Restaurante", v: "471 m" },
+                  { k: "Shopping", v: "514 m" },
+                  { k: "Universidade", v: "749 m" },
+                  { k: "Hospital", v: "928 m" },
+                ].map((p) => (
+                  <div className="lp-sc-poi" key={p.k}>
+                    <span>{p.k}</span>
+                    <b>{p.v}</b>
+                  </div>
+                ))}
+              </div>
+            </div>
+            <div className="lp-sc-foot">
+              Distância em linha reta até o serviço mais próximo, a partir de dados abertos de mapa.
+            </div>
+          </div>
         </div>
       </section>
 
-      <section className="lp-band lp-alt lp-m-hide">
+      <section className="lp-band lp-m-hide">
         <div className="lp-wrap">
           <div className="lp-market">
             <div className="lp-txt lp-reveal">
-              <span className="lp-seclabel">// análise de preço de mercado</span>
+              <span className="lp-seclabel">análise de preço de mercado</span>
               <h3>O preço é bom mesmo? A gente compara com o mercado real.</h3>
               <p>
                 Buscamos anúncios reais de imóveis semelhantes em portais consolidados - e ignoramos
@@ -2279,7 +1137,7 @@ export default async function LandingPage() {
               </p>
             </div>
             <div className="lp-marketviz lp-reveal lp-d1">
-              <div className="lp-lbl">Preço mediano por m² · Vila Mariana</div>
+              <div className="lp-lbl">Preço mediano por m² · Ribeirão Preto</div>
               <div className="lp-med">
                 <b>R$ 4.300</b>
                 <span>/ m² no mercado aberto</span>
@@ -2329,488 +1187,175 @@ export default async function LandingPage() {
         </div>
       </section>
 
-      <section className="lp-band lp-tint">
+      <section className="lp-band lp-chapter lp-deep">
         <div className="lp-wrap">
           <div className="lp-sechead lp-reveal">
-            <span className="lp-seclabel">// segmentos de mercado</span>
-            <h2>Navegue por “famílias” de oportunidades</h2>
+            <span className="lp-seclabel">famílias de imóveis</span>
+            <h2>Famílias de imóveis, montadas automaticamente</h2>
             <p>
-              Os imóveis são organizados automaticamente em grupos de imóveis parecidos, com nomes
-              claros. Fica fácil explorar o que combina com você.
+              A Lavra agrupa imóveis parecidos entre si - tipo, tamanho, faixa de preço e perfil de
+              região - e dá um nome a cada grupo. Em vez de filtrar campo por campo, você entra
+              direto na família que combina com o seu plano.
             </p>
           </div>
           <div className="lp-clusters lp-m-slide">
-            <div className="lp-cluster lp-reveal">
-              <div className="lp-hexrow">
-                <svg viewBox="0 0 26 30">
-                  <polygon
-                    className="lp-hf"
-                    points="13,1 25,8 25,22 13,29 1,22 1,8"
-                    fillOpacity="0.85"
-                  />
-                </svg>
-                <svg viewBox="0 0 26 30">
-                  <polygon
-                    className="lp-hf"
-                    points="13,1 25,8 25,22 13,29 1,22 1,8"
-                    fillOpacity="0.5"
-                  />
-                </svg>
-                <svg viewBox="0 0 26 30">
-                  <polygon
-                    className="lp-hf"
-                    points="13,1 25,8 25,22 13,29 1,22 1,8"
-                    fillOpacity="0.3"
-                  />
-                </svg>
+            {[
+              {
+                slug: "alto-valor",
+                label: "Apartamentos de alto valor",
+                meta: "perfil temporada · fachada nova e área compacta",
+              },
+              {
+                slug: "reforma",
+                label: "Casas populares para reforma - Médio porte",
+                meta: "perfil reforma e revenda · imóveis de médio porte",
+              },
+              {
+                slug: "compactos",
+                label: "Apartamentos compactos populares - ~41 m²",
+                meta: "perfil alta liquidez · primeiro investimento",
+              },
+            ].map((c, i) => (
+              <div className={`lp-cluster lp-reveal${i ? ` lp-d${i}` : ""}`} key={c.slug}>
+                <div className="lp-clthumb" aria-hidden>
+                  {[1, 2, 3, 4].map((n) => (
+                    <span className="lp-clcell" key={n}>
+                      <Image
+                        src={`/showcase/clusters/${c.slug}-${n}.jpg`}
+                        alt=""
+                        width={420}
+                        height={420}
+                        loading="lazy"
+                        sizes="170px"
+                      />
+                    </span>
+                  ))}
+                </div>
+                <b>{c.label}</b>
+                <div className="lp-meta">{c.meta}</div>
+                {stats?.featuredClusters[c.label] ? (
+                  <div className="lp-count">
+                    {stats.featuredClusters[c.label].toLocaleString("pt-BR")} imóveis
+                  </div>
+                ) : null}
               </div>
-              <b>Apartamentos populares de alta liquidez</b>
-              <div className="lp-meta">São Paulo · até R$ 350 mil · 1-2 quartos</div>
-              <div className="lp-count">1.240 imóveis</div>
-            </div>
-            <div className="lp-cluster lp-reveal lp-d1">
-              <div className="lp-hexrow">
-                <svg viewBox="0 0 26 30">
-                  <polygon
-                    className="lp-hf"
-                    points="13,1 25,8 25,22 13,29 1,22 1,8"
-                    fillOpacity="0.85"
-                  />
-                </svg>
-                <svg viewBox="0 0 26 30">
-                  <polygon
-                    className="lp-hf"
-                    points="13,1 25,8 25,22 13,29 1,22 1,8"
-                    fillOpacity="0.5"
-                  />
-                </svg>
-                <svg viewBox="0 0 26 30">
-                  <polygon
-                    className="lp-hf"
-                    points="13,1 25,8 25,22 13,29 1,22 1,8"
-                    fillOpacity="0.3"
-                  />
-                </svg>
-              </div>
-              <b>Terrenos compactos de valor médio</b>
-              <div className="lp-meta">Grande São Paulo · lotes até 250 m²</div>
-              <div className="lp-count">380 imóveis</div>
-            </div>
-            <div className="lp-cluster lp-reveal lp-d2">
-              <div className="lp-hexrow">
-                <svg viewBox="0 0 26 30">
-                  <polygon
-                    className="lp-hf"
-                    points="13,1 25,8 25,22 13,29 1,22 1,8"
-                    fillOpacity="0.85"
-                  />
-                </svg>
-                <svg viewBox="0 0 26 30">
-                  <polygon
-                    className="lp-hf"
-                    points="13,1 25,8 25,22 13,29 1,22 1,8"
-                    fillOpacity="0.5"
-                  />
-                </svg>
-                <svg viewBox="0 0 26 30">
-                  <polygon
-                    className="lp-hf"
-                    points="13,1 25,8 25,22 13,29 1,22 1,8"
-                    fillOpacity="0.3"
-                  />
-                </svg>
-              </div>
-              <b>Sobrados para reforma e revenda</b>
-              <div className="lp-meta">Zona Sul · potencial de valorização</div>
-              <div className="lp-count">156 imóveis</div>
-            </div>
+            ))}
           </div>
         </div>
       </section>
-
-      <section className="lp-band lp-alt lp-m-hide">
+      <section className="lp-band lp-alt">
         <div className="lp-wrap">
           <div className="lp-sechead lp-reveal">
-            <span className="lp-seclabel">// recomendações</span>
-            <h2>Imóveis parecidos, lado a lado</h2>
+            <span className="lp-seclabel">comparação lado a lado</span>
+            <h2>Nunca avalie um leilão sozinho</h2>
             <p>
-              Exclusivo da Lavra: para cada imóvel sugerimos <b>oportunidades equivalentes</b>{" "}
-              (mesma região e faixa de preço) e <b>parecidos visualmente</b> (mesma cidade) - para
-              comparar de verdade.
+              Para cada imóvel, a Lavra abre duas listas: <b>parecidos visualmente</b>, quando o
+              modelo reconhece fachadas quase idênticas, e <b>equivalentes</b>, de mesma região e
+              faixa de preço.
             </p>
           </div>
-          <div className="lp-carwrap lp-reveal lp-d1">
-            <div className="lp-carhint">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                <path d="M5 12h14m0 0-4-4m4 4-4 4" />
-              </svg>{" "}
-              Arraste para explorar as sugestões
+
+          <div className="lp-simseed lp-reveal">
+            <div className="lp-simseed-photo">
+              <Image
+                src={SIMILAR_SEED.photo}
+                alt={`Fachada do condomínio - ${SIMILAR_SEED.location}`}
+                width={600}
+                height={420}
+                loading="lazy"
+                sizes="(max-width: 700px) 100vw, 240px"
+              />
             </div>
-            <div className="lp-carousel">
-              <article className="lp-pcard">
-                <div className="lp-pphoto">
-                  <span className="lp-tag">Semelhante</span>
-                  <span className="lp-simi">94% similar</span>
-                  <svg
-                    className="lp-photo-illus2"
-                    viewBox="0 0 284 150"
-                    preserveAspectRatio="xMidYMid slice"
-                  >
-                    <polygon className="lp-il-hex" points="40,22 52,29 52,43 40,50 28,43 28,29" />
-                    <path
-                      className="lp-il-ground"
-                      d="M0 118 C 90 108, 190 128, 284 114 L284 150 L0 150 Z"
-                    />
-                    <rect
-                      className="lp-il-tree-trunk"
-                      x="228"
-                      y="84"
-                      width="7"
-                      height="30"
-                      rx="2"
-                    />
-                    <circle className="lp-il-tree-top" cx="231.5" cy="78" r="17" />
-                    <rect
-                      className="lp-il-roof-soft"
-                      x="104"
-                      y="42"
-                      width="70"
-                      height="72"
-                      rx="3"
-                    />
-                    <g className="lp-il-win">
-                      <rect x="114" y="52" width="12" height="12" rx="1.5" />
-                      <rect x="133" y="52" width="12" height="12" rx="1.5" />
-                      <rect x="152" y="52" width="12" height="12" rx="1.5" />
-                      <rect x="114" y="70" width="12" height="12" rx="1.5" />
-                      <rect x="133" y="70" width="12" height="12" rx="1.5" />
-                      <rect x="152" y="70" width="12" height="12" rx="1.5" />
-                      <rect x="114" y="88" width="12" height="12" rx="1.5" />
-                      <rect x="133" y="88" width="12" height="12" rx="1.5" />
-                      <rect x="152" y="88" width="12" height="12" rx="1.5" />
-                    </g>
-                  </svg>
+            <div className="lp-simseed-info">
+              <span className="lp-seclabel lp-sc-lbl">
+                Imóvel de referência · {SIMILAR_SEED.unit}
+              </span>
+              <b>{SIMILAR_SEED.title}</b>
+              <span className="lp-loc">
+                {SIMILAR_SEED.location} · {SIMILAR_SEED.areaM2.toLocaleString("pt-BR")} m² ·{" "}
+                {SIMILAR_SEED.bedrooms} quartos
+              </span>
+              <div className="lp-simseed-foot">
+                <div>
+                  <span>Lance inicial · avaliado em {money(SIMILAR_SEED.appraisedValue)}</span>
+                  <b>
+                    {money(SIMILAR_SEED.saleValue)} <em>-{SIMILAR_SEED.discount}%</em>
+                  </b>
                 </div>
-                <div className="lp-pbody">
-                  <b>Apto 68 m²</b>
-                  <div className="lp-loc">Saúde · São Paulo, SP</div>
-                  <div className="lp-pmeta">
-                    <span className="lp-price">R$ 298.000</span>
-                    <span className="lp-sc">
-                      nota <b>84</b>
-                    </span>
-                  </div>
+                <div className="lp-simcard-score">
+                  <i>{SIMILAR_SEED.investment}</i>
+                  <span>nota</span>
                 </div>
-              </article>
-              <article className="lp-pcard">
-                <div className="lp-pphoto">
-                  <span className="lp-tag">Semelhante</span>
-                  <span className="lp-simi">90% similar</span>
-                  <svg
-                    className="lp-photo-illus2"
-                    viewBox="0 0 284 150"
-                    preserveAspectRatio="xMidYMid slice"
-                  >
-                    <polygon
-                      className="lp-il-hex"
-                      points="250,20 262,27 262,41 250,48 238,41 238,27"
-                    />
-                    <path
-                      className="lp-il-ground"
-                      d="M0 116 C 80 106, 180 126, 284 112 L284 150 L0 150 Z"
-                    />
-                    <rect className="lp-il-tree-trunk" x="44" y="86" width="7" height="28" rx="2" />
-                    <circle className="lp-il-tree-top" cx="47.5" cy="80" r="16" />
-                    <polygon className="lp-il-roof" points="108,50 176,50 194,78 90,78" />
-                    <rect className="lp-il-wall" x="112" y="78" width="60" height="36" />
-                    <rect className="lp-il-door" x="133" y="94" width="18" height="20" rx="1" />
-                    <rect className="lp-il-win" x="120" y="84" width="11" height="11" rx="1.5" />
-                    <rect className="lp-il-win" x="153" y="84" width="11" height="11" rx="1.5" />
-                  </svg>
-                </div>
-                <div className="lp-pbody">
-                  <b>Sobrado 96 m²</b>
-                  <div className="lp-loc">Jabaquara · São Paulo, SP</div>
-                  <div className="lp-pmeta">
-                    <span className="lp-price">R$ 342.000</span>
-                    <span className="lp-sc">
-                      nota <b>82</b>
-                    </span>
-                  </div>
-                </div>
-              </article>
-              <article className="lp-pcard">
-                <div className="lp-pphoto">
-                  <span className="lp-tag">Semelhante</span>
-                  <span className="lp-simi">88% similar</span>
-                  <svg
-                    className="lp-photo-illus2"
-                    viewBox="0 0 284 150"
-                    preserveAspectRatio="xMidYMid slice"
-                  >
-                    <polygon className="lp-il-hex" points="40,22 52,29 52,43 40,50 28,43 28,29" />
-                    <path
-                      className="lp-il-ground"
-                      d="M0 118 C 90 108, 190 128, 284 114 L284 150 L0 150 Z"
-                    />
-                    <rect
-                      className="lp-il-tree-trunk"
-                      x="228"
-                      y="84"
-                      width="7"
-                      height="30"
-                      rx="2"
-                    />
-                    <circle className="lp-il-tree-top" cx="231.5" cy="78" r="17" />
-                    <rect
-                      className="lp-il-roof-soft"
-                      x="104"
-                      y="42"
-                      width="70"
-                      height="72"
-                      rx="3"
-                    />
-                    <g className="lp-il-win">
-                      <rect x="114" y="52" width="12" height="12" rx="1.5" />
-                      <rect x="133" y="52" width="12" height="12" rx="1.5" />
-                      <rect x="152" y="52" width="12" height="12" rx="1.5" />
-                      <rect x="114" y="70" width="12" height="12" rx="1.5" />
-                      <rect x="133" y="70" width="12" height="12" rx="1.5" />
-                      <rect x="152" y="70" width="12" height="12" rx="1.5" />
-                      <rect x="114" y="88" width="12" height="12" rx="1.5" />
-                      <rect x="133" y="88" width="12" height="12" rx="1.5" />
-                      <rect x="152" y="88" width="12" height="12" rx="1.5" />
-                    </g>
-                  </svg>
-                </div>
-                <div className="lp-pbody">
-                  <b>Apto 75 m²</b>
-                  <div className="lp-loc">Ipiranga · São Paulo, SP</div>
-                  <div className="lp-pmeta">
-                    <span className="lp-price">R$ 335.000</span>
-                    <span className="lp-sc">
-                      nota <b>80</b>
-                    </span>
-                  </div>
-                </div>
-              </article>
-              <article className="lp-pcard">
-                <div className="lp-pphoto">
-                  <span className="lp-tag">Parecido visual</span>
-                  <span className="lp-simi">96% visual</span>
-                  <svg
-                    className="lp-photo-illus2"
-                    viewBox="0 0 284 150"
-                    preserveAspectRatio="xMidYMid slice"
-                  >
-                    <polygon className="lp-il-hex" points="40,22 52,29 52,43 40,50 28,43 28,29" />
-                    <path
-                      className="lp-il-ground"
-                      d="M0 118 C 90 108, 190 128, 284 114 L284 150 L0 150 Z"
-                    />
-                    <rect
-                      className="lp-il-tree-trunk"
-                      x="228"
-                      y="84"
-                      width="7"
-                      height="30"
-                      rx="2"
-                    />
-                    <circle className="lp-il-tree-top" cx="231.5" cy="78" r="17" />
-                    <rect
-                      className="lp-il-roof-soft"
-                      x="104"
-                      y="42"
-                      width="70"
-                      height="72"
-                      rx="3"
-                    />
-                    <g className="lp-il-win">
-                      <rect x="114" y="52" width="12" height="12" rx="1.5" />
-                      <rect x="133" y="52" width="12" height="12" rx="1.5" />
-                      <rect x="152" y="52" width="12" height="12" rx="1.5" />
-                      <rect x="114" y="70" width="12" height="12" rx="1.5" />
-                      <rect x="133" y="70" width="12" height="12" rx="1.5" />
-                      <rect x="152" y="70" width="12" height="12" rx="1.5" />
-                      <rect x="114" y="88" width="12" height="12" rx="1.5" />
-                      <rect x="133" y="88" width="12" height="12" rx="1.5" />
-                      <rect x="152" y="88" width="12" height="12" rx="1.5" />
-                    </g>
-                  </svg>
-                </div>
-                <div className="lp-pbody">
-                  <b>Apto 72 m²</b>
-                  <div className="lp-loc">Vila Clementino · São Paulo, SP</div>
-                  <div className="lp-pmeta">
-                    <span className="lp-price">R$ 355.000</span>
-                    <span className="lp-sc">
-                      nota <b>79</b>
-                    </span>
-                  </div>
-                </div>
-              </article>
-              <article className="lp-pcard">
-                <div className="lp-pphoto">
-                  <span className="lp-tag">Parecido visual</span>
-                  <span className="lp-simi">91% visual</span>
-                  <svg
-                    className="lp-photo-illus2"
-                    viewBox="0 0 284 150"
-                    preserveAspectRatio="xMidYMid slice"
-                  >
-                    <polygon
-                      className="lp-il-hex"
-                      points="250,20 262,27 262,41 250,48 238,41 238,27"
-                    />
-                    <path
-                      className="lp-il-ground"
-                      d="M0 116 C 80 106, 180 126, 284 112 L284 150 L0 150 Z"
-                    />
-                    <rect className="lp-il-tree-trunk" x="44" y="86" width="7" height="28" rx="2" />
-                    <circle className="lp-il-tree-top" cx="47.5" cy="80" r="16" />
-                    <polygon className="lp-il-roof" points="108,50 176,50 194,78 90,78" />
-                    <rect className="lp-il-wall" x="112" y="78" width="60" height="36" />
-                    <rect className="lp-il-door" x="133" y="94" width="18" height="20" rx="1" />
-                    <rect className="lp-il-win" x="120" y="84" width="11" height="11" rx="1.5" />
-                    <rect className="lp-il-win" x="153" y="84" width="11" height="11" rx="1.5" />
-                  </svg>
-                </div>
-                <div className="lp-pbody">
-                  <b>Apto 66 m²</b>
-                  <div className="lp-loc">Aclimação · São Paulo, SP</div>
-                  <div className="lp-pmeta">
-                    <span className="lp-price">R$ 322.000</span>
-                    <span className="lp-sc">
-                      nota <b>77</b>
-                    </span>
-                  </div>
-                </div>
-              </article>
-              <article className="lp-pcard">
-                <div className="lp-pphoto">
-                  <span className="lp-tag">Parecido visual</span>
-                  <span className="lp-simi">88% visual</span>
-                  <svg
-                    className="lp-photo-illus2"
-                    viewBox="0 0 284 150"
-                    preserveAspectRatio="xMidYMid slice"
-                  >
-                    <polygon className="lp-il-hex" points="40,22 52,29 52,43 40,50 28,43 28,29" />
-                    <path
-                      className="lp-il-ground"
-                      d="M0 118 C 90 108, 190 128, 284 114 L284 150 L0 150 Z"
-                    />
-                    <rect
-                      className="lp-il-tree-trunk"
-                      x="228"
-                      y="84"
-                      width="7"
-                      height="30"
-                      rx="2"
-                    />
-                    <circle className="lp-il-tree-top" cx="231.5" cy="78" r="17" />
-                    <rect
-                      className="lp-il-roof-soft"
-                      x="104"
-                      y="42"
-                      width="70"
-                      height="72"
-                      rx="3"
-                    />
-                    <g className="lp-il-win">
-                      <rect x="114" y="52" width="12" height="12" rx="1.5" />
-                      <rect x="133" y="52" width="12" height="12" rx="1.5" />
-                      <rect x="152" y="52" width="12" height="12" rx="1.5" />
-                      <rect x="114" y="70" width="12" height="12" rx="1.5" />
-                      <rect x="133" y="70" width="12" height="12" rx="1.5" />
-                      <rect x="152" y="70" width="12" height="12" rx="1.5" />
-                      <rect x="114" y="88" width="12" height="12" rx="1.5" />
-                      <rect x="133" y="88" width="12" height="12" rx="1.5" />
-                      <rect x="152" y="88" width="12" height="12" rx="1.5" />
-                    </g>
-                  </svg>
-                </div>
-                <div className="lp-pbody">
-                  <b>Apto 74 m²</b>
-                  <div className="lp-loc">Paraíso · São Paulo, SP</div>
-                  <div className="lp-pmeta">
-                    <span className="lp-price">R$ 348.000</span>
-                    <span className="lp-sc">
-                      nota <b>76</b>
-                    </span>
-                  </div>
-                </div>
-              </article>
+              </div>
             </div>
           </div>
+
+          <Rail label="Unidades parecidas com a de referência" className="lp-simrail">
+            {SIMILAR.map((p) => (
+              <article className="lp-simcard" key={p.slug}>
+                <div className="lp-simcard-photo">
+                  <Image
+                    src={p.photo}
+                    alt={`Fachada - ${p.title}, ${p.location}`}
+                    width={600}
+                    height={420}
+                    loading="lazy"
+                    sizes="(max-width: 700px) 78vw, 280px"
+                  />
+                  <span className={`lp-simkind${p.kind === "visual" ? " lp-visual" : ""}`}>
+                    {p.kind === "equivalente" ? "Equivalente" : "Parecido visual"}
+                  </span>
+                  <span className="lp-simpct">{p.unit}</span>
+                </div>
+                <div className="lp-simcard-body">
+                  <b>{p.title}</b>
+                  <span className="lp-loc">
+                    {p.location.split(" · ")[0]} · {p.areaM2.toLocaleString("pt-BR")} m²
+                  </span>
+                  <div className="lp-simcard-foot">
+                    <div>
+                      <span>Lance · -{p.discount}%</span>
+                      <b>{money(p.saleValue)}</b>
+                    </div>
+                    <div className="lp-simcard-score">
+                      <i>{p.investment}</i>
+                      <span>nota</span>
+                    </div>
+                  </div>
+                </div>
+              </article>
+            ))}
+          </Rail>
+
+          <p className="lp-simnote lp-reveal">
+            Repare nos parecidos visualmente: fachadas praticamente idênticas e notas de{" "}
+            <b>85 a 47</b>. O que separa um do outro é o preço - o de nota 85 sai 59% abaixo da
+            avaliação; o de nota 52 só 41%, e custa quase o dobro.
+          </p>
         </div>
       </section>
 
-      <section className="lp-band">
+      <section className="lp-band lp-tint" id="casos">
         <div className="lp-wrap">
           <div className="lp-sechead lp-reveal">
-            <span className="lp-seclabel">// como ler as notas</span>
-            <h2>Três coisas para ter em mente</h2>
-          </div>
-          <div className="lp-readscores">
-            <div className="lp-readcard lp-reveal">
-              <div className="lp-ic">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                  <path d="M3 3v18h18" />
-                  <path d="M7 15l4-4 3 2 4-6" />
-                </svg>
-              </div>
-              <b>São comparativas</b>
-              <p>
-                Uma nota alta é boa em relação aos demais imóveis ativos - não é uma garantia
-                absoluta de bom negócio.
-              </p>
-            </div>
-            <div className="lp-readcard lp-reveal lp-d1">
-              <div className="lp-ic">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                  <path d="M12 9v4m0 3h.01" />
-                  <path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" />
-                </svg>
-              </div>
-              <b>Dados incompletos reduzem a nota</b>
-              <p>
-                Imóveis sem foto, sem área ou sem preço são penalizados - há menos certeza sobre
-                eles.
-              </p>
-            </div>
-            <div className="lp-readcard lp-reveal lp-d2">
-              <div className="lp-ic">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                  <circle cx="12" cy="12" r="9" />
-                  <path d="M12 16v-4m0-4h.01" />
-                </svg>
-              </div>
-              <b>Tudo é explicado</b>
-              <p>
-                Cada nota mostra os fatores que mais contribuíram, para você decidir com
-                transparência.
-              </p>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <section className="lp-band lp-alt" id="casos">
-        <div className="lp-wrap">
-          <div className="lp-sechead lp-reveal">
-            <span className="lp-seclabel">// casos de uso</span>
-            <h2>Feita para o seu objetivo</h2>
-            <p>Seja qual for o seu plano, a Lavra mostra os imóveis que realmente fazem sentido.</p>
+            <span className="lp-seclabel">qual é o seu plano?</span>
+            <h2>Cada objetivo pede uma nota diferente</h2>
+            <p>
+              A Lavra calcula uma nota de uso para cada objetivo de investimento. Escolha o seu e a
+              lista inteira se reorganiza em volta dele.
+            </p>
           </div>
           <div className="lp-personas lp-m-slide">
             <div className="lp-persona lp-reveal">
-              <div className="lp-emo">🔨</div>
+              <div className="lp-emo">
+                <IconSliders />
+              </div>
               <div>
-                <h3>Quem compra para reformar e revender</h3>
+                <h3>“Quero comprar mal cuidado, reformar e vender”</h3>
                 <p>
-                  Encontre imóveis com bom desconto e potencial de valorização, com liquidez de
-                  revenda estimada para a região.
+                  Ordene pela nota de reforma e revenda: ela junta desconto sobre a avaliação, preço
+                  frente ao mercado e a facilidade de revenda naquele bairro. Fachada em mau estado,
+                  aqui, conta a favor.
                 </p>
                 <div className="lp-flow">
                   <span>desconto alto</span>
@@ -2820,12 +1365,15 @@ export default async function LandingPage() {
               </div>
             </div>
             <div className="lp-persona lp-reveal lp-d1">
-              <div className="lp-emo">🏠</div>
+              <div className="lp-emo">
+                <IconHouse />
+              </div>
               <div>
-                <h3>Quem procura o próprio lar</h3>
+                <h3>“Quero sair do aluguel pagando menos”</h3>
                 <p>
-                  Filtre por moradia familiar e veja escolas, parques e serviços por perto antes
-                  mesmo de visitar.
+                  A nota de moradia familiar cruza quartos e área com escolas, parques e
+                  supermercados por perto. Você vê a região inteira antes de marcar a primeira
+                  visita.
                 </p>
                 <div className="lp-flow">
                   <span>região completa</span>
@@ -2835,12 +1383,15 @@ export default async function LandingPage() {
               </div>
             </div>
             <div className="lp-persona lp-reveal">
-              <div className="lp-emo">📈</div>
+              <div className="lp-emo">
+                <IconChart />
+              </div>
               <div>
-                <h3>Quem investe para renda</h3>
+                <h3>“Quero uma renda de aluguel”</h3>
                 <p>
-                  Compare vocação para temporada, aluguel estudantil ou moradia - e priorize onde o
-                  retorno é mais provável.
+                  Compare a vocação de cada imóvel para temporada, aluguel estudantil ou moradia: a
+                  Lavra mede hotéis, restaurantes e universidades no entorno, além da distância do
+                  centro.
                 </p>
                 <div className="lp-flow">
                   <span>temporada</span>
@@ -2850,16 +1401,18 @@ export default async function LandingPage() {
               </div>
             </div>
             <div className="lp-persona lp-reveal lp-d1">
-              <div className="lp-emo">⏰</div>
+              <div className="lp-emo">
+                <IconCalendar />
+              </div>
               <div>
-                <h3>Quem não quer perder o prazo</h3>
+                <h3>“Não posso perder a data”</h3>
                 <p>
-                  Salve seus critérios, receba alertas de novos editais compatíveis e acompanhe as
-                  datas de praça no calendário.
+                  Salve os critérios, escolha o aviso diário, semanal ou mensal e acompanhe as datas
+                  dos seus favoritos na carteira.
                 </p>
                 <div className="lp-flow">
-                  <span>alertas</span>
-                  <span>1ª e 2ª praça</span>
+                  <span>alerta por e-mail</span>
+                  <span>agenda de leilões</span>
                   <span>favoritos</span>
                 </div>
               </div>
@@ -2868,10 +1421,10 @@ export default async function LandingPage() {
         </div>
       </section>
 
-      <section className="lp-band lp-tint" id="planos">
+      <section className="lp-band" id="planos">
         <div className="lp-wrap">
           <div className="lp-sechead lp-reveal">
-            <span className="lp-seclabel">// planos</span>
+            <span className="lp-seclabel">planos</span>
             <h2>Escolha o plano que combina com o seu jogo</h2>
             <p>Comece de graça e evolua conforme suas oportunidades crescem.</p>
           </div>
@@ -3050,23 +1603,21 @@ export default async function LandingPage() {
             <ApiWaitlist />
           </div>
 
-          <p className="lp-plans-note">
-            Preços e limites são ilustrativos - ajustar antes de publicar.
-          </p>
+          <p className="lp-plans-note">Cancele quando quiser, direto no painel. Sem fidelidade.</p>
         </div>
       </section>
 
       <section className="lp-band lp-alt" id="faq">
         <div className="lp-wrap">
           <div className="lp-sechead lp-reveal">
-            <span className="lp-seclabel">// dúvidas frequentes</span>
+            <span className="lp-seclabel">dúvidas</span>
             <h2>Perguntas frequentes</h2>
-            <p>O essencial para começar com confiança.</p>
+            <p>Como a Lavra calcula, de onde vêm os dados e o que a Lavra não faz.</p>
           </div>
           <div className="lp-faq lp-reveal">
-            <details open>
+            <details id="faq-nota" open>
               <summary>
-                As notas são uma garantia de bom negócio?
+                Como a nota é calculada?
                 <span className="lp-chev">
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
                     <path d="m6 9 6 6 6-6" />
@@ -3075,15 +1626,26 @@ export default async function LandingPage() {
               </summary>
               <div className="lp-ans">
                 <p>
-                  Não. As notas são <b>comparativas</b>: mostram quão boa é uma oportunidade em
-                  relação aos outros imóveis ativos. Servem para ranquear e comparar - a decisão
-                  final, incluindo a análise jurídica do edital, continua sendo sua.
+                  Cada imóvel recebe notas de 0 a 100, a partir de quatro blocos de dados: o{" "}
+                  <b>preço</b> (desconto sobre a avaliação da Caixa e preço por m² frente a anúncios
+                  reais do mercado aberto na mesma região), a <b>região</b> (distância real até
+                  escolas, hospitais, supermercados, parques e outras categorias de ponto de
+                  referência), as <b>características do imóvel</b> (tipo, área, quartos, vagas,
+                  situação de ocupação) e a <b>facilidade de revenda</b> daquele tipo naquela
+                  cidade.
+                </p>
+                <p>
+                  Três coisas valem saber: as notas são <b>comparativas</b> - posicionam o imóvel em
+                  relação aos outros da mesma cidade, é um ranking e não um selo de aprovação;{" "}
+                  <b>não são caixa-preta</b> - toda nota abre a explicação fator a fator, o que
+                  puxou para cima e o que puxou para baixo; e <b>os pesos mudam por tipo</b> -
+                  moradia, terreno e comercial se valorizam de formas diferentes.
                 </p>
               </div>
             </details>
-            <details>
+            <details id="faq-relativa">
               <summary>
-                De onde vêm os preços de mercado?
+                O que quer dizer uma nota 87?
                 <span className="lp-chev">
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
                     <path d="m6 9 6 6 6-6" />
@@ -3092,16 +1654,17 @@ export default async function LandingPage() {
               </summary>
               <div className="lp-ans">
                 <p>
-                  De anúncios reais de imóveis semelhantes em <b>portais consolidados do mercado</b>
-                  . Excluímos portais de leilão de propósito, para comparar sempre com o mercado
-                  aberto. Usamos o preço mediano por m², que evita distorções de anúncios fora da
-                  curva.
+                  Que o imóvel está à frente da maioria dos concorrentes diretos dele - imóveis do
+                  mesmo tipo, na mesma cidade. As notas da Lavra são <b>relativas</b>: servem para
+                  ranquear e comparar rapidamente, não para dizer que um negócio é bom em termos
+                  absolutos. Uma nota 87 num mercado caro e uma nota 87 num mercado barato
+                  significam a mesma coisa: “melhor que a maioria por perto”.
                 </p>
               </div>
             </details>
-            <details>
+            <details id="faq-garantia">
               <summary>
-                O que é o “desconto sobre a avaliação”?
+                A nota é garantia de bom negócio?
                 <span className="lp-chev">
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
                     <path d="m6 9 6 6 6-6" />
@@ -3110,15 +1673,17 @@ export default async function LandingPage() {
               </summary>
               <div className="lp-ans">
                 <p>
-                  É a comparação direta entre o preço de venda do leilão e o valor que a própria
-                  Caixa avaliou para o imóvel. Diferente do preço de mercado, esse número{" "}
-                  <b>não depende de anúncios</b> - vem da avaliação oficial.
+                  Não, e nunca vai ser. A nota olha preço, região e características a partir de
+                  dados públicos. Ela não lê o edital, não avalia a situação jurídica, não sabe de
+                  dívida de condomínio, de ação judicial nem do custo real de desocupação. Antes de
+                  dar lance, leia o edital e, se possível, consulte um advogado. A decisão continua
+                  sendo sua.
                 </p>
               </div>
             </details>
-            <details>
+            <details id="faq-caixa">
               <summary>
-                Como vocês sabem se a região é boa?
+                A Lavra é ligada à Caixa?
                 <span className="lp-chev">
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
                     <path d="m6 9 6 6 6-6" />
@@ -3127,16 +1692,17 @@ export default async function LandingPage() {
               </summary>
               <div className="lp-ans">
                 <p>
-                  Medimos a proximidade de mercados, hospitais, escolas, farmácias e parques, além
-                  da <b>diversidade de serviços</b> por perto - uma região completa, não só “muitos
-                  do mesmo”. Isso vira a nota de qualidade da região, com as distâncias reais aos
-                  pontos de interesse.
+                  Não. A Lavra é independente. Os imóveis vêm da base pública de leilões e venda
+                  direta da Caixa Econômica Federal, que a Lavra coleta, organiza e analisa. Não
+                  somos afiliados, patrocinados nem endossados pela Caixa, não intermediamos lances
+                  e não recebemos comissão sobre arremates. O lance é dado sempre no canal oficial
+                  da Caixa.
                 </p>
               </div>
             </details>
-            <details>
+            <details id="faq-dados">
               <summary>
-                Preciso entender de leilão para usar?
+                De onde vêm os dados?
                 <span className="lp-chev">
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
                     <path d="m6 9 6 6 6-6" />
@@ -3145,13 +1711,36 @@ export default async function LandingPage() {
               </summary>
               <div className="lp-ans">
                 <p>
-                  Não. Você descreve o que procura em português comum, como falaria com um corretor,
-                  e a Lavra traduz isso em critérios e notas fáceis de comparar. Nada de dropdowns
-                  complexos ou juridiquês.
+                  De três fontes, todas públicas ou licenciadas.{" "}
+                  <b>Imóveis, valores de avaliação, lances e datas</b>: base pública de leilões e
+                  venda direta da Caixa. <b>Pontos de referência e distâncias</b>: bases abertas de
+                  mapas. <b>Preço de mercado</b>: anúncios reais de imóveis parecidos em portais do
+                  mercado aberto - portais de leilão ficam de fora de propósito, para a comparação
+                  ser sempre com o mercado normal.
                 </p>
               </div>
             </details>
-            <details>
+            <details id="faq-mercado">
+              <summary>
+                Como vocês sabem se o preço está bom?
+                <span className="lp-chev">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                    <path d="m6 9 6 6 6-6" />
+                  </svg>
+                </span>
+              </summary>
+              <div className="lp-ans">
+                <p>
+                  O desconto sobre a avaliação é só metade da história: ele compara o lance com o
+                  valor que a própria Caixa avaliou. A outra metade é o mercado - a Lavra calcula o
+                  preço <b>mediano</b> por m² de imóveis parecidos anunciados na mesma região (a
+                  mediana evita que um anúncio fora da curva distorça tudo) e refina comparando só
+                  área e número de quartos semelhantes. Quando há poucos anúncios, a estimativa se
+                  apoia numa área maior e a Lavra reduz a confiança daquele número.
+                </p>
+              </div>
+            </details>
+            <details id="faq-atualizacao">
               <summary>
                 Com que frequência os dados são atualizados?
                 <span className="lp-chev">
@@ -3162,15 +1751,16 @@ export default async function LandingPage() {
               </summary>
               <div className="lp-ans">
                 <p>
-                  Diariamente. Novos editais entram, imóveis arrematados saem, e as notas são
-                  recalculadas para continuar refletindo a base ativa. Você também pode salvar
-                  buscas e receber alertas quando algo compatível aparecer.
+                  Diariamente. Novos imóveis entram, arrematados saem e as notas são recalculadas
+                  para refletir a base ativa daquele dia. Com uma conta, você pode salvar buscas e
+                  receber por e-mail o que apareceu de novo, no ritmo que escolher: diário, semanal
+                  ou mensal.
                 </p>
               </div>
             </details>
-            <details>
+            <details id="faq-sumiu">
               <summary>
-                Por que um imóvel sem foto tem nota mais baixa?
+                Por que um imóvel que eu vi sumiu?
                 <span className="lp-chev">
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
                     <path d="m6 9 6 6 6-6" />
@@ -3179,13 +1769,50 @@ export default async function LandingPage() {
               </summary>
               <div className="lp-ans">
                 <p>
-                  Porque dados incompletos reduzem a certeza. Imóveis sem foto, sem área ou sem
-                  informações de preço são penalizados - não porque são ruins, mas porque sabemos
-                  menos sobre eles. E tudo isso fica explícito na explicação da nota.
+                  Porque a oferta da Caixa muda todo dia. Um imóvel pode ser arrematado, ter o
+                  leilão suspenso, mudar de modalidade ou simplesmente sair da lista entre uma
+                  atualização e outra. Quando isso acontece, a Lavra marca o anúncio como inativo em
+                  vez de apagá-lo.
                 </p>
               </div>
             </details>
-            <details>
+            <details id="faq-faltando">
+              <summary>
+                Por que um imóvel sem foto ou sem área tem nota mais baixa?
+                <span className="lp-chev">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                    <path d="m6 9 6 6 6-6" />
+                  </svg>
+                </span>
+              </summary>
+              <div className="lp-ans">
+                <p>
+                  Nas notas de uso (moradia, temporada, estudantil, reforma, comercial, liquidez),
+                  um dado que falta é simplesmente ignorado - ele não vira ponto negativo. Já na{" "}
+                  <b>nota geral de investimento</b>, faltar informação reduz a nota: com menos
+                  dados, há menos certeza sobre o imóvel.
+                </p>
+              </div>
+            </details>
+            <details id="faq-leigo">
+              <summary>
+                Preciso entender de leilão para usar?
+                <span className="lp-chev">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                    <path d="m6 9 6 6 6-6" />
+                  </svg>
+                </span>
+              </summary>
+              <div className="lp-ans">
+                <p>
+                  Não. Você descreve o que procura em português comum - “apartamento de 2 quartos
+                  até R$ 150 mil no Rio, perto de metrô” - e a Lavra traduz isso em filtros e notas.
+                  Para dar o lance, aí sim vale estudar o edital: é lá que estão as regras de
+                  pagamento, as dívidas que acompanham o imóvel e a situação de ocupação.
+                </p>
+              </div>
+            </details>
+            <details id="faq-preco">
               <summary>
                 Quanto custa?
                 <span className="lp-chev">
@@ -3196,8 +1823,10 @@ export default async function LandingPage() {
               </summary>
               <div className="lp-ans">
                 <p>
-                  Durante a fase experimental, o acesso para explorar é aberto - sem cadastro. Criar
-                  uma conta libera favoritos, buscas salvas e alertas.
+                  Explorar a base, ver todas as notas e abrir a leitura de região é gratuito e não
+                  exige cadastro. Uma conta grátis libera favoritos, uma busca salva e resumo por
+                  e-mail. Os planos pagos liberam buscas em linguagem natural sem limite, alertas
+                  configuráveis, comparação ampliada e a análise completa de região.
                 </p>
               </div>
             </details>
@@ -3254,8 +1883,8 @@ export default async function LandingPage() {
                   <path d="M5 12h14m0 0-6-6m6 6-6 6" />
                 </svg>
               </Link>
-              <a className="lp-btn lp-ghost lp-big" href="#analise">
-                Rever a metodologia
+              <a className="lp-btn lp-ghost lp-big" href="#faq-nota">
+                Como a nota é calculada
               </a>
             </div>
             <div className="lp-fine">Acesso aberto durante a fase experimental - sem cadastro.</div>
@@ -3293,11 +1922,16 @@ export default async function LandingPage() {
           </a>
           <div className="lp-links">
             <a href="#recursos">Recursos</a>
-            <a href="#analise">Como funciona</a>
+            <a href="#exemplo">Exemplo real</a>
             <a href="#casos">Casos de uso</a>
             <a href="#faq">Dúvidas</a>
           </div>
-          <span className="lp-fine">© 2026 Lavra · dados de editais públicos</span>
+          <span className="lp-fine">
+            © 2026 Lavra · Dados da base pública de imóveis da Caixa Econômica Federal, atualizados
+            diariamente. A Lavra não é afiliada, patrocinada nem endossada pela Caixa e não
+            intermedeia lances. As notas são estimativas comparativas, não recomendação de
+            investimento.
+          </span>
         </div>
       </footer>
       <LandingEffects />
