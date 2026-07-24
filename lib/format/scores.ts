@@ -1,13 +1,15 @@
 import type { ProfileKey, Property, Scores, VisualAge } from "@/lib/types";
 import type { GoalKey } from "@/lib/facets";
 
-export const GOAL_PROFILE: Record<GoalKey, ProfileKey> = {
+// "investment" has no profile badge of its own - cards keep their primary profile.
+export const GOAL_PROFILE: Record<GoalKey, ProfileKey | null> = {
   airbnb: "airbnb",
   student: "student",
   family: "family",
   flip: "flip",
   commercial: "commercial",
   liquidity: "high_liquidity",
+  investment: null,
 };
 
 export const VISUAL_AGE_LABEL: Record<VisualAge, string> = {

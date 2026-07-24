@@ -1,31 +1,24 @@
+import { Suspense } from "react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import PropertyPhoto from "@/components/property/PropertyPhoto";
 import BackButton from "./_components/BackButton";
 import SaveButton from "./_components/SaveButton";
 import ScoreBars from "./_components/ScoreBars";
-import PriceHistory from "./_components/PriceHistory";
-import ScoreBreakdown from "./_components/ScoreBreakdown";
-import ScoreWeights from "./_components/ScoreWeights";
 import VisualScore from "./_components/VisualScore";
-import NearbyPois from "./_components/NearbyPois";
 import PropertyRanks from "./_components/PropertyRanks";
-import RegionPanel from "@/components/region/RegionPanel";
-import PropertyMarket from "@/components/market/PropertyMarket";
-import SimilarCarousel, { type RecItem } from "@/components/property/SimilarCarousel";
 import Ring from "@/components/ui/Ring";
 import {
-  getMarketComparables,
-  getPriceHistory,
-  getPropertiesByIds,
-  getPropertyById,
-  getPropertyDetailText,
-  getPropertyPois,
-  getRecommendations,
-  getRegion,
-  getScoreExplain,
-  isListable,
-} from "@/lib/data";
+  BlockSkeleton,
+  InlineSkeleton,
+  MarketSlot,
+  PriceHistorySlot,
+  RecommendationsSlot,
+  RegionSlot,
+  ScoreBreakdownSlot,
+  ScoreWeightsSlot,
+} from "./_components/sections";
+import { getPropertyById, getPropertyDetailText } from "@/lib/data";
 import Hint from "@/components/ui/Hint";
 import {
   fmtDate,
@@ -43,38 +36,11 @@ export const dynamic = "force-dynamic";
 
 export default async function PropertyPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const base = await getPropertyById(id);
+  // The shell blocks only on these two single-row lookups (run concurrently);
+  // every other section streams in through the Suspense boundaries below.
+  const [base, text] = await Promise.all([getPropertyById(id), getPropertyDetailText(id)]);
   if (!base) notFound();
-
-  const [text, region, market, priceHistory, recs, propertyPois, scoreExplain] = await Promise.all([
-    getPropertyDetailText(id),
-    base.h3 ? getRegion(base.h3) : Promise.resolve(null),
-    getMarketComparables(base.uf, base.city, base.neighborhood, base.propertyType, base.area),
-    getPriceHistory(base.id),
-    getRecommendations(base.id),
-    getPropertyPois(base.id),
-    getScoreExplain(base.id),
-  ]);
   const p = { ...base, description: text.description, visualNote: text.visualNote };
-  const nearby = propertyPois;
-
-  // Only surface recommendations that are a strong match (≥ 75%).
-  const strongRecs = recs.filter((r) => Math.round((r.similarity ?? 0) * 100) >= 75);
-  const recProps = strongRecs.length
-    ? await getPropertiesByIds([...new Set(strongRecs.map((r) => r.recId))])
-    : [];
-  const propById = new Map(recProps.filter((x) => isListable(x)).map((x) => [x.id, x]));
-  const toItems = (kind: "visual" | "similar"): RecItem[] =>
-    strongRecs
-      .filter((r) => r.kind === kind)
-      .map((r) => {
-        const rp = propById.get(r.recId);
-        if (!rp) return null;
-        return { p: rp, match: Math.min(100, Math.round((r.similarity ?? 0) * 100)) };
-      })
-      .filter((x): x is RecItem => x !== null);
-  const recVisual = toItems("visual");
-  const recSemantic = toItems("similar");
 
   // deriveTitle already appends the neighborhood when there is no bedroom count.
   const heading =
@@ -155,7 +121,9 @@ export default async function PropertyPage({ params }: { params: Promise<{ id: s
                 <div className="ih-body">
                   <div className="ih-k-row">
                     <div className="ih-k">Nota geral de investimento</div>
-                    {scoreExplain && <ScoreWeights explain={scoreExplain} />}
+                    <Suspense fallback={<InlineSkeleton width={86} height={20} />}>
+                      <ScoreWeightsSlot id={p.id} />
+                    </Suspense>
                   </div>
                   <div className="ih-s">
                     Índice ponderado que combina as notas por objetivo, o desconto e o mercado do
@@ -171,14 +139,14 @@ export default async function PropertyPage({ params }: { params: Promise<{ id: s
                 vão de 0 a 100 e comparam este imóvel com os outros da mesma cidade.
               </div>
             )}
-            <ScoreBreakdown p={p} explain={scoreExplain} />
+            <Suspense fallback={<div className="skel" style={{ height: 120, borderRadius: 12 }} />}>
+              <ScoreBreakdownSlot p={p} />
+            </Suspense>
           </div>
 
-          {region && (
-            <RegionPanel region={region} pois={nearby} lat={p.lat} lon={p.lon} title={heading} />
-          )}
-
-          <NearbyPois pois={propertyPois} />
+          <Suspense fallback={<BlockSkeleton height={320} />}>
+            <RegionSlot p={p} heading={heading} />
+          </Suspense>
         </div>
 
         <div>
@@ -220,16 +188,13 @@ export default async function PropertyPage({ params }: { params: Promise<{ id: s
             </div>
           </div>
 
-          <PriceHistory points={priceHistory} />
+          <Suspense fallback={<BlockSkeleton height={150} />}>
+            <PriceHistorySlot id={p.id} />
+          </Suspense>
 
-          {market && (
-            <PropertyMarket
-              stats={market}
-              lance={p.saleValue}
-              area={p.area}
-              appraised={p.appraisedValue}
-            />
-          )}
+          <Suspense fallback={<BlockSkeleton height={220} />}>
+            <MarketSlot p={p} />
+          </Suspense>
 
           <div className="infoblock">
             <h3>Sobre o imóvel</h3>
@@ -288,16 +253,9 @@ export default async function PropertyPage({ params }: { params: Promise<{ id: s
         </div>
       </div>
 
-      <SimilarCarousel
-        title="Mais imóveis como este"
-        subtitle="Imóveis com aparência parecida com este."
-        items={recVisual}
-      />
-      <SimilarCarousel
-        title="Quem viu este também considerou"
-        subtitle="Outras oportunidades parecidas em perfil e preço."
-        items={recSemantic}
-      />
+      <Suspense fallback={null}>
+        <RecommendationsSlot id={p.id} />
+      </Suspense>
     </section>
   );
 }
