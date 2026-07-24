@@ -1,7 +1,7 @@
-import CollectionCard from "@/components/groups/CollectionCard";
 import EmptyState from "@/components/ui/EmptyState";
-import { clusterStatsFor, getClusters, getClusterStatsAll } from "@/lib/data";
+import { getClusters, getClusterStatsAll } from "@/lib/data";
 import { IconGroups } from "@/lib/icons";
+import GroupsClient from "./_components/GroupsClient";
 
 export default async function GroupsPage() {
   const [clusters, clusterStats] = await Promise.all([getClusters(), getClusterStatsAll()]);
@@ -20,15 +20,7 @@ export default async function GroupsPage() {
           agrupados, eles aparecerão aqui.
         </EmptyState>
       ) : (
-        <div className="plgrid">
-          {clusters.map((c) => (
-            <CollectionCard
-              key={c.clusterId}
-              c={c}
-              stats={clusterStatsFor(clusterStats, c.clusterId)}
-            />
-          ))}
-        </div>
+        <GroupsClient clusters={clusters} stats={clusterStats} />
       )}
     </section>
   );

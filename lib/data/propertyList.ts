@@ -18,11 +18,6 @@ const MAP_POINT_LIMIT = 4000;
 
 export const isListable = (p: Property): boolean => !p.inactive && p.scores.investment != null;
 
-// Undated actives stay visible; auctions that already happened don't.
-// String compare on the ISO date matches the SQL side's CURRENT_DATE (UTC).
-export const hasUpcomingAuction = (p: Property): boolean =>
-  p.auctionDate == null || p.auctionDate.slice(0, 10) >= new Date().toISOString().slice(0, 10);
-
 function toRpcFilters(f: PropertyFilters = {}): Record<string, unknown> {
   const out: Record<string, unknown> = {};
   if (f.q?.trim()) out.q = f.q.trim();
@@ -54,7 +49,6 @@ function toRpcFilters(f: PropertyFilters = {}): Record<string, unknown> {
   if (f.auctionWithinDays) out.auction_within_days = f.auctionWithinDays;
   if (f.auctionOn) out.auction_on = f.auctionOn;
   if (f.includeInactive) out.include_inactive = true;
-  if (!f.includePastAuctions) out.hide_past_auctions = true;
   if (f.ids) out.ids = f.ids;
   return out;
 }
@@ -310,7 +304,11 @@ export function getAnalysis(filters: PropertyFilters): Promise<AnalysisData> {
 async function loadAuctionCalendar(filtersJson: string): Promise<Record<string, number>> {
   const data = await rpcJson("auction_calendar", { p_filters: JSON.parse(filtersJson) });
   const out: Record<string, number> = {};
-  for (const r of (data ?? []) as { d: string; n: number }[]) out[r.d] = Number(r.n);
+  // `d` may be a full timestamp; the calendar keys by day, so bucket to YYYY-MM-DD.
+  for (const r of (data ?? []) as { d: string; n: number }[]) {
+    const day = String(r.d).slice(0, 10);
+    out[day] = (out[day] ?? 0) + Number(r.n);
+  }
   return out;
 }
 

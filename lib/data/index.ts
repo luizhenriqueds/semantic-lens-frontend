@@ -1,6 +1,5 @@
 export {
   isListable,
-  hasUpcomingAuction,
   getPropertiesPage,
   countProperties,
   getPropertiesByIds,
@@ -13,7 +12,7 @@ export {
   clusterStatsFor,
 } from "./propertyList";
 export { getPoisNear, getPropertyPois, getRegionPois } from "./pois";
-export { getMarketStats, getMarketHistory, getMarketComparables } from "./market";
+export { getMarketStatsForCity, getMarketComparables } from "./market";
 export {
   getMarketDashboard,
   type MarketDashboard,

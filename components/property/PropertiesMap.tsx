@@ -3,6 +3,9 @@
 import { useEffect, useRef, useState } from "react";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
+import "leaflet.markercluster";
+import "leaflet.markercluster/dist/MarkerCluster.css";
+import "leaflet.markercluster/dist/MarkerCluster.Default.css";
 import { fmtDate, money, showDiscount } from "@/lib/format";
 import { groupByAddress } from "@/lib/geo";
 import { homeIcon, homeIconCount } from "@/lib/mapMarkers";
@@ -64,7 +67,7 @@ function groupPopup(group: Property[]): string {
 export default function PropertiesMap({ properties }: { properties: Property[] }) {
   const elRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<L.Map | null>(null);
-  const layerRef = useRef<L.LayerGroup | null>(null);
+  const layerRef = useRef<L.MarkerClusterGroup | null>(null);
   const boundsRef = useRef<L.LatLngBounds | null>(null);
   const [expanded, setExpanded] = useState(false);
 
@@ -76,7 +79,11 @@ export default function PropertiesMap({ properties }: { properties: Property[] }
       maxZoom: 19,
       attribution: "&copy; OpenStreetMap",
     }).addTo(map);
-    layerRef.current = L.layerGroup().addTo(map);
+    layerRef.current = L.markerClusterGroup({
+      showCoverageOnHover: false,
+      maxClusterRadius: 55,
+      chunkedLoading: true,
+    }).addTo(map);
 
     return () => {
       map.remove();

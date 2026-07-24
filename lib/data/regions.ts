@@ -1,6 +1,6 @@
 import { supabase } from "@/lib/supabase";
 import { titleCase } from "@/lib/format";
-import { dominantStreet } from "@/lib/geo";
+import { dominantStreet, streetOf } from "@/lib/geo";
 import type { Region } from "@/lib/types";
 import { cached, fetchAllRows, num, REVALIDATE, rows, withRetry } from "./client";
 import { countProperties } from "./propertyList";
@@ -18,27 +18,29 @@ function mapScores(s: any): Region["scores"] {
   };
 }
 
-async function regionPropertyCounts(): Promise<Map<string, number>> {
-  const res = await withRetry(() => supabase.rpc("region_property_counts"));
-  return new Map(rows<any>("region_property_counts", res).map((r) => [r.h3, Number(r.n)]));
-}
-
 // raw_address of listable properties in the given cells, for street disambiguation.
 async function addressesByCell(
   h3s: string[],
 ): Promise<Map<string, { rawAddress: string | null }[]>> {
+  const chunks: string[][] = [];
+  for (let i = 0; i < h3s.length; i += 100) chunks.push(h3s.slice(i, i + 100));
+
+  const batches = await Promise.all(
+    chunks.map((chunk) =>
+      fetchAllRows<any>("property_list_mv-addresses", (f, t) =>
+        supabase
+          .from("property_list_mv")
+          .select("h3_r8,raw_address")
+          .in("h3_r8", chunk)
+          .eq("is_listable", true)
+          .order("property_id")
+          .range(f, t),
+      ),
+    ),
+  );
+
   const map = new Map<string, { rawAddress: string | null }[]>();
-  for (let i = 0; i < h3s.length; i += 100) {
-    const chunk = h3s.slice(i, i + 100);
-    const batch = await fetchAllRows<any>("property_list_mv-addresses", (f, t) =>
-      supabase
-        .from("property_list_mv")
-        .select("h3_r8,raw_address")
-        .in("h3_r8", chunk)
-        .eq("is_listable", true)
-        .order("property_id")
-        .range(f, t),
-    );
+  for (const batch of batches) {
     for (const r of batch) {
       const g = map.get(r.h3_r8);
       const item = { rawAddress: r.raw_address || null };
@@ -51,49 +53,51 @@ async function addressesByCell(
 
 // Slim list for /regions: no features/summary/neighbors. Module-level TTL cache
 // because the payload can exceed unstable_cache's 2MB limit.
+const hasProfile = (r: any) =>
+  r.convenience != null ||
+  r.walkability != null ||
+  r.commercial != null ||
+  r.airbnb != null ||
+  r.student != null ||
+  r.family != null;
+
 async function loadRegionsIndex(): Promise<Region[]> {
-  const [cells, scoreRows, dnaRows, counts] = await Promise.all([
-    fetchAllRows<any>("region_cells", (f, t) =>
-      supabase.from("region_cells").select("h3,city,neighborhood_label").order("h3").range(f, t),
+  // region_index() joins cells + scores + dna + counts server-side; page it in
+  // parallel since PostgREST caps each response at 1000 rows.
+  const countRes = await withRetry(() =>
+    supabase.from("region_cells").select("h3", { count: "exact", head: true }),
+  );
+  const total = (countRes as { count?: number | null }).count ?? 0;
+  const PAGE = 1000;
+  const pages = Math.max(1, Math.ceil(total / PAGE));
+  const pageResults = await Promise.all(
+    Array.from({ length: pages }, (_, i) =>
+      withRetry(() =>
+        supabase
+          .rpc("region_index", {})
+          .order("h3")
+          .range(i * PAGE, (i + 1) * PAGE - 1),
+      ),
     ),
-    fetchAllRows<any>("region_scores", (f, t) =>
-      supabase
-        .from("region_scores")
-        .select(SCORE_COLS)
-        .eq("score_version", 1)
-        .order("h3")
-        .range(f, t),
-    ),
-    fetchAllRows<any>("region_dna", (f, t) =>
-      supabase.from("region_dna").select("h3,dna,top_tags").order("h3").range(f, t),
-    ),
-    regionPropertyCounts(),
-  ]);
+  );
+  const idxRows = pageResults.flatMap((r) => rows<any>("region_index", r));
 
-  const scoreMap = new Map(scoreRows.map((s) => [s.h3, s]));
-  const dnaMap = new Map(dnaRows.map((d) => [d.h3, d]));
+  const regions = idxRows.filter(hasProfile).map((r): Region => ({
+    h3: r.h3,
+    name: r.neighborhood_label ?? "Região",
+    city: titleCase(r.city ?? ""),
+    subLabel: streetOf(r.sub_label),
+    numProps: Number(r.num_props ?? 0),
+    scores: mapScores(r),
+    dna: (r.dna as Region["dna"]) ?? null,
+    topTags: (r.top_tags as string[]) ?? [],
+    summary: null,
+    counts: {},
+    nearest: {},
+    neighbors: [],
+  }));
 
-  const regions = cells
-    .filter((c) => scoreMap.has(c.h3))
-    .map((c): Region => {
-      const d = dnaMap.get(c.h3);
-      return {
-        h3: c.h3,
-        name: c.neighborhood_label ?? "Região",
-        city: titleCase(c.city ?? ""),
-        subLabel: null,
-        numProps: counts.get(c.h3) ?? 0,
-        scores: mapScores(scoreMap.get(c.h3)),
-        dna: (d?.dna as Region["dna"]) ?? null,
-        topTags: (d?.top_tags as string[]) ?? [],
-        summary: null,
-        counts: {},
-        nearest: {},
-        neighbors: [],
-      };
-    });
-
-  // Disambiguate cells sharing city + name by their dominant street.
+  // Keep the sub-label only where it disambiguates same-named regions.
   const byName = new Map<string, Region[]>();
   for (const r of regions) {
     const key = `${r.city}||${r.name}`;
@@ -101,16 +105,8 @@ async function loadRegionsIndex(): Promise<Region[]> {
     if (group) group.push(r);
     else byName.set(key, [r]);
   }
-  const dupH3s = [...byName.values()]
-    .filter((g) => g.length > 1)
-    .flat()
-    .map((r) => r.h3);
-  if (dupH3s.length) {
-    const addrs = await addressesByCell(dupH3s);
-    for (const group of byName.values()) {
-      if (group.length < 2) continue;
-      for (const r of group) r.subLabel = dominantStreet(addrs.get(r.h3) ?? []);
-    }
+  for (const group of byName.values()) {
+    if (group.length < 2) for (const r of group) r.subLabel = null;
   }
   return regions;
 }

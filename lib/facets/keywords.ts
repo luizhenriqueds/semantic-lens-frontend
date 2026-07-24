@@ -46,8 +46,11 @@ export const POI_STOPWORDS = new Set([
   "uma",
   "no",
   "na",
+  "em",
   "the",
   "e",
+  "para",
+  "pra",
 ]);
 
 // Generic place words that describe an area rather than a mappable POI - handled
@@ -64,4 +67,5 @@ export type Facets = {
   priceMax: number | null;
   goal: GoalKey | null;
   poi: PoiQuery | null;
+  center: boolean;
 };

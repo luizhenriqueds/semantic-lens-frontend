@@ -9,7 +9,7 @@ import SameAddressGroups from "@/components/region/SameAddressGroups";
 import RegionScoreBars from "@/components/region/RegionScoreBars";
 import RegionMarket from "@/components/market/RegionMarket";
 import {
-  getMarketStats,
+  getMarketStatsForCity,
   getPoisNear,
   getPropertiesPage,
   getRegion,
@@ -35,19 +35,14 @@ function avg(list: Property[], field: keyof Property["scores"]): number | null {
   return Math.round(vals.reduce((a, b) => a + b, 0) / vals.length);
 }
 
-export const revalidate = 120;
-
-// On-demand ISR rather than prerendering every h3 cell at build.
-export async function generateStaticParams() {
-  return [];
-}
+// Dynamic: the app layout reads the auth cookie, so this route can't be static.
+export const dynamic = "force-dynamic";
 
 export default async function RegionPage({ params }: { params: Promise<{ h3: string }> }) {
   const { h3 } = await params;
-  const [region, cellPage, marketStats, cellPois] = await Promise.all([
+  const [region, cellPage, cellPois] = await Promise.all([
     getRegion(h3),
     getPropertiesPage({ filters: { h3 }, sort: "leilao", pageSize: 500 }),
-    getMarketStats(),
     getRegionPois(h3),
   ]);
   if (!region) notFound();
@@ -57,6 +52,7 @@ export default async function RegionPage({ params }: { params: Promise<{ h3: str
   // Must match what /properties?h3= lists, which drops inactive listings.
   const here = cellPage.items;
   const tags = regionTags(region);
+  const marketStats = await getMarketStatsForCity(region.city);
   const market = statsForRegion(marketStats, region).filter(hasReliableMarket);
 
   const geo = here.filter((p) => p.lat != null && p.lon != null);

@@ -14,13 +14,6 @@ export type MarketStats = {
   sizeMatched?: boolean;
 };
 
-export type MarketHistoryPoint = {
-  date: string;
-  priceMedian: number | null;
-  priceM2Median: number | null;
-  sampleSize: number | null;
-};
-
 export type PriceHistoryPoint = {
   date: string;
   saleValue: number | null;

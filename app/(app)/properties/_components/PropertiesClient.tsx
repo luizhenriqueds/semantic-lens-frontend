@@ -39,9 +39,9 @@ const PropertiesMap = dynamic(() => import("@/components/property/PropertiesMap"
 const PAGE_SIZE = 24;
 
 const SORTS: { key: PropertySort; label: string }[] = [
+  { key: "desconto", label: "Maior desconto" },
   { key: "leilao", label: "Data do leilão (mais próxima)" },
   { key: "investimento", label: "Melhor investimento" },
-  { key: "desconto", label: "Maior desconto" },
   { key: "score", label: "Melhor nota do objetivo" },
   { key: "menor", label: "Menor preço" },
   { key: "maior", label: "Maior preço" },
@@ -984,7 +984,7 @@ export default function PropertiesClient({
           <select
             className="selectish"
             value={sort}
-            onChange={(e) => patch({ sort: e.target.value === "leilao" ? null : e.target.value })}
+            onChange={(e) => patch({ sort: e.target.value === "desconto" ? null : e.target.value })}
           >
             {SORTS.map((s) => (
               <option key={s.key} value={s.key}>
@@ -995,49 +995,52 @@ export default function PropertiesClient({
         )}
       </div>
 
-      <div style={isPending ? { opacity: 0.55, pointerEvents: "none" } : undefined}>
-        {view === "map" ? (
-          map && map.points.length ? (
+      <div className="viewcontent">
+        {isPending && <div className="viewloadbar" aria-hidden />}
+        <div className={`viewinner${isPending ? " loading" : ""}`}>
+          {view === "map" ? (
+            map && map.points.length ? (
+              <>
+                {map.total > map.points.length && (
+                  <p className="fhint" style={{ margin: "0 0 10px" }}>
+                    Mostrando os {map.points.length.toLocaleString("pt-BR")} imóveis com melhor nota
+                    de investimento de {map.total.toLocaleString("pt-BR")}. Refine os filtros para
+                    ver todos no mapa.
+                  </p>
+                )}
+                <PropertiesMap properties={mapProperties} />
+              </>
+            ) : (
+              <EmptyState icon={<IconBuilding />} title="Nenhum imóvel para mostrar no mapa">
+                Tente remover um filtro ou limpar a busca para ver imóveis no mapa.
+              </EmptyState>
+            )
+          ) : view === "analysis" ? (
+            analysis && <PropertiesAnalysis data={analysis} onPickRange={pickRange} />
+          ) : view === "calendar" ? (
+            calendar && (
+              <AuctionCalendar
+                counts={calendar.counts}
+                day={calendar.day}
+                dayItems={calendar.dayItems}
+                onSelectDay={(d) => setParams({ day: d })}
+              />
+            )
+          ) : list && list.items.length ? (
             <>
-              {map.total > map.points.length && (
-                <p className="fhint" style={{ margin: "0 0 10px" }}>
-                  Mostrando os {map.points.length.toLocaleString("pt-BR")} imóveis com melhor nota
-                  de investimento de {map.total.toLocaleString("pt-BR")}. Refine os filtros para ver
-                  todos no mapa.
-                </p>
-              )}
-              <PropertiesMap properties={mapProperties} />
+              <div className="wlist">
+                {list.items.map((p) => (
+                  <PropertyRow key={p.id} p={p} poiCats={poiCats} poiRadius={poiRadius} />
+                ))}
+              </div>
+              <Pagination page={page} total={list.total} pageSize={PAGE_SIZE} onChange={goTo} />
             </>
           ) : (
-            <EmptyState icon={<IconBuilding />} title="Nenhum imóvel para mostrar no mapa">
-              Tente remover um filtro ou limpar a busca para ver imóveis no mapa.
+            <EmptyState icon={<IconBuilding />} title="Nenhum imóvel encontrado com esses filtros">
+              Tente remover um filtro ou limpar a busca para ver mais resultados.
             </EmptyState>
-          )
-        ) : view === "analysis" ? (
-          analysis && <PropertiesAnalysis data={analysis} onPickRange={pickRange} />
-        ) : view === "calendar" ? (
-          calendar && (
-            <AuctionCalendar
-              counts={calendar.counts}
-              day={calendar.day}
-              dayItems={calendar.dayItems}
-              onSelectDay={(d) => setParams({ day: d })}
-            />
-          )
-        ) : list && list.items.length ? (
-          <>
-            <div className="wlist">
-              {list.items.map((p) => (
-                <PropertyRow key={p.id} p={p} poiCats={poiCats} poiRadius={poiRadius} />
-              ))}
-            </div>
-            <Pagination page={page} total={list.total} pageSize={PAGE_SIZE} onChange={goTo} />
-          </>
-        ) : (
-          <EmptyState icon={<IconBuilding />} title="Nenhum imóvel encontrado com esses filtros">
-            Tente remover um filtro ou limpar a busca para ver mais resultados.
-          </EmptyState>
-        )}
+          )}
+        </div>
       </div>
     </>
   );

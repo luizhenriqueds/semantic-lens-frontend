@@ -437,7 +437,7 @@ export default async function MarketPage() {
       </div>
       <div className="oppgrid">
         {d.opp.map((o) => (
-          <Link className="opp" key={o.property_id} href={`/properties/${o.property_id}`}>
+          <Link className="opp" key={o.property_id} href={`/property/${o.property_id}`}>
             <Ring v={Math.round(o.investment ?? 0)} />
             <div className="body">
               <div className="t">{oppTitle(o)}</div>
