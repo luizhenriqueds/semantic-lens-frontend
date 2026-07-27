@@ -7,7 +7,7 @@ import { Fragment } from "react";
 type Crumb = { label: string; href?: string };
 
 const SECTION: Record<string, string> = {
-  search: "Buscar imóveis",
+  search: "Explorar imóveis",
   properties: "Imóveis",
   groups: "Grupos",
   regions: "Regiões",

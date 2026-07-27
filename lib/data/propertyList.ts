@@ -1,6 +1,7 @@
 import { supabase } from "@/lib/supabase";
 import { deriveTitle, titleCase } from "@/lib/format";
 import { ANALYSIS_EDGES, type AnalysisData } from "@/lib/facets/analysis";
+import { LIST_PAGE_SIZE } from "@/lib/filters/propertiesUrl";
 import type { ClusterStats } from "@/lib/clusters";
 import type {
   FilterOptions,
@@ -11,9 +12,8 @@ import type {
   PropertySort,
   Scores,
 } from "@/lib/types";
-import { cached, num, rows, withRetry } from "./client";
+import { REVALIDATE, cached, fetchAllRows, num, rows, withRetry } from "./client";
 
-const LIST_PAGE_SIZE = 24;
 const MAP_POINT_LIMIT = 4000;
 
 export const isListable = (p: Property): boolean => !p.inactive && p.scores.investment != null;
@@ -47,7 +47,6 @@ function toRpcFilters(f: PropertyFilters = {}): Record<string, unknown> {
   if (f.financing) out.financing = true;
   if (f.fgts) out.fgts = true;
   if (f.auctionWithinDays) out.auction_within_days = f.auctionWithinDays;
-  if (f.auctionOn) out.auction_on = f.auctionOn;
   if (f.includeInactive) out.include_inactive = true;
   if (f.ids) out.ids = f.ids;
   return out;
@@ -178,6 +177,106 @@ export async function getPropertiesByIds(ids: string[]): Promise<Property[]> {
     out.push(...rows<any>("property_list_mv", res).map(mapListRow));
   }
   return out;
+}
+
+// `auction_within_days` on the list RPC is a window around today and its "leilao" sort
+// ascends, so a page of it is entirely past auctions - hence a direct read for the
+// opposite end. `sinceIso` is hour-rounded by the caller to keep the cache key stable.
+const UPCOMING_LIMIT = 60;
+
+async function loadUpcomingAuctions(sinceIso: string): Promise<Property[]> {
+  const res = await withRetry(() =>
+    supabase
+      .from("property_list_mv")
+      .select(MV_COLS)
+      .eq("is_listable", true)
+      .gt("auction_date", sinceIso)
+      .order("auction_date", { ascending: true })
+      .limit(UPCOMING_LIMIT),
+  );
+  return rows<any>("property_list_mv", res).map(mapListRow);
+}
+
+const cachedUpcoming = cached(loadUpcomingAuctions, "upcoming-auctions");
+
+export function getUpcomingAuctions(now: Date): Promise<Property[]> {
+  const hour = new Date(now);
+  hour.setMinutes(0, 0, 0);
+  return cachedUpcoming(hour.toISOString());
+}
+
+// The list RPC accepts `auction_on` but its predicate never matches, so the calendar's
+// day drill-down came back empty for every date. Resolving the day's ids here and handing
+// them to the RPC as `ids` keeps the caller's filters and sort authoritative. Days are
+// bucketed in UTC to match `auction_calendar`, which keys its counts the same way.
+const CALENDAR_ID_CAP = 6000;
+
+async function loadAuctionDayIds(day: string): Promise<string[]> {
+  const ids = await fetchAllRows<{ property_id: string }>("auction-day-ids", (from, to) =>
+    supabase
+      .from("property_list_mv")
+      .select("property_id")
+      .eq("is_listable", true)
+      .gte("auction_date", `${day}T00:00:00Z`)
+      .lt("auction_date", `${day}T23:59:59.999Z`)
+      .order("auction_date", { ascending: true })
+      .order("property_id", { ascending: true })
+      .range(from, to),
+  );
+  return ids.slice(0, CALENDAR_ID_CAP).map((r) => r.property_id);
+}
+
+// A plain TTL map, not `cached`: unstable_cache skips the read when it runs nested inside
+// another unstable_cache, so paging a day would re-resolve the whole id set every time.
+const dayIdsCache = new Map<string, { at: number; promise: Promise<string[]> }>();
+
+function auctionDayIds(day: string): Promise<string[]> {
+  const now = Date.now();
+  const hit = dayIdsCache.get(day);
+  if (hit && now - hit.at <= REVALIDATE * 1000) return hit.promise;
+  const promise = loadAuctionDayIds(day).catch((e) => {
+    dayIdsCache.delete(day);
+    throw e;
+  });
+  dayIdsCache.set(day, { at: now, promise });
+  return promise;
+}
+
+// Cached on (day, filters, sort, page) rather than on the resolved ids - a day can hold
+// thousands of them, and `cached` stringifies every argument into the cache key.
+async function loadAuctionDayPage(
+  day: string,
+  filtersJson: string,
+  sort: PropertySort,
+  page: number,
+  pageSize: number,
+): Promise<PropertyPage> {
+  const ids = await auctionDayIds(day);
+  if (!ids.length) return { items: [], total: 0 };
+  return loadPropertiesPage(
+    JSON.stringify({ ...JSON.parse(filtersJson), ids }),
+    sort,
+    page,
+    pageSize,
+  );
+}
+
+const cachedDayPage = cached(loadAuctionDayPage, "auction-day-page");
+
+export function getAuctionDayPage(
+  day: string,
+  filters: PropertyFilters,
+  sort: PropertySort,
+  page = 1,
+  pageSize = LIST_PAGE_SIZE,
+): Promise<PropertyPage> {
+  return cachedDayPage(
+    day,
+    JSON.stringify(toRpcFilters(filters)),
+    sort,
+    Math.max(1, page),
+    pageSize,
+  );
 }
 
 type PropertyDetail = Property & { discountPercentile: number | null };

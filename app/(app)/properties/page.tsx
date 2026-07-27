@@ -2,6 +2,7 @@ import PropertiesClient from "./_components/PropertiesClient";
 import {
   getAnalysis,
   getAuctionCalendar,
+  getAuctionDayPage,
   getClusters,
   getFilterOptions,
   getMapPoints,
@@ -11,8 +12,6 @@ import {
 import { parsePropertySearchParams } from "@/lib/filters/propertiesUrl";
 import type { AnalysisData } from "@/lib/facets/analysis";
 import type { MapPoint, Property } from "@/lib/types";
-
-const CALENDAR_DAY_LIMIT = 500;
 
 export default async function PropertiesPage({
   searchParams,
@@ -32,15 +31,14 @@ export default async function PropertiesPage({
       ? (async () => {
           const [counts, dayPage] = await Promise.all([
             getAuctionCalendar(filters),
-            day
-              ? getPropertiesPage({
-                  filters: { ...filters, auctionOn: day },
-                  sort,
-                  pageSize: CALENDAR_DAY_LIMIT,
-                })
-              : Promise.resolve(null),
+            day ? getAuctionDayPage(day, filters, sort, page) : Promise.resolve(null),
           ]);
-          return { counts, day, dayItems: (dayPage?.items ?? []) as Property[] };
+          return {
+            counts,
+            day,
+            dayItems: (dayPage?.items ?? []) as Property[],
+            dayTotal: dayPage?.total ?? 0,
+          };
         })()
       : Promise.resolve(undefined),
     view === "map" ? getMapPoints(filters) : Promise.resolve(undefined),

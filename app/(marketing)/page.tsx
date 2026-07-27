@@ -12,7 +12,7 @@ import {
   SpotStudent,
 } from "@/app/(marketing)/_components/UseSpots";
 import { IconCalendar, IconChart, IconHouse, IconSliders, POI_ICON } from "@/lib/icons";
-import Rail from "@/app/(marketing)/_components/Rail";
+import Rail from "@/components/ui/Rail";
 import ShowcaseGallery from "@/app/(marketing)/_components/ShowcaseGallery";
 import { SHOWCASE_CAPTURED } from "@/app/(marketing)/_data/showcase";
 import { SIMILAR, SIMILAR_SEED } from "@/app/(marketing)/_data/similar";

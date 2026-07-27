@@ -29,14 +29,12 @@ import type {
 } from "@/lib/types";
 import { IconArrow, IconBell, IconBuilding, IconSearch, IconSliders, POI_ICON } from "@/lib/icons";
 import { MAX_NEAR_M, POI_LABEL, POI_ORDER } from "@/lib/pois";
-import type { PropertiesView } from "@/lib/filters/propertiesUrl";
+import { LIST_PAGE_SIZE, type PropertiesView } from "@/lib/filters/propertiesUrl";
 
 const PropertiesMap = dynamic(() => import("@/components/property/PropertiesMap"), {
   ssr: false,
   loading: () => <div className="lmap propmap loading">Carregando mapa…</div>,
 });
-
-const PAGE_SIZE = 24;
 
 const SORTS: { key: PropertySort; label: string }[] = [
   { key: "desconto", label: "Maior desconto" },
@@ -223,7 +221,12 @@ export default function PropertiesClient({
   h3Label?: string;
   list?: { items: Property[]; total: number };
   analysis?: AnalysisData;
-  calendar?: { counts: Record<string, number>; day: string | null; dayItems: Property[] };
+  calendar?: {
+    counts: Record<string, number>;
+    day: string | null;
+    dayItems: Property[];
+    dayTotal: number;
+  };
   map?: { points: MapPoint[]; total: number };
 }) {
   const router = useRouter();
@@ -1023,7 +1026,10 @@ export default function PropertiesClient({
                 counts={calendar.counts}
                 day={calendar.day}
                 dayItems={calendar.dayItems}
-                onSelectDay={(d) => setParams({ day: d })}
+                dayTotal={calendar.dayTotal}
+                page={page}
+                onSelectDay={(d) => setParams({ day: d, page: null })}
+                onPageChange={goTo}
               />
             )
           ) : list && list.items.length ? (
@@ -1033,7 +1039,12 @@ export default function PropertiesClient({
                   <PropertyRow key={p.id} p={p} poiCats={poiCats} poiRadius={poiRadius} />
                 ))}
               </div>
-              <Pagination page={page} total={list.total} pageSize={PAGE_SIZE} onChange={goTo} />
+              <Pagination
+                page={page}
+                total={list.total}
+                pageSize={LIST_PAGE_SIZE}
+                onChange={goTo}
+              />
             </>
           ) : (
             <EmptyState icon={<IconBuilding />} title="Nenhum imóvel encontrado com esses filtros">

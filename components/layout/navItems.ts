@@ -11,7 +11,7 @@ import {
 
 export const NAV = [
   { href: "/dashboard", label: "Início", Icon: IconHome },
-  { href: "/search", label: "Buscar imóveis", Icon: IconSearch },
+  { href: "/search", label: "Explorar imóveis", Icon: IconSearch },
   { href: "/properties", label: "Imóveis", Icon: IconBuilding },
   { href: "/market", label: "Painel de mercado", Icon: IconChart },
   { href: "/groups", label: "Grupos", Icon: IconGroups },

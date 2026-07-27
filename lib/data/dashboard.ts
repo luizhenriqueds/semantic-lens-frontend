@@ -1,3 +1,4 @@
+import { cache } from "react";
 import { supabase } from "@/lib/supabase";
 import type { ProfileKey, Scores } from "@/lib/types";
 import { cached, rows } from "./client";
@@ -16,18 +17,6 @@ export type MarketCity = {
 
 export type MarketUf = { uf: string; n: number };
 export type MarketType = { label: string; n: number };
-
-export type MarketOpp = {
-  property_id: string;
-  property_type: string;
-  city: string;
-  uf: string;
-  area_m2: number | null;
-  sale_value: number | null;
-  appraised_value: number | null;
-  discount: number | null;
-  investment: number | null;
-};
 
 // Mirrors the `data` JSONB payload of public.market_dashboard_mv (single row,
 // refreshed by the backend each batch run). Every aggregate is precomputed, so
@@ -56,7 +45,6 @@ export type MarketDashboard = {
   timeline: { next7: number; scheduled: number; first_auction: number };
   occ: { occupied: number; vacant: number; unknown: number };
   beds: { b1: number; b2: number; b3: number; b4plus: number };
-  opp: MarketOpp[];
   computedAt: string | null;
 };
 
@@ -74,4 +62,5 @@ async function loadDashboard(): Promise<MarketDashboard | null> {
   return { ...row.data, computedAt: row.computed_at ?? null };
 }
 
-export const getMarketDashboard = cached(loadDashboard, "market-dashboard");
+// Two dashboard sections read this; `cache` keeps it to one lookup per request.
+export const getMarketDashboard = cache(cached(loadDashboard, "market-dashboard"));

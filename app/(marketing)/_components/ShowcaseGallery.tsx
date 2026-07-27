@@ -5,7 +5,7 @@ import { useState } from "react";
 import Hint from "@/components/ui/Hint";
 import { SHOWCASE, type ShowcaseProperty } from "@/app/(marketing)/_data/showcase";
 import { money } from "@/lib/format";
-import Rail from "./Rail";
+import Rail from "@/components/ui/Rail";
 
 const fmtArea = (n: number) => `${n.toLocaleString("pt-BR", { maximumFractionDigits: 0 })} m²`;
 

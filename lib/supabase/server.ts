@@ -1,3 +1,4 @@
+import { cache } from "react";
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 
@@ -25,13 +26,15 @@ export async function createClient() {
   );
 }
 
-export async function getUser() {
+// Deduped per request: the layout and the page it renders both need the session, and
+// `auth.getUser()` is a network call.
+export const getUser = cache(async () => {
   const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
   return { supabase, user };
-}
+});
 
 export async function requireUser() {
   const { supabase, user } = await getUser();

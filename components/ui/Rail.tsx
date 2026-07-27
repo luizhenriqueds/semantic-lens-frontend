@@ -49,20 +49,20 @@ export default function Rail({
   const scrollable = !(atStart && atEnd);
 
   return (
-    <div className={`lp-rail ${className}`.trim()} data-start={atStart} data-end={atEnd}>
-      <div className="lp-rail-track" ref={ref} onScroll={sync} tabIndex={0} aria-label={label}>
+    <div className={`rail ${className}`.trim()} data-start={atStart} data-end={atEnd}>
+      <div className="rail-track" ref={ref} onScroll={sync} tabIndex={0} aria-label={label}>
         {children}
       </div>
 
       {scrollable && (
-        <div className="lp-rail-ctl">
-          <div className="lp-rail-prog" aria-hidden="true">
+        <div className="rail-ctl">
+          <div className="rail-prog" aria-hidden="true">
             <i style={{ transform: `scaleX(${Math.max(progress, 0.06)})` }} />
           </div>
-          <div className="lp-rail-btns">
+          <div className="rail-btns">
             <button
               type="button"
-              className="lp-rail-btn"
+              className="rail-btn"
               onClick={() => step(-1)}
               disabled={atStart}
               aria-label="Ver anteriores"
@@ -73,7 +73,7 @@ export default function Rail({
             </button>
             <button
               type="button"
-              className="lp-rail-btn"
+              className="rail-btn"
               onClick={() => step(1)}
               disabled={atEnd}
               aria-label="Ver próximos"

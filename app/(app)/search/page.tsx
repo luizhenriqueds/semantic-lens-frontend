@@ -18,7 +18,7 @@ export default async function SearchPage({
     <section className="view">
       <div className="pagehead searchhead">
         <div>
-          <h1>Buscar imóveis</h1>
+          <h1>Explorar imóveis</h1>
           <p>
             Escreva o que procura com suas palavras. A busca semântica entende o objetivo e ordena
             os resultados pelos que mais combinam.
