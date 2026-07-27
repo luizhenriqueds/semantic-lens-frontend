@@ -49,7 +49,7 @@ body {
   margin: 0;
   background: var(--bg);
   color: var(--ink);
-  font-family: "Plus Jakarta Sans", system-ui, sans-serif;
+  font-family: var(--font-sans), system-ui, sans-serif;
   font-size: 16px;
   line-height: 1.5;
   -webkit-font-smoothing: antialiased;
@@ -62,7 +62,7 @@ button {
   font-family: inherit;
 }
 .mono {
-  font-family: "JetBrains Mono", ui-monospace, monospace;
+  font-family: var(--font-mono), ui-monospace, monospace;
 }
 :focus-visible {
   outline: 3px solid var(--primary-soft);
@@ -2002,7 +2002,7 @@ select.selectish {
   font-size: 16px;
 }
 .dhead .matr {
-  font-family: "JetBrains Mono", ui-monospace, monospace;
+  font-family: var(--font-mono), ui-monospace, monospace;
   font-size: 12px;
   color: var(--ink-faint);
   margin-top: 12px;
@@ -3116,6 +3116,13 @@ select.selectish {
   font-weight: 700;
   letter-spacing: -0.01em;
   margin: 0;
+}
+.viewbar > .resultcount .range {
+  color: var(--ink-faint);
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: 0;
+  margin-left: 7px;
 }
 .viewtoggle button {
   border: none;
@@ -4367,7 +4374,8 @@ select.selectish {
   height: 25px;
   stroke-width: 1.6;
 }
-.emptystate b {
+/* Direct child only: the title. A <b> inside the body copy must stay inline. */
+.emptystate > b {
   display: block;
   font-size: 16.5px;
   letter-spacing: -0.01em;
@@ -7102,7 +7110,7 @@ select.selectish {
 }
 .opp {
   display: grid;
-  grid-template-columns: 46px 1fr auto;
+  grid-template-columns: 46px 64px 1fr auto;
   gap: 14px;
   align-items: center;
   background: var(--surface);

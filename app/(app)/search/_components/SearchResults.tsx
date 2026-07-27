@@ -6,11 +6,20 @@ import { spreadByLocality } from "@/lib/diversify";
 import { goalFromQuery } from "@/lib/facets";
 import { GOAL_PROFILE } from "@/lib/format";
 import { IconSearch } from "@/lib/icons";
+import { SEARCH_PAGE_SIZE, sortProperties, type SearchSort } from "@/lib/searchSort";
 import type { Property } from "@/lib/types";
 
 const BROWSE_LIMIT = 60;
 
-export default async function SearchResults({ query }: { query: string }) {
+export default async function SearchResults({
+  query,
+  page,
+  sort,
+}: {
+  query: string;
+  page: number;
+  sort: SearchSort;
+}) {
   const goal = query ? goalFromQuery(query) : null;
   const highlightGoal = goal ? GOAL_PROFILE[goal] : null;
 
@@ -21,7 +30,8 @@ export default async function SearchResults({ query }: { query: string }) {
   if (query) {
     try {
       const result = await hybridSearch(query);
-      const found = await getPropertiesByIds(result.hits.map((h) => h.id));
+      // Proximity and pure-goal branches already read the rows to rank them.
+      const found = result.items ?? (await getPropertiesByIds(result.hits.map((h) => h.id)));
       const byId = new Map(found.filter((p) => isListable(p)).map((p) => [p.id, p]));
       items = result.hits.map((h) => byId.get(h.id)).filter((p): p is Property => p != null);
       items = spreadByLocality(items);
@@ -30,9 +40,12 @@ export default async function SearchResults({ query }: { query: string }) {
       failed = true;
     }
   } else {
-    const page = await getPropertiesPage({ sort: "desconto", pageSize: BROWSE_LIMIT });
-    items = page.items;
+    const browse = await getPropertiesPage({ sort: "desconto", pageSize: BROWSE_LIMIT });
+    items = browse.items;
   }
+
+  const ordered = sortProperties(items, sort);
+  const pageItems = ordered.slice((page - 1) * SEARCH_PAGE_SIZE, page * SEARCH_PAGE_SIZE);
 
   const heading =
     query && !failed
@@ -56,8 +69,10 @@ export default async function SearchResults({ query }: { query: string }) {
         </EmptyState>
       ) : items.length ? (
         <PagedCards
-          items={items}
-          resetKey={query}
+          items={pageItems}
+          total={items.length}
+          page={page}
+          sort={sort}
           highlightGoal={highlightGoal}
           heading={heading}
         />

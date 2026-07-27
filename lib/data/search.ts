@@ -3,6 +3,7 @@ import { EMBEDDING_MODEL, embedQuery, rerank } from "@/lib/embed";
 import {
   escapeLike,
   isPoiCategoryOnly,
+  isPureGoal,
   normalize,
   parseFacets,
   type Facets,
@@ -12,10 +13,11 @@ import {
 import { semanticCached } from "@/lib/semanticCache";
 import { titleCase } from "@/lib/format";
 import type { Poi, Property } from "@/lib/types";
-import { cached, rows, withRetry, type QueryResult } from "./client";
+import { cached, rows, SEARCH_REVALIDATE, withRetry } from "./client";
 import {
   countProperties,
   getFilterOptions,
+  getGoalTop,
   getPropertiesByIds,
   getPropertiesPage,
   isListable,
@@ -26,7 +28,21 @@ export type SearchHit = { id: string; score: number };
 
 // Ranked hits plus a best-effort flag + message when part of the query (e.g. a
 // place we couldn't match nearby) wasn't honoured.
-export type SearchResult = { hits: SearchHit[]; fallback: boolean; fallbackNote: string | null };
+export type SearchResult = {
+  hits: SearchHit[];
+  // Branches that rank from property rows hand them over instead of ids to re-fetch.
+  items: Property[] | null;
+  fallback: boolean;
+  fallbackNote: string | null;
+};
+
+// A ranked slice plus the rows it was ranked from, in hit order.
+type Ranked = { hits: SearchHit[]; items: Property[] };
+
+const rank = (items: Property[], score: (p: Property, i: number) => number): Ranked => ({
+  hits: items.map((p, i) => ({ id: p.id, score: score(p, i) })),
+  items,
+});
 
 async function getCities(): Promise<string[]> {
   const { cities } = await getFilterOptions();
@@ -35,31 +51,51 @@ async function getCities(): Promise<string[]> {
 
 const SEARCH_INSTRUCTION =
   "Given a Portuguese real-estate search, retrieve auction property listings that best match the described property type, location and characteristics.";
+// filter_type already guarantees type precedence, so the reranker is aimed at features instead.
 const RERANK_INSTRUCTION =
-  "If the query names a property type, listings of that exact type must rank above any other type; each listing begins with its property type.";
+  "Rank higher the listings that explicitly contain every feature, room count and amenity the query asks for. A listing that does not mention a requested feature does not have it.";
 const MIN_POOL = 10;
-export const RESULT_LIMIT = 20;
+// Matches the semantic pool, so the reranked path returns everything above the floor.
+export const RESULT_LIMIT = 60;
 const RERANK_ACTIVATE = 0.5;
-const RERANK_MIN = 0.3;
+// Relative, not absolute: the score scale swings by an order of magnitude between queries, so a
+// fixed floor kept 60 results for one and 2 for another that had 31 genuine matches.
+const RERANK_MIN_RATIO = 0.15;
 const POI_NEAR_M = 5000;
 
 type Filters = {
   type: string | null;
   city: string | null;
   bedroomsMin: number | null;
+  parkingMin: number | null;
+  bathroomsMin: number | null;
   priceMax: number | null;
 };
 type PoolRow = { id: string; docText: string };
+
+// Distinguishes a failed pool query from a genuinely empty one: relaxing filters cannot help a
+// query that timed out, and the cascade would just re-issue it.
+class PoolError extends Error {}
+
+const NO_FILTERS: Filters = {
+  type: null,
+  city: null,
+  bedroomsMin: null,
+  parkingMin: null,
+  bathroomsMin: null,
+  priceMax: null,
+};
 
 async function runHybrid(
   embedding: number[],
   normalized: string,
   f: Filters,
   matchCount = 60,
+  withDocs = true,
 ): Promise<PoolRow[]> {
   const res = await withRetry(
-    () =>
-      supabase.rpc("hybrid_search", {
+    () => {
+      const q = supabase.rpc("hybrid_search", {
         query_text: normalized,
         query_embedding: embedding,
         model_name: EMBEDDING_MODEL,
@@ -67,12 +103,18 @@ async function runHybrid(
         filter_type: f.type ?? undefined,
         filter_city: f.city ?? undefined,
         filter_bedrooms_min: f.bedroomsMin ?? undefined,
+        filter_parking_min: f.parkingMin ?? undefined,
+        filter_bathrooms_min: f.bathroomsMin ?? undefined,
         filter_price_max: f.priceMax ?? undefined,
-      }),
+      });
+      // doc_text is ~1.3 KB a row and only the reranker reads it.
+      return withDocs ? q : (q.select("property_id") as unknown as typeof q);
+    },
     // A timeout here means the query is too heavy, not that the DB is busy;
     // the widening cascade already re-issues it, so don't also retry-storm.
     { retryTimeouts: false },
   );
+  if (res.error) throw new PoolError(res.error.message);
   return rows<any>("hybrid_search", res).map((r) => ({
     id: String(r.property_id),
     docText: String(r.doc_text ?? ""),
@@ -105,6 +147,7 @@ async function goalRerank(pool: PoolRow[], goal: GoalKey): Promise<SearchHit[]> 
 }
 
 const POI_LIMIT = 200;
+const POI_FANOUT = 40;
 
 // resolve_pois handles accents, acronyms and same-named places (via city)
 // server-side, so the frontend just relaxes its hints and reads the result.
@@ -123,16 +166,22 @@ async function searchPoisByName(q: PoiQuery, city: string | null): Promise<Poi[]
     if (!attempts.some(([a, b]) => a === cat && b === c)) attempts.push([cat, c]);
   }
 
+  // Only the first non-empty attempt is used, so relaxing costs one round trip.
+  const results = await Promise.all(
+    attempts.map(([cat, c]) =>
+      withRetry(() =>
+        supabase.rpc("resolve_pois", {
+          p_name: name,
+          p_category: cat ?? undefined,
+          p_city: c ?? undefined,
+          p_limit: POI_LIMIT,
+        }),
+      ),
+    ),
+  );
+
   let rpcErrored = false;
-  for (const [cat, c] of attempts) {
-    const res = await withRetry(() =>
-      supabase.rpc("resolve_pois", {
-        p_name: name,
-        p_category: cat ?? undefined,
-        p_city: c ?? undefined,
-        p_limit: POI_LIMIT,
-      }),
-    );
+  for (const res of results) {
     if (res.error) {
       rpcErrored = true;
       break;
@@ -159,6 +208,7 @@ async function searchPoisByName(q: PoiQuery, city: string | null): Promise<Poi[]
   return pois;
 }
 
+// How wide the proximity page is sampled; the hits themselves are capped at RESULT_LIMIT.
 const CATEGORY_LIMIT = 200;
 const CENTER_LADDER = [1000, 2000, 5000, 15000];
 const POI_LADDER = [500, 1000, 2000, POI_NEAR_M];
@@ -186,7 +236,7 @@ async function tightestRadius(
 
 // Closest to the centre wins, but not at any price: the very closest listings are
 // materially worse deals, so distance and discount weigh the same.
-async function centerProximityHits(facets: Facets): Promise<SearchHit[]> {
+async function centerProximityHits(facets: Facets): Promise<Ranked> {
   const base = proximityFilters(facets);
   const radius = await tightestRadius(CENTER_LADDER, (maxCenterM) => ({ ...base, maxCenterM }));
   const { items } = await getPropertiesPage({
@@ -194,21 +244,19 @@ async function centerProximityHits(facets: Facets): Promise<SearchHit[]> {
     sort: "desconto",
     pageSize: CATEGORY_LIMIT,
   });
-  const scored = items
+  const score = (p: Property) =>
+    0.5 * (1 - Math.min(1, p.centerProximity! / radius)) +
+    0.5 * Math.min(1, (p.discount ?? 0) / 90);
+  const ranked = items
     .filter((p) => p.centerProximity != null)
-    .map((p) => ({
-      id: p.id,
-      score:
-        0.5 * (1 - Math.min(1, p.centerProximity! / radius)) +
-        0.5 * Math.min(1, (p.discount ?? 0) / 90),
-    }))
-    .sort((a, b) => b.score - a.score);
-  return scored.slice(0, CATEGORY_LIMIT);
+    .sort((a, b) => score(b) - score(a))
+    .slice(0, RESULT_LIMIT);
+  return rank(ranked, score);
 }
 
 // 83-92% of the corpus is within 5 km of a school/hospital/supermarket, so the
 // category filter alone is nearly a no-op: distance has to drive the ranking.
-async function categoryProximityHits(facets: Facets): Promise<SearchHit[]> {
+async function categoryProximityHits(facets: Facets): Promise<Ranked> {
   const cat = facets.poi!.category!;
   const base = proximityFilters(facets);
   const radius = await tightestRadius(POI_LADDER, (poiRadiusM) => ({
@@ -222,10 +270,10 @@ async function categoryProximityHits(facets: Facets): Promise<SearchHit[]> {
     pageSize: CATEGORY_LIMIT,
   });
   // Copy: `items` may be a cached array.
-  const ranked = [...items].sort(
-    (a, b) => (a.nearestPoi[cat] ?? Infinity) - (b.nearestPoi[cat] ?? Infinity),
-  );
-  return ranked.map((p, i) => ({ id: p.id, score: 1 - i / Math.max(1, ranked.length) }));
+  const ranked = [...items]
+    .sort((a, b) => (a.nearestPoi[cat] ?? Infinity) - (b.nearestPoi[cat] ?? Infinity))
+    .slice(0, RESULT_LIMIT);
+  return rank(ranked, (_p, i) => 1 - i / Math.max(1, ranked.length));
 }
 
 // property_id → distance to the nearest of the given POIs, within POI_NEAR_M,
@@ -251,36 +299,51 @@ function matchesFacets(p: Property, facets: Facets): boolean {
     (!facets.type || p.propertyType === facets.type) &&
     (!facets.city || normalize(p.city) === normalize(facets.city)) &&
     (facets.bedroomsMin == null || (p.bedrooms ?? 0) >= facets.bedroomsMin) &&
+    (facets.parkingMin == null || (p.parkingSpots ?? 0) >= facets.parkingMin) &&
     (facets.priceMax == null || (p.saleValue ?? Infinity) <= facets.priceMax)
   );
 }
 
+const NEAR_SCAN = 500;
+const NEAR_BATCH = 200;
+
 // All properties near the resolved POIs, distance-ranked - not gated by the pool.
-async function nearProximityHits(near: Map<string, number>, facets: Facets): Promise<SearchHit[]> {
+// Walked in distance order, so a later batch can never displace an earlier
+// survivor: same list as the full 500-id scan, usually in one round trip.
+async function nearProximityHits(near: Map<string, number>, facets: Facets): Promise<Ranked> {
   const ids = [...near.entries()]
     .sort((a, b) => a[1] - b[1])
-    .slice(0, 500)
+    .slice(0, NEAR_SCAN)
     .map(([id]) => id);
-  const props = await getPropertiesByIds(ids);
-  const ranked = props
-    .filter((p) => matchesFacets(p, facets))
-    .sort((a, b) => (near.get(a.id) ?? Infinity) - (near.get(b.id) ?? Infinity))
-    .slice(0, CATEGORY_LIMIT);
-  return ranked.map((p, i) => ({ id: p.id, score: 1 - i / Math.max(1, ranked.length) }));
+
+  const found: Property[] = [];
+  for (let i = 0; i < ids.length && found.length < RESULT_LIMIT; i += NEAR_BATCH) {
+    const props = await getPropertiesByIds(ids.slice(i, i + NEAR_BATCH));
+    found.push(
+      ...props
+        .filter((p) => matchesFacets(p, facets))
+        .sort((a, b) => (near.get(a.id) ?? Infinity) - (near.get(b.id) ?? Infinity)),
+    );
+  }
+  const ranked = found.slice(0, RESULT_LIMIT);
+  return rank(ranked, (_p, i) => 1 - i / Math.max(1, ranked.length));
+}
+
+// A weak best match means the reranker found nothing it recognises, so recall order stands.
+function rankBy(pool: PoolRow[], scores: number[] | null): SearchHit[] {
+  const top = scores?.length ? Math.max(...scores) : 0;
+  if (scores && top >= RERANK_ACTIVATE) {
+    return pool
+      .map((p, i) => ({ id: p.id, score: scores[i] ?? 0 }))
+      .filter((h) => h.score >= top * RERANK_MIN_RATIO)
+      .sort((a, b) => b.score - a.score)
+      .slice(0, RESULT_LIMIT);
+  }
+  return pool.slice(0, RESULT_LIMIT).map((p, i) => ({ id: p.id, score: 1 - i / RESULT_LIMIT }));
 }
 
 async function semanticRank(pool: PoolRow[], normalized: string, useType: boolean) {
-  if (useType) {
-    const scores = await rerankScores(pool, normalized);
-    if (scores && Math.max(...scores) >= RERANK_ACTIVATE) {
-      return pool
-        .map((p, i) => ({ id: p.id, score: scores[i] ?? 0 }))
-        .filter((h) => h.score >= RERANK_MIN)
-        .sort((a, b) => b.score - a.score)
-        .slice(0, RESULT_LIMIT);
-    }
-  }
-  return pool.slice(0, RESULT_LIMIT).map((p, i) => ({ id: p.id, score: 1 - i / RESULT_LIMIT }));
+  return rankBy(pool, useType ? await rerankScores(pool, normalized) : null);
 }
 
 async function rerankScores(pool: PoolRow[], normalized: string): Promise<number[] | null> {
@@ -295,13 +358,6 @@ async function rerankScores(pool: PoolRow[], normalized: string): Promise<number
   }
 }
 
-// The reranker can't reliably tell gibberish from a niche-but-real search, so a
-// weak best match downgrades a no-facet result to "approximate", never to none.
-async function looksIrrelevant(pool: PoolRow[], normalized: string): Promise<boolean> {
-  const scores = await rerankScores(pool, normalized);
-  return !!scores && Math.max(...scores) < RERANK_ACTIVATE;
-}
-
 // Exact matches lead even when the reranker disagrees - they are what was asked for.
 function exactFirst(hits: SearchHit[], exact: Set<string>): SearchHit[] {
   if (!exact.size) return hits;
@@ -314,14 +370,26 @@ function poiPlaceLabel(poi: PoiQuery): string {
     : titleCase(poi.name);
 }
 
-const proximity = (hits: SearchHit[]): SearchResult => ({
-  hits,
+const EMPTY: SearchResult = { hits: [], items: [], fallback: false, fallbackNote: null };
+
+const proximity = (r: Ranked): SearchResult => ({
+  hits: r.hits,
+  items: r.items,
   fallback: false,
   fallbackNote: null,
 });
 
 function noIntent(f: Facets): boolean {
-  return !f.type && !f.city && !f.goal && !f.poi && f.bedroomsMin == null && f.priceMax == null;
+  return (
+    !f.type &&
+    !f.city &&
+    !f.goal &&
+    !f.poi &&
+    f.bedroomsMin == null &&
+    f.parkingMin == null &&
+    f.bathroomsMin == null &&
+    f.priceMax == null
+  );
 }
 
 // Names the constraints the widening step actually dropped, so the note can't
@@ -331,6 +399,8 @@ function relaxedNote(f: Facets, keptType: boolean): string {
     f.city && "cidade",
     f.priceMax != null && "preço máximo",
     f.bedroomsMin != null && "número de quartos",
+    f.parkingMin != null && "vagas de garagem",
+    f.bathroomsMin != null && "número de banheiros",
     !keptType && f.type && "tipo de imóvel",
   ].filter(Boolean);
 
@@ -341,9 +411,38 @@ function relaxedNote(f: Facets, keptType: boolean): string {
 const VAGUE_NOTE =
   "Não encontramos imóveis muito parecidos com a sua busca. Mostrando os mais próximos do que você descreveu.";
 
+// Probed in parallel, so extra rungs cost no wall-clock - they just widen the range of facet
+// combinations that find a workable floor instead of falling through to the pool.
+// 1, not 0: toRpcFilters drops scoreMin on a falsy check, so 0 would mean no floor at all.
+// property_goal_pct holds the percentiles precomputed, so this is one ordered read.
+async function goalDirectHits(facets: Facets): Promise<Ranked | null> {
+  const items = (await getGoalTop(facets.goal!, proximityFilters(facets), RESULT_LIMIT)).filter(
+    isListable,
+  );
+  if (!items.length) return null;
+  return rank(items, (_p, i) => 1 - i / items.length);
+}
+
+// Answers from the spatial index alone. Null = didn't resolve.
+async function poiProximityHits(facets: Facets): Promise<Ranked | null> {
+  const cands = await searchPoisByName(facets.poi!, facets.city);
+  // A generic name ("praia") matches hundreds of places and the spatial join is per-POI.
+  // resolve_pois orders by name similarity, so the head is the closest-named set.
+  const near = await nearestByPoi(cands.slice(0, POI_FANOUT).map((p) => p.id));
+  if (near.size) {
+    const r = await nearProximityHits(near, facets);
+    if (r.hits.length) return r;
+  }
+  // The place didn't resolve, but "perto de um hospital" still does.
+  if (facets.poi!.category) {
+    const r = await categoryProximityHits(facets);
+    if (r.hits.length) return r;
+  }
+  return null;
+}
+
 async function runHybridSearch(query: string): Promise<SearchResult> {
-  const cities = await getCities();
-  const facets = parseFacets(query, cities);
+  const facets = parseFacets(query, await getCities());
 
   // Proximity queries are filters (comprehensive), not ranked semantic searches.
   if (facets.center) {
@@ -351,6 +450,15 @@ async function runHybridSearch(query: string): Promise<SearchResult> {
   }
   if (facets.poi?.category && isPoiCategoryOnly(facets.poi.name)) {
     return proximity(await categoryProximityHits(facets));
+  }
+  // Both resolve without a vector, so they run before the embedding.
+  if (facets.poi) {
+    const r = await poiProximityHits(facets);
+    if (r) return proximity(r);
+  }
+  if (isPureGoal(facets)) {
+    const r = await goalDirectHits(facets);
+    if (r) return proximity(r);
   }
 
   const embedding = await embedQuery(facets.normalized, SEARCH_INSTRUCTION);
@@ -363,106 +471,134 @@ async function runHybridSearch(query: string): Promise<SearchResult> {
       type: facets.type,
       city: facets.city,
       bedroomsMin: facets.bedroomsMin,
+      parkingMin: facets.parkingMin,
+      bathroomsMin: facets.bathroomsMin,
       priceMax: facets.priceMax,
       goal: facets.goal,
       poi: facets.poi ? `${facets.poi.fullName}|${facets.poi.category ?? ""}` : null,
     },
     isCacheable: (r) => r.hits.length > 0,
+    // The rows come back from their own cache on a hit; keeping them here would blow the 48 KB
+    // metadata cap and silently disable the whole layer.
+    toCache: (r) => ({ ...r, items: null }),
     compute: async () => {
       const full: Filters = {
         type: facets.type,
         city: facets.city,
         bedroomsMin: facets.bedroomsMin,
+        parkingMin: facets.parkingMin,
+        bathroomsMin: facets.bathroomsMin,
         priceMax: facets.priceMax,
       };
-      const hasExtra = !!facets.city || facets.bedroomsMin != null || facets.priceMax != null;
-      const matchCount = facets.poi || facets.goal ? 200 : 60;
+      const hasExtra =
+        !!facets.city ||
+        facets.bedroomsMin != null ||
+        facets.parkingMin != null ||
+        facets.bathroomsMin != null ||
+        facets.priceMax != null;
+      // Only the goal blend ranks off the whole pool and so needs a deep one.
+      const matchCount = facets.goal ? 200 : 60;
 
       // A goal query is re-ranked entirely by the goal score, so the FTS arm is
       // wasted work - and the goal word ("liquidez") only matches score-explanation
       // text anyway. Skip it: the embedding alone gives the candidate pool.
       const poolText = facets.goal ? "" : facets.lexical;
 
+      // Only the branches that reach the reranker need the row text.
+      const withDocs = facets.poi
+        ? !!facets.type
+        : !facets.goal && (!!facets.type || noIntent(facets));
+
       // Pool building relaxes the query text first and the filters only after,
       // and never drops what it already found: results matching every stated
       // constraint stay in, ahead of the widened ones.
-      const pool: PoolRow[] = [];
-      const seen = new Set<string>();
-      const add = (batch: PoolRow[]) => {
-        for (const r of batch) {
-          if (!seen.has(r.id)) {
-            seen.add(r.id);
-            pool.push(r);
+      const buildPool = async () => {
+        const pool: PoolRow[] = [];
+        const seen = new Set<string>();
+        const add = (batch: PoolRow[]) => {
+          for (const r of batch) {
+            if (!seen.has(r.id)) {
+              seen.add(r.id);
+              pool.push(r);
+            }
           }
+        };
+
+        add(await runHybrid(embedding, poolText, full, matchCount, withDocs));
+        // Past this point the pool is usable; a failed widening step just means it stays narrow.
+        const widen = async (text: string, f: Filters) => {
+          try {
+            add(await runHybrid(embedding, text, f, matchCount, withDocs));
+          } catch (err) {
+            if (!(err instanceof PoolError)) throw err;
+          }
+        };
+
+        if (pool.length < MIN_POOL && facets.lexicalCore && facets.lexicalCore !== poolText) {
+          await widen(facets.lexicalCore, full);
         }
+        const exact = new Set(seen);
+        let keptType = true;
+
+        if (pool.length < MIN_POOL && facets.type && hasExtra) {
+          await widen(poolText, { ...NO_FILTERS, type: facets.type });
+        }
+        if (pool.length < MIN_POOL && (facets.type || hasExtra)) {
+          const before = pool.length;
+          await widen(poolText, NO_FILTERS);
+          keptType = pool.length === before;
+        }
+        return { pool, exact, keptType, widened: pool.length > exact.size };
       };
 
-      add(await runHybrid(embedding, poolText, full, matchCount));
-      if (pool.length < MIN_POOL && facets.lexicalCore && facets.lexicalCore !== poolText) {
-        add(await runHybrid(embedding, facets.lexicalCore, full, matchCount));
-      }
-      const exact = new Set(seen);
-      let keptType = true;
-
-      if (pool.length < MIN_POOL && facets.type && hasExtra) {
-        add(
-          await runHybrid(
-            embedding,
-            poolText,
-            { type: facets.type, city: null, bedroomsMin: null, priceMax: null },
-            matchCount,
-          ),
-        );
-      }
-      if (pool.length < MIN_POOL && (facets.type || hasExtra)) {
-        const before = pool.length;
-        add(
-          await runHybrid(
-            embedding,
-            poolText,
-            { type: null, city: null, bedroomsMin: null, priceMax: null },
-            matchCount,
-          ),
-        );
-        keptType = pool.length === before;
-      }
-      if (!pool.length) return proximity([]);
-
-      const widened = pool.length > exact.size;
-      const ok = (hits: SearchHit[]): SearchResult => ({
-        hits: exactFirst(hits, exact),
-        fallback: widened,
-        fallbackNote: widened ? relaxedNote(facets, keptType) : null,
-      });
-
+      // Only reached when the place didn't resolve - the spatial branch already ran.
       if (facets.poi) {
-        const cands = await searchPoisByName(facets.poi, facets.city);
-        const near = await nearestByPoi(cands.map((p) => p.id));
-        if (near.size) {
-          const hits = await nearProximityHits(near, facets);
-          if (hits.length) return proximity(hits);
-        }
-        // The place didn't resolve, but "perto de um hospital" still does.
-        if (facets.poi.category) {
-          const hits = await categoryProximityHits(facets);
-          if (hits.length) return proximity(hits);
-        }
+        const { pool } = await buildPool();
+        if (!pool.length) return EMPTY;
         return {
           hits: await semanticRank(pool, facets.normalized, !!facets.type),
+          items: null,
           fallback: true,
           fallbackNote: `Não encontramos imóveis próximos a “${poiPlaceLabel(facets.poi)}”. Mostrando os resultados mais relevantes para o restante da sua busca.`,
         };
       }
 
+      const { pool, exact, keptType, widened } = await buildPool();
+      if (!pool.length) return EMPTY;
+
+      const ok = (hits: SearchHit[]): SearchResult => ({
+        hits: exactFirst(hits, exact),
+        items: null,
+        fallback: widened,
+        fallbackNote: widened ? relaxedNote(facets, keptType) : null,
+      });
+
       if (facets.goal) return ok(await goalRerank(pool, facets.goal));
 
-      const hits = await semanticRank(pool, facets.normalized, !!facets.type);
-      if (!widened && noIntent(facets) && (await looksIrrelevant(pool, facets.normalized))) {
-        return { hits, fallback: true, fallbackNote: VAGUE_NOTE };
+      // One rerank call serves both the ranking and the "too vague" check. The rows are read
+      // alongside it: the pool ids are known already, so that read costs no wall clock.
+      const [scores, props] = await Promise.all([
+        withDocs ? rerankScores(pool, facets.normalized) : Promise.resolve(null),
+        getPropertiesByIds(pool.map((p) => p.id)),
+      ]);
+      const byId = new Map(props.map((p) => [p.id, p]));
+      const rows = (hits: SearchHit[]) =>
+        hits.map((h) => byId.get(h.id)).filter((p): p is Property => p != null);
+
+      const hits = rankBy(pool, scores);
+      const weak = !!scores && Math.max(...scores) < RERANK_ACTIVATE;
+      if (!widened && noIntent(facets) && weak) {
+        return { hits, items: rows(hits), fallback: true, fallbackNote: VAGUE_NOTE };
       }
-      return ok(hits);
+      const ordered = exactFirst(hits, exact);
+      return {
+        hits: ordered,
+        items: rows(ordered),
+        fallback: widened,
+        fallbackNote: widened ? relaxedNote(facets, keptType) : null,
+      };
     },
   });
 }
 
-export const hybridSearch = cached(runHybridSearch, "hybrid-search");
+export const hybridSearch = cached(runHybridSearch, "hybrid-search", SEARCH_REVALIDATE);

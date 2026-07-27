@@ -22,6 +22,7 @@ export {
   type MarketCity,
   type MarketUf,
   type MarketType,
+  type MarketOpp,
 } from "./dashboard";
 export { getClusters } from "./clusters";
 export { getRegions, getRegion, getRegionLabel } from "./regions";

@@ -26,8 +26,8 @@ export async function createClient() {
   );
 }
 
-// Deduped per request: the layout and the page it renders both need the session, and
-// `auth.getUser()` is a network call.
+// getUser() always revalidates server-side; without this the layout and each server action in
+// the same request would pay their own round trip.
 export const getUser = cache(async () => {
   const supabase = await createClient();
   const {

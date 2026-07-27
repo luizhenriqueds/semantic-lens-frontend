@@ -8,7 +8,17 @@ import type { Alert, AlertFilters, AlertPatch } from "@/lib/types";
 
 export async function countAlertMatches(filters: AlertFilters): Promise<number> {
   await requireUser();
-  return countProperties(alertToPropertyFilters(filters));
+  const q = filters.q?.trim();
+  const rest = alertToPropertyFilters({ ...filters, q: undefined });
+  if (!q) return countProperties(rest);
+
+  // property_list_page matches q as a substring of search_text ("apartamento vila moreira sao
+  // paulo sp"), so a natural-language alert counts 0. Run the real pipeline, then intersect.
+  const { hits } = await hybridSearch(q);
+  if (!hits.length) return 0;
+  return Object.keys(rest).length
+    ? countProperties({ ...rest, ids: hits.map((h) => h.id) })
+    : hits.length;
 }
 
 export async function countDescriptionMatches(

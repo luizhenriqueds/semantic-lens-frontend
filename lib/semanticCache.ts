@@ -1,4 +1,5 @@
 import { Index } from "@upstash/vector";
+import { after } from "next/server";
 import { fnv1a } from "@/lib/hash";
 
 // Semantic cache in front of the search pipeline. On a near-duplicate query
@@ -138,6 +139,15 @@ async function store<T>(
   }
 }
 
+// Only the next query needs the write; `after` keeps it alive past the response.
+function writeBack(p: Promise<void>): void {
+  try {
+    after(() => p);
+  } catch {
+    void p;
+  }
+}
+
 export async function semanticCached<T>({
   namespace,
   vector,
@@ -145,6 +155,7 @@ export async function semanticCached<T>({
   facets,
   compute,
   isCacheable,
+  toCache,
 }: {
   namespace: Namespace;
   vector: number[];
@@ -152,14 +163,41 @@ export async function semanticCached<T>({
   facets: Facets;
   compute: () => Promise<T>;
   isCacheable?: (result: T) => boolean;
+  // Drop anything cheap to rebuild: the payload rides in metadata, capped at 48 KB.
+  toCache?: (result: T) => T;
 }): Promise<T> {
   // Fully disabled → zero overhead, no Upstash round-trip.
   if (!isEnabled() && !isShadow()) return compute();
 
   const cfg = NS_CONFIG[namespace];
-  const hit = await lookup<T>(namespace, vector, facets, cfg);
+  const pending = lookup<T>(namespace, vector, facets, cfg);
 
-  if (hit && isEnabled()) {
+  const finish = (hit: { payload: T; score: number } | null, result: T): T => {
+    if (hit) {
+      const same = JSON.stringify(hit.payload) === JSON.stringify(result);
+      stats[namespace].shadowHit++;
+      if (same) stats[namespace].shadowMatch++;
+      console.info(
+        `[semcache] ${namespace} SHADOW score=${hit.score.toFixed(3)} match=${same} (not served) ${tallyLog(namespace)}`,
+      );
+    } else {
+      stats[namespace].miss++;
+      console.info(`[semcache] ${namespace} MISS ${tallyLog(namespace)}`);
+    }
+    if (!isCacheable || isCacheable(result)) {
+      writeBack(store(namespace, vector, text, facets, toCache ? toCache(result) : result));
+    }
+    return result;
+  };
+
+  // Shadow never serves, so its lookup runs alongside compute, not before it.
+  if (!isEnabled()) {
+    const [hit, result] = await Promise.all([pending, compute()]);
+    return finish(hit, result);
+  }
+
+  const hit = await pending;
+  if (hit) {
     stats[namespace].hit++;
     console.info(
       `[semcache] ${namespace} HIT score=${hit.score.toFixed(3)} (served) ${tallyLog(namespace)}`,
@@ -167,22 +205,5 @@ export async function semanticCached<T>({
     return hit.payload;
   }
 
-  const result = await compute();
-
-  if (hit) {
-    const same = JSON.stringify(hit.payload) === JSON.stringify(result);
-    stats[namespace].shadowHit++;
-    if (same) stats[namespace].shadowMatch++;
-    console.info(
-      `[semcache] ${namespace} SHADOW score=${hit.score.toFixed(3)} match=${same} (not served) ${tallyLog(namespace)}`,
-    );
-  } else {
-    stats[namespace].miss++;
-    console.info(`[semcache] ${namespace} MISS ${tallyLog(namespace)}`);
-  }
-
-  if (!isCacheable || isCacheable(result)) {
-    await store(namespace, vector, text, facets, result);
-  }
-  return result;
+  return finish(null, await compute());
 }

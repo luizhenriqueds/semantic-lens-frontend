@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useSyncExternalStore } from "react";
 
 const stores = new Set<() => void>();
 
@@ -13,11 +13,11 @@ export function resetClientStores() {
 export function createClientStore<T>(fallback: T, load: () => Promise<T>) {
   let value = fallback;
   let started = false;
-  const listeners = new Set<(v: T) => void>();
+  const listeners = new Set<() => void>();
 
   const set = (next: T) => {
     value = next;
-    listeners.forEach((l) => l(value));
+    listeners.forEach((l) => l());
   };
 
   const start = () => {
@@ -31,18 +31,20 @@ export function createClientStore<T>(fallback: T, load: () => Promise<T>) {
       });
   };
 
-  const useValue = (): T => {
-    const [v, setV] = useState<T>(value);
-    useEffect(() => {
-      listeners.add(setV);
-      setV(value);
-      start();
-      return () => {
-        listeners.delete(setV);
-      };
-    }, []);
-    return v;
-  };
+  // The server snapshot must be the fallback: on a repeat visit the module still holds the
+  // previous value, which would not match the server's HTML during hydration.
+  const useValue = (): T =>
+    useSyncExternalStore(
+      (onChange) => {
+        listeners.add(onChange);
+        start();
+        return () => {
+          listeners.delete(onChange);
+        };
+      },
+      () => value,
+      () => fallback,
+    );
 
   stores.add(() => {
     started = false;
