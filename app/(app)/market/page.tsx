@@ -1,4 +1,5 @@
 import Link from "next/link";
+import PropertyPhoto from "@/components/property/PropertyPhoto";
 import EmptyState from "@/components/ui/EmptyState";
 import { getMarketDashboard, type MarketOpp } from "@/lib/data";
 import { fmtDay, money } from "@/lib/format";
@@ -439,6 +440,13 @@ export default async function MarketPage() {
         {d.opp.map((o) => (
           <Link className="opp" key={o.property_id} href={`/property/${o.property_id}`}>
             <Ring v={Math.round(o.investment ?? 0)} />
+            <div className="thumb">
+              <PropertyPhoto
+                src={o.image ?? null}
+                alt={`Foto do imóvel: ${oppTitle(o)}`}
+                sizes="64px"
+              />
+            </div>
             <div className="body">
               <div className="t">{oppTitle(o)}</div>
               <div className="loc">

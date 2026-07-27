@@ -1,5 +1,6 @@
 import { createDeepInfra } from "@ai-sdk/deepinfra";
 import { embed } from "ai";
+import { cached } from "./data/client";
 
 export const EMBEDDING_MODEL = "qwen3-embedding:0.6b";
 
@@ -7,13 +8,19 @@ function provider() {
   return createDeepInfra({ apiKey: process.env.DEEPINFRA_API_KEY });
 }
 
-export async function embedQuery(text: string, instruction?: string): Promise<number[]> {
-  const value = instruction ? `Instruct: ${instruction}\nQuery: ${text}` : text;
+async function loadEmbedding(value: string): Promise<number[]> {
   const { embedding } = await embed({
     model: provider().embeddingModel("Qwen/Qwen3-Embedding-0.6B"),
     value,
   });
   return embedding;
+}
+
+// Deterministic per model, so it outlives the search cache by a long way.
+const cachedEmbedding = cached(loadEmbedding, "embed-query", 86_400);
+
+export function embedQuery(text: string, instruction?: string): Promise<number[]> {
+  return cachedEmbedding(instruction ? `Instruct: ${instruction}\nQuery: ${text}` : text);
 }
 
 const RERANK_MODEL = "Qwen/Qwen3-Reranker-0.6B";

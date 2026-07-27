@@ -1,64 +1,58 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { useTransition } from "react";
 import Pagination from "@/components/ui/Pagination";
 import PropertyCard from "@/components/property/PropertyCard";
-import { investmentScore, profileScore } from "@/lib/format";
+import { SEARCH_PAGE_SIZE, SEARCH_SORTS, type SearchSort } from "@/lib/searchSort";
 import type { ProfileKey, Property } from "@/lib/types";
 
-const PAGE_SIZE = 25;
-
-type Sort = "relevancia" | "investimento" | "desconto" | "score" | "menor" | "maior";
-
-const SORTS: { key: Sort; label: string }[] = [
-  { key: "relevancia", label: "Relevância" },
-  { key: "investimento", label: "Melhor investimento" },
-  { key: "desconto", label: "Maior desconto" },
-  { key: "score", label: "Melhor nota do objetivo" },
-  { key: "menor", label: "Menor preço" },
-  { key: "maior", label: "Maior preço" },
-];
-
+// Page and sort live in the URL so the server can slice: only one page is ever serialized.
 export default function PagedCards({
   items,
-  resetKey,
+  total,
+  page,
+  sort,
   highlightGoal,
   heading,
 }: {
   items: Property[];
-  resetKey?: string;
+  total: number;
+  page: number;
+  sort: SearchSort;
   highlightGoal?: ProfileKey | null;
   heading?: string;
 }) {
-  const [page, setPage] = useState(1);
-  const [sort, setSort] = useState<Sort>("relevancia");
-  useEffect(() => setPage(1), [resetKey, sort]);
+  const router = useRouter();
+  const params = useSearchParams();
+  const [, startNav] = useTransition();
 
-  const sorted = useMemo(() => {
-    if (sort === "relevancia") return items;
-    const list = [...items];
-    list.sort((a, b) => {
-      if (sort === "investimento") return (investmentScore(b) ?? 0) - (investmentScore(a) ?? 0);
-      if (sort === "desconto") return (b.discount ?? 0) - (a.discount ?? 0);
-      if (sort === "score") return (profileScore(b) ?? 0) - (profileScore(a) ?? 0);
-      if (sort === "menor") return (a.saleValue ?? Infinity) - (b.saleValue ?? Infinity);
-      return (b.saleValue ?? 0) - (a.saleValue ?? 0);
-    });
-    return list;
-  }, [items, sort]);
-
-  const pageItems = sorted.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+  const go = (next: Record<string, string>) => {
+    const sp = new URLSearchParams(params.toString());
+    for (const [k, v] of Object.entries(next)) sp.set(k, v);
+    startNav(() => router.push(`/search?${sp}`, { scroll: false }));
+  };
 
   return (
     <>
       <div className="viewbar">
-        {heading && <h2 className="resultcount">{heading}</h2>}
+        {heading && (
+          <h2 className="resultcount">
+            {heading}
+            {total > items.length && (
+              <span className="range">
+                mostrando {(page - 1) * SEARCH_PAGE_SIZE + 1}–
+                {(page - 1) * SEARCH_PAGE_SIZE + items.length} de {total}
+              </span>
+            )}
+          </h2>
+        )}
         <select
           className="selectish"
           value={sort}
-          onChange={(e) => setSort(e.target.value as Sort)}
+          onChange={(e) => go({ sort: e.target.value, page: "1" })}
         >
-          {SORTS.map((s) => (
+          {SEARCH_SORTS.map((s) => (
             <option key={s.key} value={s.key}>
               Ordenar: {s.label}
             </option>
@@ -66,16 +60,16 @@ export default function PagedCards({
         </select>
       </div>
       <div className="pgrid">
-        {pageItems.map((p) => (
+        {items.map((p) => (
           <PropertyCard key={p.id} p={p} highlightGoal={highlightGoal} />
         ))}
       </div>
       <Pagination
         page={page}
-        total={sorted.length}
-        pageSize={PAGE_SIZE}
+        total={total}
+        pageSize={SEARCH_PAGE_SIZE}
         onChange={(p) => {
-          setPage(p);
+          go({ page: String(p) });
           window.scrollTo({ top: 0, behavior: "smooth" });
         }}
       />

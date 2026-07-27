@@ -2,6 +2,8 @@ import { unstable_cache } from "next/cache";
 
 export const CLUSTER_RUN = "property-v1";
 export const REVALIDATE = 120;
+// The corpus is rebuilt by one nightly batch, so search results outlive the shared 120s.
+export const SEARCH_REVALIDATE = 900;
 
 export function num(v: unknown): number | null {
   if (v == null) return null;
@@ -60,9 +62,8 @@ export async function fetchAllRows<T>(
 export function cached<A extends unknown[], T>(
   fn: (...args: A) => Promise<T>,
   prefix: string,
+  revalidate = REVALIDATE,
 ): (...args: A) => Promise<T> {
   return (...args: A) =>
-    unstable_cache(() => fn(...args), [prefix, ...args.map(String)], {
-      revalidate: REVALIDATE,
-    })();
+    unstable_cache(() => fn(...args), [prefix, ...args.map(String)], { revalidate })();
 }

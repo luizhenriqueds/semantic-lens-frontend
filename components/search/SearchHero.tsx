@@ -1,6 +1,7 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useRouter } from "next/navigation";
+import { useRef, useState, useTransition } from "react";
 import { IconSearch } from "@/lib/icons";
 
 const EXAMPLES = [
@@ -21,9 +22,10 @@ export default function SearchHero({
   initial?: string;
   showExamples?: boolean;
 }) {
+  const router = useRouter();
   const formRef = useRef<HTMLFormElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
-  const [submitting, setSubmitting] = useState(false);
+  const [submitting, startSubmit] = useTransition();
   const [empty, setEmpty] = useState(!initial.trim());
 
   const pickExample = (ex: string) => {
@@ -32,9 +34,12 @@ export default function SearchHero({
     formRef.current?.requestSubmit();
   };
 
-  const onSubmit = () => {
-    if (!inputRef.current?.value.trim()) return;
-    setSubmitting(true);
+  // A plain GET submit reloads the document; the form stays as the no-JS fallback.
+  const onSubmit = (e: React.FormEvent) => {
+    const q = inputRef.current?.value.trim();
+    if (!q) return;
+    e.preventDefault();
+    startSubmit(() => router.push(`/search?q=${encodeURIComponent(q)}`));
   };
 
   return (

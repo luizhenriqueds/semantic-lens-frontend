@@ -11,7 +11,7 @@ import type {
   PropertySort,
   Scores,
 } from "@/lib/types";
-import { cached, num, rows, withRetry } from "./client";
+import { cached, num, rows, SEARCH_REVALIDATE, withRetry } from "./client";
 
 const LIST_PAGE_SIZE = 24;
 const MAP_POINT_LIMIT = 4000;
@@ -166,18 +166,44 @@ export function countProperties(filters: PropertyFilters): Promise<number> {
 
 const MV_COLS = "*";
 
-export async function getPropertiesByIds(ids: string[]): Promise<Property[]> {
-  const out: Property[] = [];
-  for (let i = 0; i < ids.length; i += 200) {
-    const res = await withRetry(() =>
-      supabase
-        .from("property_list_mv")
-        .select(MV_COLS)
-        .in("property_id", ids.slice(i, i + 200)),
-    );
-    out.push(...rows<any>("property_list_mv", res).map(mapListRow));
-  }
-  return out;
+// Chunks are independent reads - issued together, not in series.
+async function loadPropertiesByIds(idsJson: string): Promise<Property[]> {
+  const ids: string[] = JSON.parse(idsJson);
+  const chunks: string[][] = [];
+  for (let i = 0; i < ids.length; i += 200) chunks.push(ids.slice(i, i + 200));
+  const res = await Promise.all(
+    chunks.map((chunk) =>
+      withRetry(() => supabase.from("property_list_mv").select(MV_COLS).in("property_id", chunk)),
+    ),
+  );
+  return res.flatMap((r) => rows<any>("property_list_mv", r).map(mapListRow));
+}
+
+const cachedByIds = cached(loadPropertiesByIds, "properties-by-ids", SEARCH_REVALIDATE);
+
+// Corpus top-N by a goal's precomputed percentile, already ranked and filtered.
+async function loadGoalTop(goal: string, filtersJson: string, limit: number): Promise<Property[]> {
+  const data = await rpcJson("goal_top", {
+    p_goal: goal,
+    p_filters: JSON.parse(filtersJson),
+    p_limit: limit,
+  });
+  return ((data ?? []) as any[]).map(mapListRow);
+}
+
+const cachedGoalTop = cached(loadGoalTop, "goal-top", SEARCH_REVALIDATE);
+
+export function getGoalTop(
+  goal: string,
+  filters: PropertyFilters,
+  limit: number,
+): Promise<Property[]> {
+  return cachedGoalTop(goal, JSON.stringify(toRpcFilters(filters)), limit);
+}
+
+export function getPropertiesByIds(ids: string[]): Promise<Property[]> {
+  if (!ids.length) return Promise.resolve([]);
+  return cachedByIds(JSON.stringify(ids));
 }
 
 type PropertyDetail = Property & { discountPercentile: number | null };
@@ -238,7 +264,8 @@ async function loadFilterOptions(): Promise<FilterOptions> {
   };
 }
 
-export const getFilterOptions = cached(loadFilterOptions, "filter-options");
+// Five full scans of the MV on every search, but it only changes when the batch refreshes it.
+export const getFilterOptions = cached(loadFilterOptions, "filter-options", 3600);
 
 async function loadAnalysis(filtersJson: string): Promise<AnalysisData> {
   const finite = (edges: number[]) => edges.filter((e) => Number.isFinite(e));
