@@ -25,6 +25,10 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="pt-BR" className={`${sans.variable} ${mono.variable}`}>
+      <head>
+        {/* Property photos are served straight from Caixa; save the handshake. */}
+        <link rel="preconnect" href="https://venda-imoveis.caixa.gov.br" />
+      </head>
       <body>{children}</body>
     </html>
   );

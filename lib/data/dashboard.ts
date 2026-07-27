@@ -1,3 +1,4 @@
+import { cache } from "react";
 import { supabase } from "@/lib/supabase";
 import { titleCase } from "@/lib/format";
 import type { ProfileKey, Scores } from "@/lib/types";
@@ -115,4 +116,5 @@ async function loadDashboard(): Promise<MarketDashboard | null> {
   return { ...row.data, opp: opp.length ? opp : row.data.opp, computedAt: row.computed_at ?? null };
 }
 
-export const getMarketDashboard = cached(loadDashboard, "market-dashboard");
+// Two dashboard sections read this; `cache` keeps it to one lookup per request.
+export const getMarketDashboard = cache(cached(loadDashboard, "market-dashboard"));

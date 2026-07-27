@@ -4,6 +4,8 @@ export {
   countProperties,
   getPropertiesByIds,
   getPropertyById,
+  getUpcomingAuctions,
+  getAuctionDayPage,
   getMapPoints,
   getFilterOptions,
   getAnalysis,

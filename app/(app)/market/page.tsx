@@ -1,7 +1,6 @@
 import Link from "next/link";
-import PropertyPhoto from "@/components/property/PropertyPhoto";
 import EmptyState from "@/components/ui/EmptyState";
-import { getMarketDashboard, type MarketOpp } from "@/lib/data";
+import { getMarketDashboard } from "@/lib/data";
 import { fmtDay, money } from "@/lib/format";
 import { PROFILE_SHORT, SCORE_LABEL } from "@/lib/format/scores";
 import { IconBuilding } from "@/lib/icons";
@@ -129,36 +128,6 @@ function HBars({
       ))}
     </div>
   );
-}
-
-function Ring({ v }: { v: number }) {
-  const r = 20;
-  const circ = 2 * Math.PI * r;
-  const off = circ * (1 - v / 100);
-  return (
-    <svg className="score-ring" viewBox="0 0 46 46">
-      <circle cx="23" cy="23" r={r} fill="none" stroke="var(--surface-2)" strokeWidth="4.5" />
-      <circle
-        cx="23"
-        cy="23"
-        r={r}
-        fill="none"
-        stroke="var(--primary)"
-        strokeWidth="4.5"
-        strokeLinecap="round"
-        strokeDasharray={circ}
-        strokeDashoffset={off}
-        transform="rotate(-90 23 23)"
-      />
-      <text x="23" y="27" textAnchor="middle" fontSize="13" fontWeight="700" fill="var(--ink)">
-        {v}
-      </text>
-    </svg>
-  );
-}
-
-function oppTitle(o: MarketOpp): string {
-  return o.area_m2 ? `${o.property_type} · ${int(o.area_m2)} m²` : o.property_type;
 }
 
 export default async function MarketPage() {
@@ -429,47 +398,6 @@ export default async function MarketPage() {
           </div>
           <HBars arr={bedRows} />
         </div>
-      </div>
-
-      {/* Top opportunities */}
-      <div className="sectitle">
-        <h2>Destaques da rodada</h2>
-        <span className="hint">nota alta + deságio real</span>
-      </div>
-      <div className="oppgrid">
-        {d.opp.map((o) => (
-          <Link className="opp" key={o.property_id} href={`/property/${o.property_id}`}>
-            <Ring v={Math.round(o.investment ?? 0)} />
-            <div className="thumb">
-              <PropertyPhoto
-                src={o.image ?? null}
-                alt={`Foto do imóvel: ${oppTitle(o)}`}
-                sizes="64px"
-              />
-            </div>
-            <div className="body">
-              <div className="t">{oppTitle(o)}</div>
-              <div className="loc">
-                {o.city}, {o.uf}
-              </div>
-              <div className="facts">
-                <span>
-                  Nota <b>{Math.round(o.investment ?? 0)}</b>
-                </span>
-                {o.area_m2 != null && (
-                  <span>
-                    <b>{int(o.area_m2)}</b> m²
-                  </span>
-                )}
-              </div>
-            </div>
-            <div className="price">
-              <div className="now">{o.sale_value != null ? money(o.sale_value) : "—"}</div>
-              {o.appraised_value != null && <div className="was">{money(o.appraised_value)}</div>}
-              {o.discount != null && <div className="disc">−{Math.round(o.discount)}%</div>}
-            </div>
-          </Link>
-        ))}
       </div>
 
       <div className="note" style={{ marginTop: 22 }}>

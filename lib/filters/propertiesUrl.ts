@@ -1,6 +1,9 @@
 import { parseRange } from "@/lib/facets/range";
 import type { PropertyFilters, PropertySort, Scores } from "@/lib/types";
 
+// Shared by the server loader and the client Pagination so the two cannot drift.
+export const LIST_PAGE_SIZE = 24;
+
 export type PropertiesView = "list" | "analysis" | "calendar" | "map";
 
 const VIEWS = new Set<string>(["list", "analysis", "calendar", "map"]);

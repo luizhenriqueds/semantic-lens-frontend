@@ -2,7 +2,9 @@
 
 import { useMemo, useState } from "react";
 import EmptyState from "@/components/ui/EmptyState";
+import Pagination from "@/components/ui/Pagination";
 import PropertyRow from "@/components/property/PropertyRow";
+import { LIST_PAGE_SIZE } from "@/lib/filters/propertiesUrl";
 import type { Property } from "@/lib/types";
 import { IconBack, IconCalendar } from "@/lib/icons";
 
@@ -31,12 +33,18 @@ export default function AuctionCalendar({
   counts,
   day,
   dayItems,
+  dayTotal,
+  page,
   onSelectDay,
+  onPageChange,
 }: {
   counts: Record<string, number>;
   day: string | null;
   dayItems: Property[];
+  dayTotal: number;
+  page: number;
   onSelectDay: (day: string | null) => void;
+  onPageChange: (page: number) => void;
 }) {
   const today = useMemo(() => {
     const d = new Date();
@@ -150,12 +158,18 @@ export default function AuctionCalendar({
       {selected && selectedItems.length > 0 && (
         <div className="calday">
           <div className="calday-h">
-            {selectedItems.length} leilã{selectedItems.length > 1 ? "es" : "o"} em{" "}
+            {dayTotal.toLocaleString("pt-BR")} leilã{dayTotal > 1 ? "es" : "o"} em{" "}
             {Number(selected.slice(8, 10))} de {MONTHS[Number(selected.slice(5, 7)) - 1]}
           </div>
           {selectedItems.map((p) => (
             <PropertyRow key={p.id} p={p} />
           ))}
+          <Pagination
+            page={page}
+            total={dayTotal}
+            pageSize={LIST_PAGE_SIZE}
+            onChange={onPageChange}
+          />
         </div>
       )}
     </div>

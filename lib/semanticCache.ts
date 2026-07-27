@@ -1,5 +1,6 @@
 import { Index } from "@upstash/vector";
 import { after } from "next/server";
+import { fnv1a } from "@/lib/hash";
 
 // Semantic cache in front of the search pipeline. On a near-duplicate query
 // (same hard facets + cosine similarity >= threshold) we return the cached
@@ -71,16 +72,9 @@ function getIndex(): Index | null {
   return index;
 }
 
-// FNV-1a 32-bit → hex. Used to derive collision-safe, quote-free ids and the
-// facet bucket key that isolates entries with identical hard filters.
-function hash(s: string): string {
-  let h = 0x811c9dc5;
-  for (let i = 0; i < s.length; i++) {
-    h ^= s.charCodeAt(i);
-    h = Math.imul(h, 0x01000193);
-  }
-  return (h >>> 0).toString(16);
-}
+// Hex, for collision-safe quote-free ids and the facet bucket key that isolates
+// entries with identical hard filters.
+const hash = (s: string): string => fnv1a(s).toString(16);
 
 type Facets = Record<string, string | number | null>;
 

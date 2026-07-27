@@ -26,7 +26,6 @@ export type PropertyFilters = {
   financing?: boolean;
   fgts?: boolean;
   auctionWithinDays?: number;
-  auctionOn?: string;
   includeInactive?: boolean;
   ids?: string[];
 };
