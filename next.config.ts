@@ -4,7 +4,7 @@ const nextConfig: NextConfig = {
   reactStrictMode: true,
   experimental: {
     // Faster navigations: keep rendered segments warm.
-    staleTimes: { dynamic: 30, static: 180 },
+    staleTimes: { dynamic: 120, static: 300 },
   },
 };
 

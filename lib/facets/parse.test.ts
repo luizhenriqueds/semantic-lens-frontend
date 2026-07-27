@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { goalFromQuery, parseFacets } from "./parse";
+import { goalFromQuery, isPureGoal, parseFacets } from "./parse";
 
 const CITIES = ["Corumbá", "Campo Grande", "São Paulo"];
 
@@ -68,6 +68,19 @@ describe("parseFacets", () => {
     expect(b.bedroomsMin).toBe(3);
   });
 
+  it("extracts parking and bathroom counts as hard facets", () => {
+    const f = parseFacets("apartamento com 2 vagas e 2 banheiros", CITIES);
+    expect(f.parkingMin).toBe(2);
+    expect(f.bathroomsMin).toBe(2);
+    expect(parseFacets("casa com garagem", CITIES).parkingMin).toBeNull();
+  });
+
+  it("ends the POI phrase at a purpose clause", () => {
+    const f = parseFacets("imovel proximo a ufms para estudantes", CITIES);
+    expect(f.poi?.name).toBe("ufms");
+    expect(f.goal).toBe("student");
+  });
+
   it("keeps stopwords inside a POI name", () => {
     const f = parseFacets("casa perto do hospital das clinicas", CITIES);
     expect(f.poi?.name).toBe("hospital das clinicas");
@@ -111,5 +124,30 @@ describe("goalFromQuery", () => {
     expect(goalFromQuery("reforma e revenda")).toBe("flip");
     expect(goalFromQuery("ponto comercial")).toBe("commercial");
     expect(goalFromQuery("apenas moradia")).toBeNull();
+  });
+});
+
+describe("isPureGoal", () => {
+  const pure = (q: string) => isPureGoal(parseFacets(q, CITIES));
+
+  it("is true when the goal words are the whole query", () => {
+    expect(pure("Comprar, reformar e revender")).toBe(true);
+    expect(pure("imóvel com boa liquidez")).toBe(true);
+    expect(pure("imóvel para renda de aluguel de temporada")).toBe(true);
+  });
+
+  it("counts type and city as hard filters, not description", () => {
+    expect(pure("apartamento para revender em Campo Grande")).toBe(true);
+  });
+
+  it("is false when the query also describes the property", () => {
+    expect(pure("apartamento amplo em zona comercial")).toBe(false);
+    expect(pure("casa com piscina para temporada")).toBe(false);
+  });
+
+  it("is false without a goal, or when another branch owns the query", () => {
+    expect(pure("casa com quintal")).toBe(false);
+    expect(pure("imóvel perto da ufms")).toBe(false);
+    expect(pure("apartamento perto do centro")).toBe(false);
   });
 });

@@ -1,5 +1,6 @@
 import { fuzzy, normalize } from "./normalize";
 import {
+  GOAL_FILLER,
   GOAL_KEYWORDS,
   LEXICAL_NOISE,
   LOCALITY_WORDS,
@@ -23,6 +24,23 @@ function findGoal(tokens: string[]): GoalKey | null {
 
 export function goalFromQuery(query: string): GoalKey | null {
   return findGoal(normalize(query).split(" ").filter(Boolean));
+}
+
+const isGoalWord = (t: string) =>
+  GOAL_KEYWORDS.some(([kws]) => kws.some((k) => t === k || (k.length >= 5 && t.startsWith(k))));
+
+// True when the goal words are the whole query ("comprar, reformar e revender"): nothing for
+// retrieval to match on, so the goal score alone answers it. Type/city are already hard filters.
+export function isPureGoal(f: Facets): boolean {
+  if (!f.goal || f.poi || f.center) return false;
+  const core = new Set(f.lexicalCore.split(" ").filter(Boolean));
+  // `normalized` keeps punctuation ("comprar, reformar"), so compare on the word.
+  const word = (t: string) => t.replace(/^\W+|\W+$/g, "");
+  return f.lexical
+    .split(" ")
+    .map(word)
+    .filter(Boolean)
+    .every((t) => core.has(t) || LOCALITY_WORDS.has(t) || GOAL_FILLER.has(t) || isGoalWord(t));
 }
 
 const POI_CATEGORY_WORDS = new Set(POI_CATEGORY_KEYWORDS.flatMap(([kws]) => kws));
@@ -98,7 +116,8 @@ function isCenterProximity(
   return words.length > 0 && words.every((w) => w === "centro");
 }
 
-const BEDROOM_WORD = /^(?:quarto|quartos|dormitorio|dormitorios|dorm|suite|suites)$/;
+const COUNT_WORD =
+  /^(?:quarto|quartos|dormitorio|dormitorios|dorm|suite|suites|vaga|vagas|garagem|garagens|banheiro|banheiros)$/;
 
 // Keeps only tokens that can plausibly appear in a listing document - see LEXICAL_NOISE.
 function buildLexical(normalized: string, priceMatch: string | null): string {
@@ -107,7 +126,7 @@ function buildLexical(normalized: string, priceMatch: string | null): string {
     .filter(Boolean)
     .filter((w) => !LEXICAL_NOISE.has(w));
   return words
-    .filter((w, i) => !/^\d+([.,]\d+)?$/.test(w) || BEDROOM_WORD.test(words[i + 1] ?? ""))
+    .filter((w, i) => !/^\d+([.,]\d+)?$/.test(w) || COUNT_WORD.test(words[i + 1] ?? ""))
     .join(" ");
 }
 
@@ -173,6 +192,12 @@ export function parseFacets(raw: string, cities: string[]): Facets {
   );
   if (bm) bedroomsMin = parseInt(bm[1], 10);
 
+  // Neither retrieval arm nor the reranker honours a count reliably, so these are hard filters.
+  const gm = normalized.match(/(\d+)\s*\+?\s*(?:vaga|vagas|garagem|garagens)/);
+  const parkingMin = gm ? parseInt(gm[1], 10) : null;
+  const wm = normalized.match(/(\d+)\s*\+?\s*(?:banheiro|banheiros|wc|lavabo|lavabos)/);
+  const bathroomsMin = wm ? parseInt(wm[1], 10) : null;
+
   let priceMax: number | null = null;
   const pm = normalized.match(
     /(?:ate|abaixo de|no maximo|maximo|menos de|max)\s*(?:r\$)?\s*([\d.,]+)\s*(mil|mi|milhao|milhoes|k)?/,
@@ -198,6 +223,8 @@ export function parseFacets(raw: string, cities: string[]): Facets {
     type,
     city,
     bedroomsMin,
+    parkingMin,
+    bathroomsMin,
     priceMax,
     goal: findGoal(tokens),
     poi: findPoi(normalized, cityList),

@@ -37,6 +37,32 @@ export const POI_CATEGORY_KEYWORDS: [string[], string][] = [
   [["farmacia", "drogaria"], "pharmacy"],
 ];
 
+// Objective words rather than property attributes - see isPureGoal.
+export const GOAL_FILLER = new Set([
+  "comprar",
+  "compra",
+  "vender",
+  "venda",
+  "revender",
+  "revenda",
+  "alugar",
+  "aluguel",
+  "locacao",
+  "renda",
+  "lucro",
+  "retorno",
+  "ganho",
+  "ganhar",
+  "morar",
+  "residir",
+  "negocio",
+  "oportunidade",
+  "objetivo",
+  "ideal",
+  "otimo",
+  "otima",
+]);
+
 export const POI_STOPWORDS = new Set([
   "de",
   "da",
@@ -61,10 +87,26 @@ export const POI_STOPWORDS = new Set([
 
 // Generic place words that describe an area rather than a mappable POI - handled
 // by the city filter + semantic ranking, not by proximity to a point.
-export const LOCALITY_WORDS = new Set(["centro", "bairro", "bairros", "regiao", "zona", "cidade"]);
+// "central" is here because Central (BA) is a real city: without it "região central" filters
+// the whole search down to a small Bahian town.
+export const LOCALITY_WORDS = new Set([
+  "centro",
+  "central",
+  "centrais",
+  "bairro",
+  "bairros",
+  "regiao",
+  "zona",
+  "cidade",
+]);
 
-// End the place name - what follows belongs to another facet ("perto da usp ate 200 mil").
+// End the place name - what follows belongs to another facet ("perto da usp ate 200 mil",
+// "perto da ufms para estudantes").
 export const POI_PHRASE_END = new Set([
+  "para",
+  "pra",
+  // Locative: what follows qualifies where, not which place ("praia em santa catarina").
+  "em",
   "ate",
   "abaixo",
   "maximo",
@@ -144,6 +186,8 @@ export type Facets = {
   type: string | null;
   city: string | null;
   bedroomsMin: number | null;
+  parkingMin: number | null;
+  bathroomsMin: number | null;
   priceMax: number | null;
   goal: GoalKey | null;
   poi: PoiQuery | null;
