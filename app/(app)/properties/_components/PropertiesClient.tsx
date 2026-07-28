@@ -23,13 +23,18 @@ import type {
   FilterOptions,
   MapPoint,
   Property,
+  PropertyChangeKind,
   PropertyFilters,
   PropertySort,
   Scores,
 } from "@/lib/types";
 import { IconArrow, IconBell, IconBuilding, IconSearch, IconSliders, POI_ICON } from "@/lib/icons";
 import { MAX_NEAR_M, POI_LABEL, POI_ORDER } from "@/lib/pois";
-import { LIST_PAGE_SIZE, type PropertiesView } from "@/lib/filters/propertiesUrl";
+import {
+  CHANGE_WINDOW_DAYS,
+  LIST_PAGE_SIZE,
+  type PropertiesView,
+} from "@/lib/filters/propertiesUrl";
 
 const PropertiesMap = dynamic(() => import("@/components/property/PropertiesMap"), {
   ssr: false,
@@ -67,6 +72,11 @@ const GOAL_STEPS = [50, 60, 70, 80, 90];
 const POI_RADII = [500, 1000, 2000, 5000];
 const CENTER_STEPS = [1000, 2000, 5000, 10_000];
 const POI_VISIBLE = 12;
+
+const CHANGE_LABEL: Record<PropertyChangeKind, string> = {
+  payment: "Passou a aceitar financiamento/FGTS",
+  modality: "Mudou de modalidade",
+};
 
 const PRAZOS: { days: number; label: string }[] = [
   { days: 7, label: "Próximos 7 dias" },
@@ -277,6 +287,7 @@ export default function PropertiesClient({
   const scoreMin = filters.scoreMin ?? 0;
   const financiamento = !!filters.financing;
   const fgts = !!filters.fgts;
+  const changeKind = filters.changeKind ?? null;
   const modalidade = filters.modalities ?? [];
   const prazoLeilao = filters.auctionWithinDays ?? 0;
   const range = filters.range ?? null;
@@ -484,6 +495,12 @@ export default function PropertiesClient({
     if (financiamento)
       f.push({ key: "fin", label: "Aceita financiamento", clear: () => patch({ fin: null }) });
     if (fgts) f.push({ key: "fgts", label: "Aceita FGTS", clear: () => patch({ fgts: null }) });
+    if (changeKind)
+      f.push({
+        key: "mudou",
+        label: CHANGE_LABEL[changeKind],
+        clear: () => patch({ mudou: null, dias: null }),
+      });
     return f;
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filters, clusters]);
@@ -499,7 +516,7 @@ export default function PropertiesClient({
     minVisual > 0,
     scoreKey !== "none" && scoreMin > 0,
   ].filter(Boolean).length;
-  const leilaoCount = [prazoLeilao > 0, financiamento, fgts].filter(Boolean).length;
+  const leilaoCount = [prazoLeilao > 0, financiamento, fgts, !!changeKind].filter(Boolean).length;
 
   const ADVANCED_NULL: Record<string, string | null> = {
     dim: null,
@@ -520,6 +537,8 @@ export default function PropertiesClient({
     fgts: null,
     prazo: null,
     cluster: null,
+    mudou: null,
+    dias: null,
   };
 
   const clearAdvanced = () => {
@@ -693,20 +712,18 @@ export default function PropertiesClient({
                   onToggle={() => toggleSec("grupo")}
                 >
                   <div className="flabel">Grupo de imóveis</div>
-                  <select
-                    className="selectish fwide"
+                  <SearchableSelect
+                    label="Grupo"
+                    allLabel="Todos os grupos"
+                    showLabel={false}
+                    className="fwide"
                     value={cluster === "all" ? "all" : String(cluster)}
-                    onChange={(e) =>
-                      patch({ cluster: e.target.value === "all" ? null : e.target.value })
-                    }
-                  >
-                    <option value="all">Todos os grupos</option>
-                    {clusters.map((c) => (
-                      <option key={c.clusterId} value={String(c.clusterId)}>
-                        {c.label}
-                      </option>
-                    ))}
-                  </select>
+                    options={clusters.map((c) => ({
+                      value: String(c.clusterId),
+                      label: c.label,
+                    }))}
+                    onChange={(v) => patch({ cluster: v === "all" ? null : v })}
+                  />
                 </Section>
                 <Section
                   title="Imóvel"
@@ -976,6 +993,25 @@ export default function PropertiesClient({
                     />
                     Aceita FGTS
                   </label>
+
+                  <div className="flabel">Mudou recentemente</div>
+                  <div className="fchiprow">
+                    <Chip active={!changeKind} onClick={() => patch({ mudou: null, dias: null })}>
+                      Qualquer
+                    </Chip>
+                    {Object.entries(CHANGE_LABEL).map(([key, label]) => (
+                      <Chip
+                        key={key}
+                        active={changeKind === key}
+                        onClick={() => patch({ mudou: key, dias: String(CHANGE_WINDOW_DAYS) })}
+                      >
+                        {label}
+                      </Chip>
+                    ))}
+                  </div>
+                  <p className="fhint">
+                    Comparado ao que o imóvel era há {CHANGE_WINDOW_DAYS} dias.
+                  </p>
                 </Section>
               </div>
 

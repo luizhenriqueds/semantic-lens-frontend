@@ -21,6 +21,10 @@ export default function PriceHistory({ points }: { points: PriceHistoryPoint[] }
 
   const first = pts[0];
   const last = pts[pts.length - 1];
+  // Points mark the ends of each interval, so a run can span two of them.
+  const states = pts.filter(
+    (p, i) => !i || p.saleValue !== pts[i - 1].saleValue || p.modality !== pts[i - 1].modality,
+  ).length;
   const delta = last.saleValue - first.saleValue;
   const deltaPct = first.saleValue > 0 ? Math.round((delta / first.saleValue) * 100) : 0;
   const down = delta < 0;
@@ -68,7 +72,7 @@ export default function PriceHistory({ points }: { points: PriceHistoryPoint[] }
         <div>
           <div className="phist-now">{money(last.saleValue)}</div>
           <div className="phist-sub">
-            {pts.length} anúncios · desde {fmt(first.date)}
+            {states} {states === 1 ? "anúncio" : "anúncios"} · desde {fmt(first.date)}
           </div>
         </div>
         <div className={`phist-delta${stable ? " flat" : down ? " down" : " up"}`}>

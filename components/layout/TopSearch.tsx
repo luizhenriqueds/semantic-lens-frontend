@@ -7,7 +7,7 @@ import { IconSearch } from "@/lib/icons";
 export default function TopSearch() {
   const router = useRouter();
   const inputRef = useRef<HTMLInputElement>(null);
-  const [, startSubmit] = useTransition();
+  const [submitting, startSubmit] = useTransition();
 
   // Route client-side instead of letting the GET form do a full document navigation.
   const onSubmit = (e: React.FormEvent) => {
@@ -17,8 +17,14 @@ export default function TopSearch() {
     startSubmit(() => router.push(`/search?q=${encodeURIComponent(q)}`));
   };
 
+  // Unlike the same-page search on /search, this is a cross-route jump with cold chunks.
   return (
-    <form className="topsearch" action="/search" method="get" onSubmit={onSubmit}>
+    <form
+      className={`topsearch${submitting ? " busy" : ""}`}
+      action="/search"
+      method="get"
+      onSubmit={onSubmit}
+    >
       <IconSearch width={18} height={18} strokeWidth={1.7} />
       <input
         ref={inputRef}
@@ -26,6 +32,7 @@ export default function TopSearch() {
         placeholder="Buscar imóveis — descreva o que procura"
         aria-label="Buscar imóveis"
         autoComplete="off"
+        onFocus={() => router.prefetch("/search")}
       />
     </form>
   );

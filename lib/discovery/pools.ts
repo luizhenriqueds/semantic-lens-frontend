@@ -1,5 +1,6 @@
 import { SCORE_FIELD } from "@/lib/format";
-import type { ProfileKey, PropertyFilters, PropertySort } from "@/lib/types";
+import { CHANGE_WINDOW_DAYS } from "@/lib/filters/propertiesUrl";
+import type { ProfileKey, PropertyChangeKind, PropertyFilters, PropertySort } from "@/lib/types";
 
 // One definition per rail, so the query that fills it and the "Ver todos" link that
 // leaves it cannot drift apart.
@@ -35,10 +36,10 @@ export const DISCOUNT: Pool = {
 };
 
 export const BUDGET: Pool = {
-  filters: { maxPrice: 90_000, minInvestment: 68 },
+  filters: { maxPrice: 100_000, minInvestment: 68 },
   sort: "score",
   pageSize: 40,
-  href: "/properties?preco=90000&invest=68&sort=score",
+  href: "/properties?preco=100000&invest=68&sort=score",
 };
 
 export const FINANCING: Pool = {
@@ -56,6 +57,22 @@ export const VACANT: Pool = {
   pageSize: 200,
   href: null,
 };
+
+const CHANGE_INVEST_MIN = 60;
+
+const changePool = (kind: PropertyChangeKind): Pool => ({
+  filters: {
+    changeKind: kind,
+    changedWithinDays: CHANGE_WINDOW_DAYS,
+    minInvestment: CHANGE_INVEST_MIN,
+  },
+  sort: "score",
+  pageSize: 40,
+  href: `/properties?mudou=${kind}&dias=${CHANGE_WINDOW_DAYS}&invest=${CHANGE_INVEST_MIN}&sort=score`,
+});
+
+export const MODALITY_CHANGE = changePool("modality");
+export const PAYMENT_CHANGE = changePool("payment");
 
 const GOAL_SCORE_MIN = 82;
 

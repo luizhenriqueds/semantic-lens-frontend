@@ -12,7 +12,7 @@ export default function HighlightsGrid({ items }: { items: Property[] }) {
     <section className="railsec">
       <SectionHead
         title="Destaques da rodada"
-        why="nota de investimento alta somada a deságio real — o cruzamento mais raro da base"
+        why="nota de investimento alta somada a deságio real"
         moreHref="/market"
         moreLabel="Ver painel de mercado"
       />

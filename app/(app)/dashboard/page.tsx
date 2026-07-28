@@ -2,9 +2,16 @@ import { Suspense } from "react";
 import { accountFrom, shortName } from "@/lib/account";
 import { getPropertiesPage } from "@/lib/data";
 import { getFavoriteIds } from "@/lib/data/favorites";
-import { HIGHLIGHTS, daySeed, parseGoal, pickHero, seededPick } from "@/lib/discovery";
+import {
+  HIGHLIGHTS,
+  byInvestment,
+  daySeed,
+  parseGoal,
+  pickHero,
+  seededPick,
+} from "@/lib/discovery";
 import { getUser } from "@/lib/supabase/server";
-import GoalChips from "./_components/GoalChips";
+import GoalSection from "./_components/GoalSection";
 import HeroPick from "./_components/HeroPick";
 import HighlightsGrid from "./_components/HighlightsGrid";
 import HomeHead from "./_components/HomeHead";
@@ -17,6 +24,8 @@ import {
   FinancingRailSlot,
   GoalRailSlot,
   MarketSlot,
+  ModalityChangeRailSlot,
+  PaymentChangeRailSlot,
   SavedRailSlot,
   VacantRailSlot,
 } from "./_components/sections";
@@ -46,9 +55,11 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
   // The hero is the LCP element: a priority image inside a Suspense boundary cannot be
   // preloaded from the initial HTML, so this one pool is awaited rather than streamed.
   const hero = pickHero(pool.items, seed);
-  const featured = seededPick(pool.items, 6, "highlights", seed, {
-    exclude: hero ? new Set([hero.id]) : undefined,
-  });
+  const featured = byInvestment(
+    seededPick(pool.items, 6, "highlights", seed, {
+      exclude: hero ? new Set([hero.id]) : undefined,
+    }),
+  );
 
   const { name } = accountFrom(user);
   const greeting = user ? `Olá, ${shortName(name)}.` : "Olá!";
@@ -73,12 +84,12 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
         <ClosingRailSlot seed={seed} now={now} />
       </Suspense>
 
-      <div className="railsec">
-        <GoalChips active={goal} />
-      </div>
-      <Suspense key={goal} fallback={<RailSkeleton />}>
-        <GoalRailSlot goal={goal} seed={seed} now={now} />
-      </Suspense>
+      {/* Unkeyed on purpose - see GoalSection. */}
+      <GoalSection active={goal}>
+        <Suspense fallback={<RailSkeleton hideHead />}>
+          <GoalRailSlot goal={goal} seed={seed} now={now} />
+        </Suspense>
+      </GoalSection>
 
       <HighlightsGrid items={featured} />
 
@@ -98,12 +109,20 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
         <FinancingRailSlot seed={seed} now={now} />
       </Suspense>
 
+      <Suspense fallback={null}>
+        <PaymentChangeRailSlot seed={seed} now={now} />
+      </Suspense>
+
+      <Suspense fallback={null}>
+        <ModalityChangeRailSlot seed={seed} now={now} />
+      </Suspense>
+
       <Suspense fallback={<GridSkeleton />}>
         <CitiesSlot seed={seed} />
       </Suspense>
 
       <Suspense fallback={<GridSkeleton cells={3} />}>
-        <CollectionsSlot seed={seed} />
+        <CollectionsSlot />
       </Suspense>
     </section>
   );

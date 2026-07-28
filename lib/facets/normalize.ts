@@ -2,6 +2,12 @@ export function normalize(s: string): string {
   return s.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/\s+/g, " ").trim();
 }
 
+// Search cache key: folds "Casa 02 Quartos" onto "casa 2 quartos". Only whole tokens are
+// unpadded, so "R$ 100.000" is left alone.
+export function canonicalQuery(s: string): string {
+  return normalize(s).replace(/(^|\s)0+(\d)/g, "$1$2");
+}
+
 // Keeps user input from turning into a LIKE wildcard.
 export function escapeLike(s: string): string {
   return s.replace(/[\\%_]/g, (c) => `\\${c}`);

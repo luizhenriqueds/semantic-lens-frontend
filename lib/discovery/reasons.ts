@@ -11,7 +11,15 @@ export type ReasonTone = "plain" | "on" | "hot";
 export type Reason = { key: string; text: string; tone: ReasonTone };
 
 export type RailKind =
-  "saved" | "closing" | "goal" | "discount" | "budget" | "vacant" | "financing";
+  | "saved"
+  | "closing"
+  | "goal"
+  | "discount"
+  | "budget"
+  | "vacant"
+  | "financing"
+  | "modality-change"
+  | "payment-change";
 
 export type ReasonContext = {
   rail: RailKind;
@@ -81,6 +89,18 @@ export function reasonsFor(p: Property, ctx: ReasonContext): Reason[] {
       break;
     case "financing":
       out.push({ key: "financing", text: "Aceita financiamento", tone: "on" }, scoreReason(p));
+      break;
+    // The change log records that one of the two started, not which.
+    case "payment-change": {
+      const how = [p.acceptsFinancing && "financiamento", p.acceptsFgts && "FGTS"]
+        .filter(Boolean)
+        .join("/");
+      out.push({ key: "financing", text: `Passou a aceitar ${how}`, tone: "on" }, scoreReason(p));
+      break;
+    }
+    case "modality-change":
+      if (p.modality) out.push({ key: "modality", text: `Agora: ${p.modality}`, tone: "on" });
+      out.push(scoreReason(p), discountReason(p));
       break;
     case "saved":
       if (ctx.anchorCity && p.city === ctx.anchorCity) {
