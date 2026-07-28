@@ -41,10 +41,7 @@ export default function GoalSection({
   return (
     <>
       <div className="railsec">
-        <SectionHead
-          title="Para o seu objetivo"
-          why="escolha o que você quer fazer com o imóvel — a lista muda com a sua escolha"
-        />
+        <SectionHead title="Para o seu objetivo" why="escolha o seu objetivo com o imóvel" />
         <div className="goalchips" role="group" aria-label="Objetivo">
           {DISCOVERY_GOALS.map((g) => (
             <button

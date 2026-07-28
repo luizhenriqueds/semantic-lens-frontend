@@ -67,7 +67,7 @@ export async function ClosingRailSlot({ seed, now }: SlotProps) {
   return (
     <RailSection
       title="Termina em breve"
-      why="leilões e vendas online com prazo estourando — ordenados por nota"
+      why="leilões e vendas online com prazo estourando"
       pill="urgente"
       pillTone="warn"
       moreHref={CLOSING_HREF}
@@ -83,7 +83,7 @@ export async function DiscountRailSlot({ seed, now }: SlotProps) {
   return (
     <RailSection
       title="Deságios que chamam atenção"
-      why="58% ou mais abaixo da avaliação oficial — ordenados por nota"
+      why="58% ou mais abaixo da avaliação oficial"
       moreHref={DISCOUNT.href}
       moreLabel="Ver todos os deságios"
       items={items}
@@ -97,7 +97,7 @@ export async function BudgetRailSlot({ seed, now }: SlotProps) {
   return (
     <RailSection
       title="Imóveis de até R$ 100 mil"
-      why="porta de entrada — nota alta com o menor cheque possível"
+      why="barreira de entrada baixa. Boas oportunidades para capitalizar com baixo investimento"
       moreHref={BUDGET.href}
       moreLabel="Ver por faixa de preço"
       items={items}
@@ -112,7 +112,7 @@ export async function VacantRailSlot({ seed, now }: SlotProps) {
   return (
     <RailSection
       title="Sem dor de cabeça: desocupados"
-      why="entrega imediata, sem custo nem prazo de desocupação"
+      why="entrega rápida, sem custo nem prazo de desocupação"
       pill="raro"
       items={items}
       ctx={{ rail: "vacant", now }}
@@ -125,7 +125,7 @@ export async function FinancingRailSlot({ seed, now }: SlotProps) {
   return (
     <RailSection
       title="Aceitam financiamento bancário"
-      why="uma fatia pequena da base aceita — dá para entrar sem o caixa todo"
+      why="uma fatia pequena da base aceita financiamento. Boas oportunidades para preservar o seu caixa"
       pill="raro"
       moreHref={FINANCING.href}
       moreLabel="Ver com financiamento"
@@ -140,7 +140,7 @@ export async function ModalityChangeRailSlot({ seed, now }: SlotProps) {
   return (
     <RailSection
       title="Mudaram de modalidade"
-      why="avançaram de fase ou foram para venda direta nos últimos 30 dias — a maioria com corte de preço"
+      why="avançaram de fase ou foram para venda direta nos últimos 30 dias. A maioria teve redução de preço"
       pill="novo"
       moreHref={MODALITY_CHANGE.href}
       moreLabel="Ver todos"
@@ -157,7 +157,7 @@ export async function PaymentChangeRailSlot({ seed, now }: SlotProps) {
   return (
     <RailSection
       title="Passaram a aceitar financiamento ou FGTS"
-      why="não aceitavam há 30 dias e passaram a aceitar — dá para entrar sem o caixa todo"
+      why="não aceitavam há 30 dias e passaram a aceitar"
       pill="novo"
       moreHref={PAYMENT_CHANGE.href}
       moreLabel="Ver todos"
@@ -242,7 +242,7 @@ export async function CollectionsSlot() {
     <section className="railsec">
       <SectionHead
         title="Coleções de imóveis que você pode gostar"
-        why="grupos de imóveis semelhantes, reunidos por perfil — ordenados por nota média"
+        why="grupos de imóveis semelhantes, reunidos por perfil e refinados exclusivamente para o investidor"
         moreHref="/groups"
         moreLabel="Ver todas"
       />

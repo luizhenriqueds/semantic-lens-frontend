@@ -309,13 +309,13 @@ export default async function MarketPage() {
                 <div className="num">
                   {c.discount_median != null ? `${Math.round(c.discount_median)}%` : "—"}
                 </div>
-                <div className="num">
+                <div className="num notacell">
                   {c.investment_median != null ? (
                     <>
-                      <div>{Math.round(c.investment_median)}</div>
                       <div className="minibar">
                         <i style={{ width: `${Math.round(c.investment_median)}%` }} />
                       </div>
+                      <span>{Math.round(c.investment_median)}</span>
                     </>
                   ) : (
                     "—"

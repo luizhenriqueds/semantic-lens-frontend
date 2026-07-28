@@ -7193,6 +7193,19 @@ select.selectish {
   overflow: hidden;
   margin-top: 5px;
 }
+/* bar and value on one line, so the row's single-line cells share their centreline instead of
+   splitting the difference between a stacked number and its bar */
+.rtrow .num.notacell {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 9px;
+}
+.market .rtrow .num.notacell .minibar {
+  flex: 1;
+  min-width: 30px;
+  margin-top: 0;
+}
 .market .minibar i {
   display: block;
   height: 100%;
