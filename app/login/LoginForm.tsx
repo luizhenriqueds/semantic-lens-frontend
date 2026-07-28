@@ -3,6 +3,7 @@
 import { useRouter, useSearchParams } from "next/navigation";
 import { useState } from "react";
 import { requestPasswordReset } from "@/app/actions/auth";
+import PasswordInput from "@/components/auth/PasswordInput";
 import { createClient } from "@/lib/supabase/client";
 
 export default function LoginForm() {
@@ -66,14 +67,7 @@ export default function LoginForm() {
             Esqueci minha senha
           </button>
         </div>
-        <input
-          type="password"
-          autoComplete="current-password"
-          minLength={6}
-          required
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-        />
+        <PasswordInput value={password} onChange={setPassword} />
       </label>
 
       <button className="btn solid au-submit" type="submit" disabled={busy}>

@@ -62,6 +62,7 @@ const AREA_STEPS = [50, 100, 150, 200, 300];
 const QUARTOS_STEPS = [1, 2, 3, 4];
 const DESCONTO_STEPS = [10, 20, 30, 40, 50];
 const INVEST_STEPS = [50, 60, 70, 80, 90];
+const VISUAL_STEPS = [50, 60, 70, 80];
 const GOAL_STEPS = [50, 60, 70, 80, 90];
 const POI_RADII = [500, 1000, 2000, 5000];
 const CENTER_STEPS = [1000, 2000, 5000, 10_000];
@@ -271,6 +272,7 @@ export default function PropertiesClient({
   const maxCenter = filters.maxCenterM ?? 0;
   const minDesconto = filters.minDiscount ?? 0;
   const minInvest = filters.minInvestment ?? 0;
+  const minVisual = filters.minVisualScore ?? 0;
   const scoreKey = filters.scoreKey && filters.scoreMin ? filters.scoreKey : ("none" as const);
   const scoreMin = filters.scoreMin ?? 0;
   const financiamento = !!filters.financing;
@@ -453,6 +455,12 @@ export default function PropertiesClient({
         label: `Investimento ≥ ${minInvest}`,
         clear: () => patch({ invest: null }),
       });
+    if (minVisual > 0)
+      f.push({
+        key: "visual",
+        label: `Fachada ≥ ${minVisual}`,
+        clear: () => patch({ fachada: null }),
+      });
     if (scoreKey !== "none" && scoreMin > 0)
       f.push({
         key: "goal",
@@ -485,9 +493,12 @@ export default function PropertiesClient({
 
   const imovelCount = [minQuartos > 0, maxPreco > 0, minArea > 0].filter(Boolean).length;
   const poiCount = poiCats.length + (maxCenter > 0 ? 1 : 0);
-  const retornoCount = [minDesconto > 0, minInvest > 0, scoreKey !== "none" && scoreMin > 0].filter(
-    Boolean,
-  ).length;
+  const retornoCount = [
+    minDesconto > 0,
+    minInvest > 0,
+    minVisual > 0,
+    scoreKey !== "none" && scoreMin > 0,
+  ].filter(Boolean).length;
   const leilaoCount = [prazoLeilao > 0, financiamento, fgts].filter(Boolean).length;
 
   const ADVANCED_NULL: Record<string, string | null> = {
@@ -502,6 +513,7 @@ export default function PropertiesClient({
     centro: null,
     desconto: null,
     invest: null,
+    fachada: null,
     goal: null,
     goalMin: null,
     fin: null,
@@ -866,6 +878,30 @@ export default function PropertiesClient({
                     ))}
                   </div>
 
+                  {filterOptions.visualScore && (
+                    <>
+                      <div className="flabel">Avaliação visual da fachada</div>
+                      <div className="fchiprow">
+                        <Chip active={!minVisual} onClick={() => patch({ fachada: null })}>
+                          Qualquer
+                        </Chip>
+                        {VISUAL_STEPS.map((v) => (
+                          <Chip
+                            key={v}
+                            active={minVisual === v}
+                            onClick={() => patch({ fachada: String(v) })}
+                          >
+                            ≥ {v}
+                          </Chip>
+                        ))}
+                      </div>
+                      <p className="fhint">
+                        Nota de 0 a 100 que o modelo de visão dá à foto do anúncio (fachada,
+                        acabamento e conservação). Imóveis sem foto avaliada ficam de fora.
+                      </p>
+                    </>
+                  )}
+
                   <div className="flabel">Nota do objetivo</div>
                   <select
                     className={`selectish fwide${scoreKey !== "none" ? " on" : ""}`}
@@ -1000,7 +1036,8 @@ export default function PropertiesClient({
 
       <div className="viewcontent">
         {isPending && <div className="viewloadbar" aria-hidden />}
-        <div className={`viewinner${isPending ? " loading" : ""}`}>
+        {/* the calendar dims its own day panel instead */}
+        <div className={`viewinner${isPending && view !== "calendar" ? " loading" : ""}`}>
           {view === "map" ? (
             map && map.points.length ? (
               <>
@@ -1028,6 +1065,7 @@ export default function PropertiesClient({
                 dayItems={calendar.dayItems}
                 dayTotal={calendar.dayTotal}
                 page={page}
+                loading={isPending}
                 onSelectDay={(d) => setParams({ day: d, page: null })}
                 onPageChange={goTo}
               />

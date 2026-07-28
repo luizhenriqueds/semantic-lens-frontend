@@ -21,6 +21,8 @@ export type PropertyFilters = {
   maxCenterM?: number;
   minDiscount?: number;
   minInvestment?: number;
+  /** Facade grade from the vision model, 0-100. Needs `min_visual_score` on the RPC. */
+  minVisualScore?: number;
   scoreKey?: keyof Scores;
   scoreMin?: number;
   financing?: boolean;
@@ -36,6 +38,8 @@ export type FilterOptions = {
   types: string[];
   modalities: string[];
   poiCategories: string[];
+  /** Whether the list RPC honours `min_visual_score` — probed, see getFilterOptions. */
+  visualScore: boolean;
 };
 
 export type MapPoint = {

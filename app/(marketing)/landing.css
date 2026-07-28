@@ -279,7 +279,7 @@
   border-bottom: 1px solid var(--line);
 }
 .lp-hero .lp-hexfield {
-  opacity: 0.5;
+  opacity: 0.42;
   mask-image: radial-gradient(80% 85% at 70% 0%, #000 25%, transparent 78%);
   -webkit-mask-image: radial-gradient(80% 85% at 70% 0%, #000 25%, transparent 78%);
 }
@@ -287,17 +287,19 @@
   position: relative;
   z-index: 1;
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 0.92fr);
-  gap: 56px;
+  /* the text column has to hold both CTAs on one row */
+  grid-template-columns: minmax(0, 1fr) minmax(0, 0.82fr);
+  gap: 60px;
   align-items: center;
-  padding: 78px 28px 88px;
+  padding: 72px 28px 84px;
 }
 .lp-hero h1 {
-  font-size: clamp(36px, 4.6vw, 58px);
+  /* capped so a two-line headline doesn't turn into four in the text column */
+  font-size: clamp(36px, 4.4vw, 55px);
   font-weight: 800;
-  letter-spacing: -0.035em;
-  line-height: 1.04;
-  margin: 0 0 20px;
+  letter-spacing: -0.03em;
+  line-height: 1.02;
+  margin: 0 0 18px;
 }
 .lp-hero h1 .lp-u {
   color: var(--primary);
@@ -328,20 +330,34 @@
   }
 }
 .lp-hero .lp-lede {
-  font-size: 18px;
+  font-size: 17.5px;
+  line-height: 1.6;
   color: var(--ink-soft);
-  max-width: 48ch;
-  margin: 0 0 30px;
+  max-width: 42ch;
+  margin: 0 0 28px;
 }
 .lp-hero .lp-actions {
   display: flex;
-  gap: 12px;
+  align-items: center;
+  gap: 14px;
   flex-wrap: wrap;
 }
+.lp-hero .lp-btn.lp-solid {
+  box-shadow: 0 10px 26px color-mix(in srgb, var(--primary) 26%, transparent);
+}
+.lp-hero .lp-btn.lp-solid svg {
+  transition: transform 0.15s ease;
+}
+.lp-hero .lp-btn.lp-solid:hover svg {
+  transform: translateX(2px);
+}
+.lp-hero .lp-btn.lp-ghost {
+  border-color: color-mix(in srgb, var(--primary) 20%, var(--line));
+}
 .lp-hero .lp-micro {
-  margin-top: 22px;
-  font-size: 13px;
-  color: var(--ink-faint);
+  margin-top: 18px;
+  font-size: 13.5px;
+  color: var(--ink-soft);
 }
 
 /* hero product mock - a property card with the investment score */
@@ -351,7 +367,9 @@
   border: 1px solid var(--line);
   border-radius: 20px;
   padding: 20px;
-  box-shadow: 0 30px 70px rgba(var(--shadow), 0.14);
+  box-shadow:
+    0 24px 56px rgba(var(--shadow), 0.13),
+    0 2px 6px rgba(var(--shadow), 0.06);
   animation: lp-floaty 8s ease-in-out infinite;
 }
 @keyframes lp-floaty {
@@ -365,24 +383,35 @@
 }
 .lp-heromock .lp-photo {
   position: relative;
-  height: 168px;
+  aspect-ratio: 16 / 10;
   border-radius: 14px;
   overflow: hidden;
-  background: linear-gradient(
-    135deg,
-    color-mix(in srgb, var(--primary) 22%, var(--surface)),
-    var(--surface-2)
-  );
+  background: var(--surface-2);
   border: 1px solid var(--line-soft);
-  display: grid;
-  place-items: center;
 }
-.lp-heromock .lp-photo svg {
-  width: 54px;
-  height: 54px;
-  stroke: var(--primary-soft);
-  stroke-width: 1.4;
-  opacity: 0.8;
+.lp-heromock .lp-photo img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+/* keeps the badge and the use chips legible over any façade */
+.lp-heromock .lp-photo::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  background: linear-gradient(
+    180deg,
+    rgba(0, 0, 0, 0.28) 0%,
+    transparent 32%,
+    transparent 48%,
+    rgba(0, 0, 0, 0.42) 100%
+  );
+}
+.lp-heromock .lp-disc,
+.lp-heromock .lp-uses {
+  z-index: 2;
 }
 .lp-heromock .lp-disc {
   position: absolute;
@@ -390,10 +419,10 @@
   left: 12px;
   background: var(--primary);
   color: var(--surface);
-  font-size: 12.5px;
+  font-size: 12px;
   font-weight: 700;
-  border-radius: 8px;
-  padding: 5px 10px;
+  border-radius: 100px;
+  padding: 5px 12px;
   box-shadow: 0 4px 12px rgba(var(--shadow), 0.2);
 }
 .lp-heromock .lp-uses {
@@ -437,12 +466,52 @@
   text-align: right;
   flex-shrink: 0;
 }
+.lp-heromock .lp-price span {
+  display: block;
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+}
+.lp-heromock .lp-price b {
+  font-size: 21px;
+  font-weight: 800;
+  letter-spacing: -0.025em;
+  line-height: 1.15;
+  color: var(--primary);
+}
+.lp-heromock .lp-price small {
+  display: block;
+  font-size: 11.5px;
+  color: var(--ink-faint);
+  text-decoration: line-through;
+}
+/* factor bars inside the hero mock */
+.lp-mockbars {
+  margin-top: 16px;
+  padding-top: 14px;
+  border-top: 1px solid var(--line-soft);
+}
+.lp-mockbars .lp-bar {
+  margin-bottom: 10px;
+}
+.lp-mockbars .lp-bar:last-child {
+  margin-bottom: 0;
+}
+.lp-mockbars .lp-bar .lp-t {
+  font-size: 11.5px;
+  margin-bottom: 4px;
+}
+.lp-mockbars .lp-bar .lp-track {
+  height: 6px;
+}
 .lp-heromock .lp-scorebar {
   display: flex;
   align-items: center;
   gap: 16px;
-  margin-top: 16px;
-  padding: 16px 4px 4px;
+  margin-top: 14px;
+  padding: 14px 4px 2px;
   border-top: 1px solid var(--line-soft);
 }
 /* the ring renders its own label inside, so give it room not to touch the edge */
@@ -476,6 +545,7 @@
 .lp-ring text {
   fill: var(--ink);
   font-weight: 800;
+  letter-spacing: -0.02em;
   font-family: "Plus Jakarta Sans", sans-serif;
 }
 
@@ -1334,9 +1404,6 @@ footer.lp-foot .lp-fine {
 /* ============================================================
      Property illustrations (SVG, tema-aware)
      ============================================================ */
-.lp-il-ground {
-  fill: color-mix(in srgb, var(--primary) 15%, var(--surface-2));
-}
 .lp-il-wall {
   fill: var(--surface);
   stroke: var(--primary);
@@ -1355,34 +1422,6 @@ footer.lp-foot .lp-fine {
   fill: var(--primary-wash);
   stroke: var(--primary-soft);
   stroke-width: 1.4;
-}
-.lp-il-tree-top {
-  fill: var(--primary-soft);
-}
-.lp-il-tree-trunk {
-  fill: var(--primary);
-  opacity: 0.55;
-}
-.lp-il-hex {
-  fill: var(--primary);
-  opacity: 0.12;
-}
-.lp-il-pin {
-  fill: var(--primary);
-}
-.lp-il-pin-dot {
-  fill: var(--surface);
-}
-
-/* hero property scene fills the card photo (override base .lp-photo svg sizing) */
-.lp-heromock .lp-photo svg.lp-photo-illus {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  opacity: 1;
-  stroke: none;
-  stroke-width: 0;
 }
 
 /* soft house silhouettes behind the CTA */
@@ -2136,6 +2175,11 @@ footer.lp-foot .lp-fine {
   .lp-hero h1 .lp-u svg path {
     stroke-dashoffset: 0;
   }
+  /* LandingEffects sets the end state inline, so these just snap into place */
+  .lp-ring .lp-bar,
+  .lp-bar .lp-track i {
+    transition: none;
+  }
 }
 
 @media (max-width: 860px) {
@@ -2172,6 +2216,31 @@ footer.lp-foot .lp-fine {
 @media (max-width: 700px) {
   section.lp-band {
     padding: 52px 0;
+  }
+  /* the mock is the proof shot, so it stays on mobile - just calmer */
+  .lp-heromock {
+    padding: 14px;
+    border-radius: 18px;
+    animation: none;
+    box-shadow: 0 16px 36px rgba(var(--shadow), 0.12);
+  }
+  .lp-heromock .lp-photo {
+    aspect-ratio: 16 / 9;
+  }
+  .lp-heromock .lp-price b {
+    font-size: 19px;
+  }
+  .lp-heromock .lp-mrow b {
+    font-size: 14.5px;
+  }
+  .lp-heromock .lp-mrow .lp-loc {
+    font-size: 12px;
+  }
+  .lp-mockbars .lp-bar:nth-child(3) {
+    display: none;
+  }
+  .lp-hero .lp-micro {
+    line-height: 1.5;
   }
   .lp-sechead {
     margin-bottom: 34px;

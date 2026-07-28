@@ -129,6 +129,20 @@ export const IconCalendar = (p: P) => (
     <path d="M8 3v4m8-4v4M3 10h18" />
   </svg>
 );
+export const IconEye = (p: P) => (
+  <svg {...base(p)}>
+    <path d="M2 12s3.6-6 10-6 10 6 10 6-3.6 6-10 6-10-6-10-6Z" />
+    <circle cx="12" cy="12" r="3" />
+  </svg>
+);
+export const IconEyeOff = (p: P) => (
+  <svg {...base(p)} strokeLinecap="round">
+    <path d="M10.6 6.2A9.9 9.9 0 0 1 12 6c6.4 0 10 6 10 6a17.6 17.6 0 0 1-3.3 3.8" />
+    <path d="M6.5 8.2A17.4 17.4 0 0 0 2 12s3.6 6 10 6a10 10 0 0 0 4-.8" />
+    <path d="M9.9 9.9a3 3 0 0 0 4.2 4.2" />
+    <path d="m3 3 18 18" />
+  </svg>
+);
 export const IconCollection = (p: P) => (
   <svg {...base(p)} strokeWidth={1.3}>
     <path d="M2 21h20" />

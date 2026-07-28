@@ -9,7 +9,6 @@ import {
   getMarketDashboard,
   getPropertiesByIds,
   getPropertiesPage,
-  getPropertyById,
   getRecommendations,
   getUpcomingAuctions,
   isListable,
@@ -148,15 +147,15 @@ export async function GoalRailSlot({ goal, seed, now }: SlotProps & { goal: Prof
 }
 
 export async function SavedRailSlot({ ids, seed, now }: SlotProps & { ids: string[] }) {
-  const anchorId = seededShuffle(ids, railSeed(seed, "anchor"))[0];
-  if (!anchorId) return null;
+  if (!ids.length) return null;
 
-  // Both reads key off the same id, so they don't need to be sequential.
-  const [anchor, recs] = await Promise.all([
-    getPropertyById(anchorId),
-    getRecommendations(anchorId),
-  ]);
+  // A saved property can go inactive or lose its photo, and the chip shows its thumbnail.
+  const saved = (await getPropertiesByIds(ids)).filter(isListable);
+  const withPhoto = saved.filter((p) => p.image);
+  const anchor = seededShuffle(withPhoto.length ? withPhoto : saved, railSeed(seed, "anchor"))[0];
   if (!anchor) return null;
+
+  const recs = await getRecommendations(anchor.id);
 
   const recIds = [...new Set(recs.filter((r) => (r.similarity ?? 0) >= 0.75).map((r) => r.recId))];
 
