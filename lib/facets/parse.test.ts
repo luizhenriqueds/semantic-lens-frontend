@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { goalFromQuery, isPureGoal, parseFacets } from "./parse";
+import { goalFromQuery, isPureGoal, isStructural, parseFacets } from "./parse";
 
 const CITIES = ["Corumbá", "Campo Grande", "São Paulo"];
 
@@ -149,5 +149,40 @@ describe("isPureGoal", () => {
     expect(pure("casa com quintal")).toBe(false);
     expect(pure("imóvel perto da ufms")).toBe(false);
     expect(pure("apartamento perto do centro")).toBe(false);
+  });
+});
+
+describe("isStructural", () => {
+  const structural = (q: string) => isStructural(parseFacets(q, CITIES));
+
+  it("is true when every word became a hard filter", () => {
+    expect(structural("casa 02 quartos")).toBe(true);
+    expect(structural("apartamento 2 quartos")).toBe(true);
+    expect(structural("casa 3 quartos 2 vagas em Campo Grande")).toBe(true);
+    expect(structural("apartamento")).toBe(true);
+  });
+
+  it("tolerates locality filler around the facets", () => {
+    expect(structural("apartamento 2 quartos no bairro")).toBe(true);
+  });
+
+  it("is false when the query still describes the property", () => {
+    expect(structural("casa 2 quartos com piscina")).toBe(false);
+    expect(structural("apartamento reformado")).toBe(false);
+    expect(structural("casa com quintal grande")).toBe(false);
+  });
+
+  it("is false with no hard filter at all", () => {
+    expect(structural("imovel bonito")).toBe(false);
+  });
+
+  it("is false for bathrooms, which only the retrieval RPC can filter on", () => {
+    expect(structural("casa 2 quartos 2 banheiros")).toBe(false);
+  });
+
+  it("leaves the branches that own the query alone", () => {
+    expect(structural("casa 2 quartos para temporada")).toBe(false);
+    expect(structural("apartamento perto da ufms")).toBe(false);
+    expect(structural("apartamento perto do centro")).toBe(false);
   });
 });

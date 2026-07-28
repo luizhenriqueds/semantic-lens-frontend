@@ -269,6 +269,18 @@ button {
 .topsearch svg {
   stroke: var(--ink-faint);
 }
+.topsearch.busy {
+  border-color: var(--primary-soft);
+}
+.topsearch.busy svg {
+  stroke: var(--primary);
+  animation: topsearch-pulse 1s ease-in-out infinite;
+}
+@keyframes topsearch-pulse {
+  50% {
+    opacity: 0.35;
+  }
+}
 .iconbtn {
   width: 46px;
   height: 46px;
@@ -449,7 +461,8 @@ button {
   }
 }
 @media (prefers-reduced-motion: reduce) {
-  .view {
+  .view,
+  .topsearch.busy svg {
     animation: none;
   }
 }
@@ -1200,6 +1213,10 @@ button {
 /* searchable select (estado / cidade) */
 .ssel {
   position: relative;
+}
+.ssel.fwide,
+.ssel.fwide .ssel-pop {
+  width: 100%;
 }
 .ssel-btn {
   width: 100%;
@@ -6296,6 +6313,8 @@ select.selectish {
 }
 .anchorchip {
   display: inline-flex;
+  /* on the same optical line as the "ver todos" link, not the flex-start title block */
+  align-self: center;
   align-items: center;
   gap: 9px;
   background: var(--surface);
@@ -6552,6 +6571,11 @@ select.selectish {
   border-color: var(--primary);
   color: var(--surface);
 }
+/* anchors the shared .viewloadbar over the outgoing rail */
+.goalrail {
+  position: relative;
+}
+
 /* the picked chip breathes while the rail loads - dimming the whole group read as a freeze */
 .goalchip.loading {
   animation: goalpulse 1.1s ease-in-out infinite;
@@ -6701,7 +6725,8 @@ select.selectish {
   .sectitle .grow {
     display: none;
   }
-  .sectitle .more {
+  .sectitle .more,
+  .sectitle .anchorchip {
     align-self: flex-start;
   }
   .herobody {

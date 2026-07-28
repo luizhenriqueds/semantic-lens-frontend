@@ -3,6 +3,8 @@ import type { Scores } from "./property";
 
 export type PropertySort = "leilao" | "investimento" | "desconto" | "score" | "menor" | "maior";
 
+export type PropertyChangeKind = "modality" | "payment";
+
 // Mirrors the jsonb filter contract of the backend's property_list_matched() function.
 export type PropertyFilters = {
   q?: string;
@@ -23,6 +25,9 @@ export type PropertyFilters = {
   minInvestment?: number;
   /** Facade grade from the vision model, 0-100. Needs `min_visual_score` on the RPC. */
   minVisualScore?: number;
+  /** Listings whose modality moved, or that started accepting financing/FGTS. */
+  changeKind?: PropertyChangeKind;
+  changedWithinDays?: number;
   scoreKey?: keyof Scores;
   scoreMin?: number;
   financing?: boolean;

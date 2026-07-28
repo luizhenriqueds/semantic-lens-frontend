@@ -1,8 +1,10 @@
 import { describe, expect, it } from "vitest";
 import { makeProperty } from "@/lib/__fixtures__/property";
-import { seededPick } from "./sample";
+import { byInvestment, seededPick } from "./sample";
 
 const inCity = (id: string, city: string) => makeProperty({ id, city });
+const scored = (id: string, investment: number | null) =>
+  makeProperty({ id, scores: { investment } });
 
 const pool = [
   inCity("1", "Rio de Janeiro"),
@@ -50,5 +52,27 @@ describe("seededPick", () => {
     const before = pool.map((p) => p.id);
     seededPick(pool, 4, "r", 7);
     expect(pool.map((p) => p.id)).toEqual(before);
+  });
+});
+
+describe("byInvestment", () => {
+  it("orders by investment score, best first", () => {
+    const items = [scored("a", 51), scored("b", 88), scored("c", 70)];
+    expect(byInvestment(items).map((p) => p.id)).toEqual(["b", "c", "a"]);
+  });
+
+  it("sinks unscored listings to the end", () => {
+    const items = [scored("a", null), scored("b", 40), scored("c", null)];
+    expect(
+      byInvestment(items)
+        .map((p) => p.id)
+        .slice(0, 1),
+    ).toEqual(["b"]);
+  });
+
+  it("does not mutate its input", () => {
+    const items = [scored("a", 10), scored("b", 90)];
+    byInvestment(items);
+    expect(items.map((p) => p.id)).toEqual(["a", "b"]);
   });
 });

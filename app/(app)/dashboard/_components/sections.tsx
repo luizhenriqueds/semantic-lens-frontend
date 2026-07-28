@@ -18,8 +18,11 @@ import {
   CLOSING_HREF,
   DISCOUNT,
   FINANCING,
+  MODALITY_CHANGE,
+  PAYMENT_CHANGE,
   RAIL_SIZE,
   VACANT,
+  byInvestment,
   goalPool,
   isVacant,
   railSeed,
@@ -32,8 +35,7 @@ import CityGrid from "./CityGrid";
 import InsightStrip from "./InsightStrip";
 
 // Each section owns its query and streams in independently, so the slowest rail never
-// holds up the document. Every pool filter is a user-independent constant, so the reads
-// underneath are shared across all visitors by unstable_cache.
+// holds up the document.
 
 type SlotProps = { seed: number; now: Date };
 
@@ -45,6 +47,9 @@ async function fetchPool(pool: Pool): Promise<Property[]> {
   });
   return items;
 }
+
+const railItems = (pool: readonly Property[], rail: string, seed: number): Property[] =>
+  byInvestment(seededPick(pool, RAIL_SIZE, rail, seed));
 
 export async function MarketSlot() {
   const d = await getMarketDashboard();
@@ -58,14 +63,11 @@ export async function CitiesSlot({ seed }: { seed: number }) {
 }
 
 export async function ClosingRailSlot({ seed, now }: SlotProps) {
-  const pool = await getUpcomingAuctions(now);
-  const items = seededPick(pool, RAIL_SIZE, "closing", seed).sort(
-    (a, b) => new Date(a.auctionDate!).getTime() - new Date(b.auctionDate!).getTime(),
-  );
+  const items = railItems(await getUpcomingAuctions(now), "closing", seed);
   return (
     <RailSection
       title="Termina em breve"
-      why="leilões e vendas online com prazo estourando — do mais urgente ao menos"
+      why="leilões e vendas online com prazo estourando — ordenados por nota"
       pill="urgente"
       pillTone="warn"
       moreHref={CLOSING_HREF}
@@ -77,11 +79,11 @@ export async function ClosingRailSlot({ seed, now }: SlotProps) {
 }
 
 export async function DiscountRailSlot({ seed, now }: SlotProps) {
-  const items = seededPick(await fetchPool(DISCOUNT), RAIL_SIZE, "discount", seed);
+  const items = railItems(await fetchPool(DISCOUNT), "discount", seed);
   return (
     <RailSection
       title="Deságios que chamam atenção"
-      why="58% ou mais abaixo da avaliação oficial, com nota mínima de 60"
+      why="58% ou mais abaixo da avaliação oficial — ordenados por nota"
       moreHref={DISCOUNT.href}
       moreLabel="Ver todos os deságios"
       items={items}
@@ -91,10 +93,10 @@ export async function DiscountRailSlot({ seed, now }: SlotProps) {
 }
 
 export async function BudgetRailSlot({ seed, now }: SlotProps) {
-  const items = seededPick(await fetchPool(BUDGET), RAIL_SIZE, "budget", seed);
+  const items = railItems(await fetchPool(BUDGET), "budget", seed);
   return (
     <RailSection
-      title="Cabe em até R$ 90 mil"
+      title="Imóveis de até R$ 100 mil"
       why="porta de entrada — nota alta com o menor cheque possível"
       moreHref={BUDGET.href}
       moreLabel="Ver por faixa de preço"
@@ -106,7 +108,7 @@ export async function BudgetRailSlot({ seed, now }: SlotProps) {
 
 export async function VacantRailSlot({ seed, now }: SlotProps) {
   const pool = (await fetchPool(VACANT)).filter((p) => isVacant(p.occupancyStatus));
-  const items = seededPick(pool, RAIL_SIZE, "vacant", seed);
+  const items = railItems(pool, "vacant", seed);
   return (
     <RailSection
       title="Sem dor de cabeça: desocupados"
@@ -119,7 +121,7 @@ export async function VacantRailSlot({ seed, now }: SlotProps) {
 }
 
 export async function FinancingRailSlot({ seed, now }: SlotProps) {
-  const items = seededPick(await fetchPool(FINANCING), RAIL_SIZE, "financing", seed);
+  const items = railItems(await fetchPool(FINANCING), "financing", seed);
   return (
     <RailSection
       title="Aceitam financiamento bancário"
@@ -133,9 +135,40 @@ export async function FinancingRailSlot({ seed, now }: SlotProps) {
   );
 }
 
+export async function ModalityChangeRailSlot({ seed, now }: SlotProps) {
+  const items = railItems(await fetchPool(MODALITY_CHANGE), "modality-change", seed);
+  return (
+    <RailSection
+      title="Mudaram de modalidade"
+      why="avançaram de fase ou foram para venda direta nos últimos 30 dias — a maioria com corte de preço"
+      pill="novo"
+      moreHref={MODALITY_CHANGE.href}
+      moreLabel="Ver todos"
+      items={items}
+      ctx={{ rail: "modality-change", now }}
+    />
+  );
+}
+
+export async function PaymentChangeRailSlot({ seed, now }: SlotProps) {
+  // The log records the start, not a later stop: ~4% dropped it again inside the window.
+  const pool = (await fetchPool(PAYMENT_CHANGE)).filter((p) => p.acceptsFinancing || p.acceptsFgts);
+  const items = railItems(pool, "payment-change", seed);
+  return (
+    <RailSection
+      title="Passaram a aceitar financiamento ou FGTS"
+      why="não aceitavam há 30 dias e passaram a aceitar — dá para entrar sem o caixa todo"
+      pill="novo"
+      moreHref={PAYMENT_CHANGE.href}
+      moreLabel="Ver todos"
+      items={items}
+      ctx={{ rail: "payment-change", now }}
+    />
+  );
+}
+
 export async function GoalRailSlot({ goal, seed, now }: SlotProps & { goal: ProfileKey }) {
-  const pool = goalPool(goal);
-  const items = seededPick(await fetchPool(pool), RAIL_SIZE, `goal-${goal}`, seed);
+  const items = railItems(await fetchPool(goalPool(goal)), `goal-${goal}`, seed);
   return (
     <RailSection
       hideHead
@@ -159,8 +192,7 @@ export async function SavedRailSlot({ ids, seed, now }: SlotProps & { ids: strin
 
   const recIds = [...new Set(recs.filter((r) => (r.similarity ?? 0) >= 0.75).map((r) => r.recId))];
 
-  // Not every property has recommendations computed; same city + same type is the
-  // documented fallback.
+  // Not every property has recommendations computed; same city + same type is the fallback.
   let pool = recIds.length ? await getPropertiesByIds(recIds) : [];
   if (pool.length < 6) {
     const { items } = await getPropertiesPage({
@@ -173,7 +205,7 @@ export async function SavedRailSlot({ ids, seed, now }: SlotProps & { ids: strin
 
   const byId = new Map(pool.filter(isListable).map((p) => [p.id, p]));
   byId.delete(anchor.id);
-  const items = seededPick([...byId.values()], RAIL_SIZE, "saved", seed);
+  const items = railItems([...byId.values()], "saved", seed);
 
   return (
     <RailSection
@@ -195,15 +227,22 @@ export async function SavedRailSlot({ ids, seed, now }: SlotProps & { ids: strin
   );
 }
 
-export async function CollectionsSlot({ seed }: { seed: number }) {
+// Ranked by the group's average investment score - /groups keeps its own ordering.
+export async function CollectionsSlot() {
   const [clusters, stats] = await Promise.all([getClusters(), getClusterStatsAll()]);
-  const picked = seededShuffle(clusters, railSeed(seed, "collections")).slice(0, 3);
+  const picked = [...clusters]
+    .sort(
+      (a, b) =>
+        (clusterStatsFor(stats, b.clusterId).avgScore ?? -1) -
+        (clusterStatsFor(stats, a.clusterId).avgScore ?? -1),
+    )
+    .slice(0, 3);
   if (picked.length < 3) return null;
   return (
     <section className="railsec">
       <SectionHead
-        title="Coleções parecidas"
-        why="grupos de imóveis semelhantes, reunidos por perfil"
+        title="Coleções de imóveis que você pode gostar"
+        why="grupos de imóveis semelhantes, reunidos por perfil — ordenados por nota média"
         moreHref="/groups"
         moreLabel="Ver todas"
       />

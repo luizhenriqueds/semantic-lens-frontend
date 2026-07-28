@@ -1,4 +1,5 @@
 import { supabase } from "@/lib/supabase";
+import { escapeLike } from "@/lib/facets";
 import { deriveTitle, titleCase } from "@/lib/format";
 import { ANALYSIS_EDGES, type AnalysisData } from "@/lib/facets/analysis";
 import { LIST_PAGE_SIZE } from "@/lib/filters/propertiesUrl";
@@ -51,6 +52,10 @@ function toRpcFilters(f: PropertyFilters = {}): Record<string, unknown> {
   if (f.minDiscount) out.min_discount = f.minDiscount;
   if (f.minInvestment) out.min_investment = f.minInvestment;
   if (f.minVisualScore) out.min_visual_score = f.minVisualScore;
+  if (f.changeKind) {
+    out.change_kind = f.changeKind;
+    if (f.changedWithinDays) out.changed_within_days = f.changedWithinDays;
+  }
   if (f.scoreKey) out.score_key = f.scoreKey;
   if (f.scoreMin) out.score_min = f.scoreMin;
   if (f.financing) out.financing = true;
@@ -212,6 +217,40 @@ export function getGoalTop(
 export function getPropertiesByIds(ids: string[]): Promise<Property[]> {
   if (!ids.length) return Promise.resolve([]);
   return cachedByIds(JSON.stringify(ids));
+}
+
+/** What this path can honour. Deliberately not PropertyFilters: parking has no RPC key, and a
+ *  filter this read silently ignored would be worse than a type error. */
+export type StructuralFilters = {
+  type?: string;
+  city?: string;
+  minBedrooms?: number;
+  minParking?: number;
+  maxPrice?: number;
+};
+
+// "apartamento 2 quartos" is a filtered list, not a search. Reads the MV directly because
+// property_list_page spends ~500ms of its ~600 counting a total the search page never shows.
+// Each predicate mirrors what property_list_matched does with the same key. Not wrapped in
+// `cached`: the only caller already runs inside the hybrid-search cache, which nesting skips.
+export async function getStructuralList(f: StructuralFilters, limit: number): Promise<Property[]> {
+  let q = supabase
+    .from("property_list_mv")
+    .select(MV_COLS)
+    .eq("is_listable", true)
+    .not("investment", "is", null);
+  if (f.type) q = q.ilike("property_type", escapeLike(f.type));
+  if (f.city) q = q.ilike("city", escapeLike(f.city));
+  if (f.minBedrooms) q = q.gte("bedrooms", f.minBedrooms);
+  if (f.minParking) q = q.gte("parking_spots", f.minParking);
+  if (f.maxPrice) q = q.lte("sale_value", f.maxPrice);
+  const res = await withRetry(() =>
+    q
+      .order("investment", { ascending: false })
+      .order("property_id", { ascending: true })
+      .limit(limit),
+  );
+  return rows<any>("structural-list", res).map(mapListRow);
 }
 
 // `auction_within_days` on the list RPC is a window around today and its "leilao" sort

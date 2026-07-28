@@ -29,18 +29,31 @@ export function goalFromQuery(query: string): GoalKey | null {
 const isGoalWord = (t: string) =>
   GOAL_KEYWORDS.some(([kws]) => kws.some((k) => t === k || (k.length >= 5 && t.startsWith(k))));
 
+// Every lexical token is either a hard facet (type/city), locality filler, or something the
+// caller's `extra` accounts for. `normalized` keeps punctuation, so compare on the word.
+function allTokensExplained(f: Facets, extra: (t: string) => boolean): boolean {
+  const core = new Set(f.lexicalCore.split(" ").filter(Boolean));
+  return f.lexical
+    .split(" ")
+    .map((t) => t.replace(/^\W+|\W+$/g, ""))
+    .filter(Boolean)
+    .every((t) => core.has(t) || LOCALITY_WORDS.has(t) || extra(t));
+}
+
 // True when the goal words are the whole query ("comprar, reformar e revender"): nothing for
 // retrieval to match on, so the goal score alone answers it. Type/city are already hard filters.
 export function isPureGoal(f: Facets): boolean {
   if (!f.goal || f.poi || f.center) return false;
-  const core = new Set(f.lexicalCore.split(" ").filter(Boolean));
-  // `normalized` keeps punctuation ("comprar, reformar"), so compare on the word.
-  const word = (t: string) => t.replace(/^\W+|\W+$/g, "");
-  return f.lexical
-    .split(" ")
-    .map(word)
-    .filter(Boolean)
-    .every((t) => core.has(t) || LOCALITY_WORDS.has(t) || GOAL_FILLER.has(t) || isGoalWord(t));
+  return allTokensExplained(f, (t) => GOAL_FILLER.has(t) || isGoalWord(t));
+}
+
+// True when every word already became a predicate ("casa 02 quartos"), leaving nothing to rank.
+// Bathrooms are excluded: only the retrieval RPC can filter on them.
+export function isStructural(f: Facets): boolean {
+  if (f.goal || f.poi || f.center || f.bathroomsMin != null) return false;
+  const hasFacet =
+    !!f.type || !!f.city || f.bedroomsMin != null || f.parkingMin != null || f.priceMax != null;
+  return hasFacet && allTokensExplained(f, (t) => COUNT_WORD.test(t) || /^\d+$/.test(t));
 }
 
 const POI_CATEGORY_WORDS = new Set(POI_CATEGORY_KEYWORDS.flatMap(([kws]) => kws));

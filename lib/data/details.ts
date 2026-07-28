@@ -63,34 +63,46 @@ async function loadPropertyDetailText(
 
 export const getPropertyDetailText = cached(loadPropertyDetailText, "property-detail-text");
 
+// `listings` rows are intervals dated at their *last* live day; the chart wants starts, so each
+// is dated from where the previous ended and `first_seen` opens the series.
 async function loadPriceHistory(id: string): Promise<PriceHistoryPoint[]> {
-  const res = await withRetry(() =>
-    supabase
-      .from("listings")
-      .select("appraised_value,sale_value,discount,modality,auction_date,snapshot_date")
-      .eq("property_id", id)
-      .order("snapshot_date", { ascending: true }),
+  const [listed, prop] = await Promise.all([
+    withRetry(() =>
+      supabase
+        .from("listings")
+        .select("appraised_value,sale_value,discount,modality,snapshot_date")
+        .eq("property_id", id)
+        .order("snapshot_date", { ascending: true })
+        .order("id", { ascending: true }),
+    ),
+    withRetry(() =>
+      supabase.from("properties").select("first_seen").eq("property_id", id).limit(1),
+    ),
+  ]);
+
+  const raw = rows<any>("price-history", listed).filter(
+    (l) => l.snapshot_date && l.sale_value != null,
   );
+  if (!raw.length) return [];
 
-  const raw = rows<any>("price-history", res)
-    .filter((l) => l.snapshot_date && l.sale_value != null)
-    .map((l) => ({
-      date: String(l.snapshot_date),
-      saleValue: num(l.sale_value),
-      appraisedValue: num(l.appraised_value),
-      discount: num(l.discount),
-      modality: l.modality || null,
-    }));
+  const firstSeen = rows<any>("price-history-first-seen", prop)[0]?.first_seen;
+  const start = String(raw[0].snapshot_date);
+  const opened = firstSeen && String(firstSeen) < start ? String(firstSeen) : start;
 
-  // Drop interior snapshots whose price and modality didn't change so the chart shows real
-  // movements rather than scraping cadence, but always keep the first and last.
-  const out: PriceHistoryPoint[] = [];
-  for (let i = 0; i < raw.length; i++) {
-    const prev = out[out.length - 1];
-    const isLast = i === raw.length - 1;
-    const same = prev && prev.saleValue === raw[i].saleValue && prev.modality === raw[i].modality;
-    if (same && !isLast) continue;
-    out.push(raw[i]);
+  const at = (l: any, date: string): PriceHistoryPoint => ({
+    date,
+    saleValue: num(l.sale_value),
+    appraisedValue: num(l.appraised_value),
+    discount: num(l.discount),
+    modality: l.modality || null,
+  });
+
+  const out = raw.map((l, i) => at(l, i === 0 ? opened : String(raw[i - 1].snapshot_date)));
+
+  // Closes the last interval, so a listing that never moved reads as a flat line, not a dot.
+  const last = raw[raw.length - 1];
+  if (String(last.snapshot_date) > out[out.length - 1].date) {
+    out.push(at(last, String(last.snapshot_date)));
   }
   return out;
 }

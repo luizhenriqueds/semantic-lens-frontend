@@ -29,15 +29,17 @@ export function InsightsSkeleton() {
 
 const RAIL_SKELETON_CARDS = 5;
 
-export function RailSkeleton() {
+export function RailSkeleton({ hideHead = false }: { hideHead?: boolean }) {
   return (
     <section className="railsec">
-      <div className="sectitle wide">
-        <div className="tx">
-          <div className="skline w45" style={{ height: 18 }} />
-          <div className="skline w70" style={{ marginTop: 8 }} />
+      {!hideHead && (
+        <div className="sectitle wide">
+          <div className="tx">
+            <div className="skline w45" style={{ height: 18 }} />
+            <div className="skline w70" style={{ marginTop: 8 }} />
+          </div>
         </div>
-      </div>
+      )}
       <div className="rail-track skel-track">
         {Array.from({ length: RAIL_SKELETON_CARDS }, (_, i) => (
           <div className="skcard" key={i}>

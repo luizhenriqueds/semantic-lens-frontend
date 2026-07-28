@@ -12,12 +12,17 @@ export default function SearchableSelect({
   options,
   onChange,
   allLabel = "todos",
+  showLabel = true,
+  className = "",
 }: {
   label: string;
   value: string;
   options: Opt[];
   onChange: (value: string) => void;
   allLabel?: string;
+  /** Off where a surrounding <div class="flabel"> already names the control. */
+  showLabel?: boolean;
+  className?: string;
 }) {
   const [open, setOpen] = useState(false);
   const [q, setQ] = useState("");
@@ -44,16 +49,18 @@ export default function SearchableSelect({
   const filtered = q ? all.filter((o) => norm(o.label).includes(norm(q))) : all;
 
   return (
-    <div className={`ssel${value !== "all" ? " on" : ""}`} ref={ref}>
+    <div
+      className={`ssel${value !== "all" ? " on" : ""}${className ? ` ${className}` : ""}`}
+      ref={ref}
+    >
       <button
         type="button"
         className="selectish ssel-btn"
         onClick={() => setOpen((v) => !v)}
         aria-expanded={open}
+        aria-label={showLabel ? undefined : label}
       >
-        <span className="ssel-cur">
-          {label}: {current}
-        </span>
+        <span className="ssel-cur">{showLabel ? `${label}: ${current}` : current}</span>
         <span className="ssel-caret" aria-hidden="true">
           ▾
         </span>

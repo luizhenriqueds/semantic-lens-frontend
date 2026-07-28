@@ -1,5 +1,5 @@
 import { parseRange } from "@/lib/facets/range";
-import type { PropertyFilters, PropertySort, Scores } from "@/lib/types";
+import type { PropertyChangeKind, PropertyFilters, PropertySort, Scores } from "@/lib/types";
 
 // Shared by the server loader and the client Pagination so the two cannot drift.
 export const LIST_PAGE_SIZE = 24;
@@ -8,6 +8,11 @@ export type PropertiesView = "list" | "analysis" | "calendar" | "map";
 
 const VIEWS = new Set<string>(["list", "analysis", "calendar", "map"]);
 const SORTS = new Set<string>(["leilao", "investimento", "desconto", "score", "menor", "maior"]);
+const CHANGE_KINDS = new Set<string>(["modality", "payment"]);
+
+// Long enough that the rarer half (financing/FGTS starts, ~48/day) still fills a rail.
+export const CHANGE_WINDOW_DAYS = 30;
+
 const SCORE_KEYS = new Set<string>([
   "flip",
   "liquidity",
@@ -81,6 +86,11 @@ export function parsePropertySearchParams(sp: SP): PropertiesQuery {
   if (invest) filters.minInvestment = invest;
   const fachada = posInt(one(sp.fachada));
   if (fachada) filters.minVisualScore = Math.min(100, fachada);
+  const mudou = one(sp.mudou);
+  if (mudou && CHANGE_KINDS.has(mudou)) {
+    filters.changeKind = mudou as PropertyChangeKind;
+    filters.changedWithinDays = posInt(one(sp.dias)) ?? CHANGE_WINDOW_DAYS;
+  }
   const goal = one(sp.goal);
   const goalMin = posInt(one(sp.goalMin));
   if (goal && SCORE_KEYS.has(goal) && goalMin) {

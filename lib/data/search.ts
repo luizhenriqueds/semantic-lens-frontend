@@ -1,9 +1,11 @@
 import { supabase } from "@/lib/supabase";
 import { EMBEDDING_MODEL, embedQuery, rerank } from "@/lib/embed";
 import {
+  canonicalQuery,
   escapeLike,
   isPoiCategoryOnly,
   isPureGoal,
+  isStructural,
   normalize,
   parseFacets,
   type Facets,
@@ -20,6 +22,7 @@ import {
   getGoalTop,
   getPropertiesByIds,
   getPropertiesPage,
+  getStructuralList,
   isListable,
 } from "./propertyList";
 import { mapPoi, POI_FIELDS } from "./pois";
@@ -430,6 +433,16 @@ async function goalDirectHits(facets: Facets): Promise<Ranked | null> {
   return rank(items, (_p, i) => 1 - i / items.length);
 }
 
+// Null when nothing matched, so the caller can still widen through FTS.
+async function structuralHits(facets: Facets): Promise<Ranked | null> {
+  const found = await getStructuralList(
+    { ...proximityFilters(facets), minParking: facets.parkingMin ?? undefined },
+    RESULT_LIMIT,
+  );
+  if (!found.length) return null;
+  return rank(found, (_p, i) => 1 - i / found.length);
+}
+
 // Answers from the spatial index alone. Null = didn't resolve.
 async function poiProximityHits(facets: Facets): Promise<Ranked | null> {
   const cands = await searchPoisByName(facets.poi!, facets.city);
@@ -500,29 +513,41 @@ async function buildPool(embedding: number[] | null, facets: Facets): Promise<Bu
   };
 
   add(await runHybrid(embedding, poolText, full, matchCount, withDocs));
+
   // Past this point the pool is usable; a failed widening step just means it stays narrow.
-  const widen = async (text: string, f: Filters) => {
+  const probe = async (text: string, f: Filters): Promise<PoolRow[]> => {
     try {
-      add(await runHybrid(embedding, text, f, matchCount, withDocs));
+      return await runHybrid(embedding, text, f, matchCount, withDocs);
     } catch (err) {
-      if (!(err instanceof PoolError)) throw err;
+      if (err instanceof PoolError) return [];
+      throw err;
     }
   };
 
-  if (pool.length < MIN_POOL && facets.lexicalCore && facets.lexicalCore !== poolText) {
-    await widen(facets.lexicalCore, full);
-  }
+  // The text arm ranks but never gates, so a short pool means the filters exhausted the corpus
+  // and only a rung that drops one can help. The two filtered rungs are probed together; the
+  // unfiltered one scans the whole corpus, so it stays behind its guard.
+  const [core, byType] =
+    pool.length < MIN_POOL
+      ? await Promise.all([
+          facets.lexicalCore && facets.lexicalCore !== poolText
+            ? probe(facets.lexicalCore, full)
+            : null,
+          facets.type && hasExtra ? probe(poolText, { ...NO_FILTERS, type: facets.type }) : null,
+        ])
+      : [null, null];
+
+  if (core) add(core);
   const exact = new Set(seen);
   let keptType = true;
 
-  if (pool.length < MIN_POOL && facets.type && hasExtra) {
-    await widen(poolText, { ...NO_FILTERS, type: facets.type });
-  }
+  if (byType && pool.length < MIN_POOL) add(byType);
   if (pool.length < MIN_POOL && (facets.type || hasExtra)) {
     const before = pool.length;
-    await widen(poolText, NO_FILTERS);
+    add(await probe(poolText, NO_FILTERS));
     keptType = pool.length === before;
   }
+
   return { pool, exact, keptType, widened: pool.length > exact.size, withDocs };
 }
 
@@ -596,6 +621,12 @@ async function runHybridSearch(query: string): Promise<SearchResult> {
     if (r) return proximity(r);
   }
 
+  // Hard filters answer it outright; never worth an embedding or a cross-encoder pass.
+  if (isStructural(facets)) {
+    const r = await structuralHits(facets);
+    return r ? proximity(r) : ftsSearch(facets);
+  }
+
   if (!HYBRID_ENABLED) return ftsSearch(facets);
 
   const embedding = await embedQuery(facets.normalized, SEARCH_INSTRUCTION);
@@ -658,4 +689,9 @@ async function runHybridSearch(query: string): Promise<SearchResult> {
   });
 }
 
-export const hybridSearch = cached(runHybridSearch, "hybrid-search", SEARCH_REVALIDATE);
+const cachedSearch = cached(runHybridSearch, "hybrid-search", SEARCH_REVALIDATE);
+
+// Canonicalise outside `cached`, which keys on the raw arguments.
+export function hybridSearch(query: string): Promise<SearchResult> {
+  return cachedSearch(canonicalQuery(query));
+}

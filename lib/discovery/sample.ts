@@ -1,4 +1,5 @@
 import { spreadByLocality } from "@/lib/diversify";
+import { investmentScore } from "@/lib/format";
 import type { Property } from "@/lib/types";
 import { railSeed, seededShuffle } from "./seed";
 
@@ -17,4 +18,9 @@ export function seededPick(
   const candidates = exclude?.size ? pool.filter((p) => !exclude.has(p.id)) : pool.slice();
   const shuffled = seededShuffle(candidates, railSeed(seed, rail));
   return spreadByLocality(shuffled, maxPerCity, byCity).slice(0, n);
+}
+
+// After the pick, so the seed and the diversity cap still choose *which* listings appear.
+export function byInvestment(items: Property[]): Property[] {
+  return [...items].sort((a, b) => (investmentScore(b) ?? -1) - (investmentScore(a) ?? -1));
 }
