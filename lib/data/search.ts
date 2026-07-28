@@ -16,7 +16,7 @@ import type { Poi, Property } from "@/lib/types";
 import { cached, rows, SEARCH_REVALIDATE, withRetry } from "./client";
 import {
   countProperties,
-  getFilterOptions,
+  getFilterOptionsRaw,
   getGoalTop,
   getPropertiesByIds,
   getPropertiesPage,
@@ -45,7 +45,7 @@ const rank = (items: Property[], score: (p: Property, i: number) => number): Ran
 });
 
 async function getCities(): Promise<string[]> {
-  const { cities } = await getFilterOptions();
+  const { cities } = await getFilterOptionsRaw();
   return [...new Set(cities.map((c) => c.city).filter(Boolean))];
 }
 
@@ -54,6 +54,12 @@ const SEARCH_INSTRUCTION =
 // filter_type already guarantees type precedence, so the reranker is aimed at features instead.
 const RERANK_INSTRUCTION =
   "Rank higher the listings that explicitly contain every feature, room count and amenity the query asks for. A listing that does not mention a requested feature does not have it.";
+// Hybrid retrieval (embedding + reranker) is the default; ENABLE_HYBRID_SEARCH=0 falls back
+// to ftsSearch below, trading semantic recall on paraphrases for two fewer inference hops.
+const HYBRID_ENABLED = !["0", "false"].includes(
+  (process.env.ENABLE_HYBRID_SEARCH ?? "").trim().toLowerCase(),
+);
+
 const MIN_POOL = 10;
 // Matches the semantic pool, so the reranked path returns everything above the floor.
 export const RESULT_LIMIT = 60;
@@ -86,8 +92,9 @@ const NO_FILTERS: Filters = {
   priceMax: null,
 };
 
+// A null embedding makes the RPC answer from full-text search alone.
 async function runHybrid(
-  embedding: number[],
+  embedding: number[] | null,
   normalized: string,
   f: Filters,
   matchCount = 60,
@@ -441,6 +448,134 @@ async function poiProximityHits(facets: Facets): Promise<Ranked | null> {
   return null;
 }
 
+type BuiltPool = {
+  pool: PoolRow[];
+  exact: Set<string>;
+  keptType: boolean;
+  widened: boolean;
+  withDocs: boolean;
+};
+
+// Relaxes the query text first and the filters only after, and never drops what it already
+// found: results matching every stated constraint stay in, ahead of the widened ones.
+async function buildPool(embedding: number[] | null, facets: Facets): Promise<BuiltPool> {
+  const full: Filters = {
+    type: facets.type,
+    city: facets.city,
+    bedroomsMin: facets.bedroomsMin,
+    parkingMin: facets.parkingMin,
+    bathroomsMin: facets.bathroomsMin,
+    priceMax: facets.priceMax,
+  };
+  const hasExtra =
+    !!facets.city ||
+    facets.bedroomsMin != null ||
+    facets.parkingMin != null ||
+    facets.bathroomsMin != null ||
+    facets.priceMax != null;
+  // Only the goal blend ranks off the whole pool and so needs a deep one.
+  const matchCount = facets.goal ? 200 : 60;
+
+  // A goal query is re-ranked entirely by the goal score, so the FTS arm is wasted work -
+  // and the goal word ("liquidez") only matches score-explanation text anyway. Skip it: the
+  // embedding alone gives the candidate pool. Without an embedding the text is all there is.
+  const poolText = facets.goal && embedding ? "" : facets.lexical;
+
+  // Only the branches that re-rank on the row text pay for it.
+  const withDocs = embedding
+    ? facets.poi
+      ? !!facets.type
+      : !facets.goal && (!!facets.type || noIntent(facets))
+    : !facets.goal;
+
+  const pool: PoolRow[] = [];
+  const seen = new Set<string>();
+  const add = (batch: PoolRow[]) => {
+    for (const r of batch) {
+      if (!seen.has(r.id)) {
+        seen.add(r.id);
+        pool.push(r);
+      }
+    }
+  };
+
+  add(await runHybrid(embedding, poolText, full, matchCount, withDocs));
+  // Past this point the pool is usable; a failed widening step just means it stays narrow.
+  const widen = async (text: string, f: Filters) => {
+    try {
+      add(await runHybrid(embedding, text, f, matchCount, withDocs));
+    } catch (err) {
+      if (!(err instanceof PoolError)) throw err;
+    }
+  };
+
+  if (pool.length < MIN_POOL && facets.lexicalCore && facets.lexicalCore !== poolText) {
+    await widen(facets.lexicalCore, full);
+  }
+  const exact = new Set(seen);
+  let keptType = true;
+
+  if (pool.length < MIN_POOL && facets.type && hasExtra) {
+    await widen(poolText, { ...NO_FILTERS, type: facets.type });
+  }
+  if (pool.length < MIN_POOL && (facets.type || hasExtra)) {
+    const before = pool.length;
+    await widen(poolText, NO_FILTERS);
+    keptType = pool.length === before;
+  }
+  return { pool, exact, keptType, widened: pool.length > exact.size, withDocs };
+}
+
+// A ranked slice of a pool, carrying that pool's widening state into the result.
+function pooled(
+  built: BuiltPool,
+  facets: Facets,
+  hits: SearchHit[],
+  items: Property[] | null = null,
+): SearchResult {
+  return {
+    hits: exactFirst(hits, built.exact),
+    items,
+    fallback: built.widened,
+    fallbackNote: built.widened ? relaxedNote(facets, built.keptType) : null,
+  };
+}
+
+// Short tokens are filler and would flatten the coverage term.
+const COVERAGE_MIN_LEN = 4;
+
+// Stand-in for the cross-encoder when it is off: how much of what was asked for the listing
+// text actually mentions. Free - the rows are already in memory.
+function lexicalRank(pool: PoolRow[], facets: Facets): SearchHit[] {
+  const terms = [
+    ...new Set(
+      normalize(facets.lexical)
+        .split(" ")
+        .filter((t) => t.length >= COVERAGE_MIN_LEN),
+    ),
+  ];
+  const n = pool.length;
+  return pool
+    .map((p, i) => {
+      const doc = normalize(p.docText);
+      const hit = terms.length ? terms.filter((t) => doc.includes(t)).length / terms.length : 0;
+      return { id: p.id, score: 0.65 * rankNorm(i, n) + 0.35 * hit };
+    })
+    .sort((a, b) => b.score - a.score)
+    .slice(0, RESULT_LIMIT);
+}
+
+// Full-text only: no embedding, no reranker, no semantic cache. The facet parser still
+// supplies the hard filters, so type/city/bedroom precision is unaffected.
+async function ftsSearch(facets: Facets): Promise<SearchResult> {
+  const built = await buildPool(null, facets);
+  if (!built.pool.length) return EMPTY;
+  const hits = facets.goal
+    ? await goalRerank(built.pool, facets.goal)
+    : lexicalRank(built.pool, facets);
+  return pooled(built, facets, hits);
+}
+
 async function runHybridSearch(query: string): Promise<SearchResult> {
   const facets = parseFacets(query, await getCities());
 
@@ -460,6 +595,8 @@ async function runHybridSearch(query: string): Promise<SearchResult> {
     const r = await goalDirectHits(facets);
     if (r) return proximity(r);
   }
+
+  if (!HYBRID_ENABLED) return ftsSearch(facets);
 
   const embedding = await embedQuery(facets.normalized, SEARCH_INSTRUCTION);
 
@@ -482,78 +619,9 @@ async function runHybridSearch(query: string): Promise<SearchResult> {
     // metadata cap and silently disable the whole layer.
     toCache: (r) => ({ ...r, items: null }),
     compute: async () => {
-      const full: Filters = {
-        type: facets.type,
-        city: facets.city,
-        bedroomsMin: facets.bedroomsMin,
-        parkingMin: facets.parkingMin,
-        bathroomsMin: facets.bathroomsMin,
-        priceMax: facets.priceMax,
-      };
-      const hasExtra =
-        !!facets.city ||
-        facets.bedroomsMin != null ||
-        facets.parkingMin != null ||
-        facets.bathroomsMin != null ||
-        facets.priceMax != null;
-      // Only the goal blend ranks off the whole pool and so needs a deep one.
-      const matchCount = facets.goal ? 200 : 60;
-
-      // A goal query is re-ranked entirely by the goal score, so the FTS arm is
-      // wasted work - and the goal word ("liquidez") only matches score-explanation
-      // text anyway. Skip it: the embedding alone gives the candidate pool.
-      const poolText = facets.goal ? "" : facets.lexical;
-
-      // Only the branches that reach the reranker need the row text.
-      const withDocs = facets.poi
-        ? !!facets.type
-        : !facets.goal && (!!facets.type || noIntent(facets));
-
-      // Pool building relaxes the query text first and the filters only after,
-      // and never drops what it already found: results matching every stated
-      // constraint stay in, ahead of the widened ones.
-      const buildPool = async () => {
-        const pool: PoolRow[] = [];
-        const seen = new Set<string>();
-        const add = (batch: PoolRow[]) => {
-          for (const r of batch) {
-            if (!seen.has(r.id)) {
-              seen.add(r.id);
-              pool.push(r);
-            }
-          }
-        };
-
-        add(await runHybrid(embedding, poolText, full, matchCount, withDocs));
-        // Past this point the pool is usable; a failed widening step just means it stays narrow.
-        const widen = async (text: string, f: Filters) => {
-          try {
-            add(await runHybrid(embedding, text, f, matchCount, withDocs));
-          } catch (err) {
-            if (!(err instanceof PoolError)) throw err;
-          }
-        };
-
-        if (pool.length < MIN_POOL && facets.lexicalCore && facets.lexicalCore !== poolText) {
-          await widen(facets.lexicalCore, full);
-        }
-        const exact = new Set(seen);
-        let keptType = true;
-
-        if (pool.length < MIN_POOL && facets.type && hasExtra) {
-          await widen(poolText, { ...NO_FILTERS, type: facets.type });
-        }
-        if (pool.length < MIN_POOL && (facets.type || hasExtra)) {
-          const before = pool.length;
-          await widen(poolText, NO_FILTERS);
-          keptType = pool.length === before;
-        }
-        return { pool, exact, keptType, widened: pool.length > exact.size };
-      };
-
       // Only reached when the place didn't resolve - the spatial branch already ran.
       if (facets.poi) {
-        const { pool } = await buildPool();
+        const { pool } = await buildPool(embedding, facets);
         if (!pool.length) return EMPTY;
         return {
           hits: await semanticRank(pool, facets.normalized, !!facets.type),
@@ -563,17 +631,11 @@ async function runHybridSearch(query: string): Promise<SearchResult> {
         };
       }
 
-      const { pool, exact, keptType, widened } = await buildPool();
+      const built = await buildPool(embedding, facets);
+      const { pool, widened, withDocs } = built;
       if (!pool.length) return EMPTY;
 
-      const ok = (hits: SearchHit[]): SearchResult => ({
-        hits: exactFirst(hits, exact),
-        items: null,
-        fallback: widened,
-        fallbackNote: widened ? relaxedNote(facets, keptType) : null,
-      });
-
-      if (facets.goal) return ok(await goalRerank(pool, facets.goal));
+      if (facets.goal) return pooled(built, facets, await goalRerank(pool, facets.goal));
 
       // One rerank call serves both the ranking and the "too vague" check. The rows are read
       // alongside it: the pool ids are known already, so that read costs no wall clock.
@@ -590,13 +652,8 @@ async function runHybridSearch(query: string): Promise<SearchResult> {
       if (!widened && noIntent(facets) && weak) {
         return { hits, items: rows(hits), fallback: true, fallbackNote: VAGUE_NOTE };
       }
-      const ordered = exactFirst(hits, exact);
-      return {
-        hits: ordered,
-        items: rows(ordered),
-        fallback: widened,
-        fallbackNote: widened ? relaxedNote(facets, keptType) : null,
-      };
+      const res = pooled(built, facets, hits);
+      return { ...res, items: rows(res.hits) };
     },
   });
 }

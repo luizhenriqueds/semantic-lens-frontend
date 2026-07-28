@@ -79,6 +79,8 @@ export function parsePropertySearchParams(sp: SP): PropertiesQuery {
   if (desconto) filters.minDiscount = desconto;
   const invest = posInt(one(sp.invest));
   if (invest) filters.minInvestment = invest;
+  const fachada = posInt(one(sp.fachada));
+  if (fachada) filters.minVisualScore = Math.min(100, fachada);
   const goal = one(sp.goal);
   const goalMin = posInt(one(sp.goalMin));
   if (goal && SCORE_KEYS.has(goal) && goalMin) {

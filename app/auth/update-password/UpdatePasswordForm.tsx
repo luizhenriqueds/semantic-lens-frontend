@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
+import PasswordInput from "@/components/auth/PasswordInput";
 
 export default function UpdatePasswordForm() {
   const router = useRouter();
@@ -33,14 +34,7 @@ export default function UpdatePasswordForm() {
 
       <label className="au-field">
         <span>Nova senha</span>
-        <input
-          type="password"
-          autoComplete="new-password"
-          minLength={6}
-          required
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-        />
+        <PasswordInput value={password} onChange={setPassword} autoComplete="new-password" />
         <small className="au-hint">Mínimo de 6 caracteres.</small>
       </label>
 

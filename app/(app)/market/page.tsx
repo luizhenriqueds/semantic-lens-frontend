@@ -27,45 +27,72 @@ function moneyBi(n: number): string {
   return money(n);
 }
 
-const DONUT_COLORS = ["var(--primary)", "var(--primary-soft)", "#8AA57C", "var(--line)"];
+// Ordered by size, so the ramp steps lightness rather than hue - adjacent slices have to
+// stay apart. Mixed against --surface so it inverts with the theme.
+const DONUT_COLORS = [
+  "var(--primary)",
+  "color-mix(in srgb, var(--primary) 62%, var(--surface))",
+  "color-mix(in srgb, var(--primary) 34%, var(--surface))",
+  "color-mix(in srgb, var(--ink-faint) 62%, var(--surface))",
+  "color-mix(in srgb, var(--ink-faint) 34%, var(--surface))",
+  "var(--line)",
+];
+// Past this, slices are folded into a single "Outros": a 0.1% sliver is unreadable anyway.
+const DONUT_MAX_SLICES = 5;
+// Blank arc between slices, in % of the circumference.
+const DONUT_GAP = 0.8;
 
-function Donut({
-  size,
-  slices,
-}: {
-  size: number;
-  slices: { label: string; n: number; color?: string }[];
-}) {
-  const total = slices.reduce((s, d) => s + d.n, 0) || 1;
-  let off = 25; // start at 12 o'clock
+type Slice = { label: string; n: number; color?: string };
+
+function foldSmall(slices: Slice[]): Slice[] {
+  if (slices.length <= DONUT_MAX_SLICES + 1) return slices;
+  const head = slices.slice(0, DONUT_MAX_SLICES);
+  const rest = slices.slice(DONUT_MAX_SLICES);
+  return [...head, { label: "Outros", n: rest.reduce((s, d) => s + d.n, 0), color: "var(--line)" }];
+}
+
+const DONUT_R = 15.9;
+// Dashes are path units, not percent: 2πr is 99.9, and rounding it to 100 left a sliver of
+// bare track at 12 o'clock that read as a rendering fault.
+const DONUT_C = 2 * Math.PI * DONUT_R;
+const pathLen = (fraction: number) => fraction * DONUT_C;
+
+function Donut({ size, slices }: { size: number; slices: Slice[] }) {
+  const shown = foldSmall([...slices].sort((a, b) => b.n - a.n));
+  const total = shown.reduce((s, d) => s + d.n, 0) || 1;
+  let off = DONUT_C / 4; // start at 12 o'clock
   return (
     <div className="donutwrap">
       <svg className="donut" width={size} height={size} viewBox="0 0 42 42">
-        <circle cx="21" cy="21" r="15.9" fill="none" stroke="var(--surface-2)" strokeWidth="6" />
-        {slices.map((d, i) => {
-          const len = (d.n / total) * 100;
+        <circle cx="21" cy="21" r={DONUT_R} fill="none" stroke="var(--surface-2)" strokeWidth="6" />
+        {shown.map((d, i) => {
+          const len = pathLen(d.n / total);
           const dashoffset = off;
           off -= len;
+          // the gap must not swallow a slice whole: tiny ones stay a visible tick
+          const arc = Math.max(len > 0 ? 0.6 : 0, len - pathLen(DONUT_GAP / 100));
           return (
             <circle
               key={d.label}
               cx="21"
               cy="21"
-              r="15.9"
+              r={DONUT_R}
               fill="none"
               stroke={d.color ?? DONUT_COLORS[i % DONUT_COLORS.length]}
               strokeWidth="6"
-              strokeDasharray={`${len} ${100 - len}`}
+              strokeDasharray={`${arc} ${DONUT_C - arc}`}
               strokeDashoffset={dashoffset}
-            />
+            >
+              <title>{`${d.label}: ${int(d.n)} (${pct((d.n / total) * 100)})`}</title>
+            </circle>
           );
         })}
       </svg>
       <div className="legend">
-        {slices.map((d, i) => (
+        {shown.map((d, i) => (
           <div className="row" key={d.label}>
             <i style={{ background: d.color ?? DONUT_COLORS[i % DONUT_COLORS.length] }} />
-            {d.label}
+            <span className="lb">{d.label}</span>
             <span className="n">{int(d.n)}</span>
             <span className="p">{pct((d.n / total) * 100)}</span>
           </div>
@@ -154,12 +181,13 @@ export default async function MarketPage() {
     .sort((a, b) => b[1] - a[1])
     .map(([k, n]) => ({ key: k, label: PROFILE_SHORT[k], n }));
 
+  // Ranked like every other HBars block on the page, not in bedroom order.
   const bedRows = [
     { key: "b1", label: "1 dorm.", n: d.beds.b1 },
     { key: "b2", label: "2 dorm.", n: d.beds.b2 },
     { key: "b3", label: "3 dorm.", n: d.beds.b3 },
     { key: "b4plus", label: "4+ dorm.", n: d.beds.b4plus },
-  ];
+  ].sort((a, b) => b.n - a.n);
 
   return (
     <section className="view market">
@@ -368,10 +396,14 @@ export default async function MarketPage() {
               <div className="v accent">{int(d.timeline.next7)}</div>
               <div className="l">nos próximos 7 dias</div>
             </div>
-            <div className="t">
-              <div className="v">{int(d.timeline.scheduled)}</div>
-              <div className="l">agendados</div>
-            </div>
+            {/* the MV currently reports `scheduled` equal to `next7`; the same number
+                twice reads as a bug, so the tile only shows when it adds information */}
+            {d.timeline.scheduled !== d.timeline.next7 && (
+              <div className="t">
+                <div className="v">{int(d.timeline.scheduled)}</div>
+                <div className="l">com data marcada</div>
+              </div>
+            )}
             <div className="t">
               <div className="v">{int(d.timeline.first_auction)}</div>
               <div className="l">em 1ª praça</div>
@@ -385,9 +417,10 @@ export default async function MarketPage() {
           <Donut
             size={128}
             slices={[
-              { label: "Ocupado", n: d.occ.occupied, color: "var(--primary)" },
-              { label: "Desocupado", n: d.occ.vacant, color: "var(--primary-soft)" },
-              { label: "Não informado", n: d.occ.unknown, color: "var(--line)" },
+              { label: "Ocupado", n: d.occ.occupied, color: DONUT_COLORS[0] },
+              // mid-tone, not a tint: a pale slice reads as a hole in the ring
+              { label: "Desocupado", n: d.occ.vacant, color: DONUT_COLORS[1] },
+              { label: "Não informado", n: d.occ.unknown, color: DONUT_COLORS[3] },
             ]}
           />
         </div>

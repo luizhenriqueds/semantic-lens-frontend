@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { registerAccount } from "@/app/actions/auth";
+import PasswordInput from "@/components/auth/PasswordInput";
 
 export default function RegisterForm() {
   const [name, setName] = useState("");
@@ -59,14 +60,7 @@ export default function RegisterForm() {
       </label>
       <label className="au-field">
         <span>Senha</span>
-        <input
-          type="password"
-          autoComplete="new-password"
-          minLength={6}
-          required
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-        />
+        <PasswordInput value={password} onChange={setPassword} autoComplete="new-password" />
         <small className="au-hint">Mínimo de 6 caracteres.</small>
       </label>
 

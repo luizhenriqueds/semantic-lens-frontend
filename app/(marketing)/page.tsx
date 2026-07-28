@@ -142,7 +142,7 @@ export default async function LandingPage() {
                     Entrar
                   </Link>
                   <Link className="lp-btn lp-solid" href="/register">
-                    Criar conta
+                    Criar conta grátis
                   </Link>
                 </>
               )}
@@ -192,79 +192,53 @@ export default async function LandingPage() {
         <div className="lp-wrap">
           <div>
             <h1>
-              O leilão certo,
+              Saiba quais leilões
               <br />
-              sem garimpo e<br />
-              sem{" "}
               <span className="lp-u">
-                juridiquês.
+                valem o lance
                 <svg viewBox="0 0 200 10" preserveAspectRatio="none" aria-hidden="true">
                   <path d="M2 7 Q 50 2, 100 6 T 198 4" />
                 </svg>
               </span>
+              .
             </h1>
             <p className="lp-lede">
-              A Lavra reúne os imóveis de leilão da Caixa em um painel só e dá a cada um notas de 0
-              a 100 para preço, região e melhor uso. Você descreve o que procura em português; as
-              melhores oportunidades sobem para o topo.
+              A Lavra analisa todo dia os imóveis de leilão da Caixa e dá uma nota de 0 a 100 a cada
+              um: preço, região e potencial de revenda, sempre com o porquê.
             </p>
             <div className="lp-actions">
               <Link className="lp-btn lp-solid lp-big" href="/dashboard">
-                Explorar imóveis
+                Ver as melhores oportunidades
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
                   <path d="M5 12h14m0 0-6-6m6 6-6 6" />
                 </svg>
               </Link>
               <a className="lp-btn lp-ghost lp-big" href="#exemplo">
-                Ver um imóvel real analisado
+                Ver uma análise real
               </a>
             </div>
-            <div className="lp-micro">Sem cadastro para explorar · base atualizada diariamente</div>
+            <div className="lp-micro">
+              {stats
+                ? `${countShort(stats.activeProperties)} imóveis ativos${
+                    stats.discountMedian != null
+                      ? ` · ${stats.discountMedian.toLocaleString("pt-BR", { maximumFractionDigits: 1 })}% de desconto mediano`
+                      : ""
+                  } · sem cadastro`
+                : "Sem cadastro para explorar · base atualizada diariamente"}
+            </div>
           </div>
 
           <div className="lp-heromock lp-reveal" aria-hidden="true">
             <div className="lp-photo">
-              <span className="lp-disc">Desconto sobre a avaliação</span>
-              <svg
-                className="lp-photo-illus"
-                viewBox="0 0 360 180"
-                preserveAspectRatio="xMidYMid slice"
-              >
-                <polygon className="lp-il-hex" points="308,24 324,33 324,51 308,60 292,51 292,33" />
-                <polygon
-                  className="lp-il-hex"
-                  points="46,30 58,37 58,51 46,58 34,51 34,37"
-                  opacity="0.09"
-                />
-                <path
-                  className="lp-il-ground"
-                  d="M0 134 C 90 118, 150 142, 220 130 C 290 120, 332 136, 360 128 L360 180 L0 180 Z"
-                />
-
-                <rect className="lp-il-roof-soft" x="40" y="66" width="54" height="66" rx="3" />
-                <rect className="lp-il-win" x="48" y="76" width="11" height="11" rx="1.5" />
-                <rect className="lp-il-win" x="67" y="76" width="11" height="11" rx="1.5" />
-                <rect className="lp-il-win" x="48" y="94" width="11" height="11" rx="1.5" />
-                <rect className="lp-il-win" x="67" y="94" width="11" height="11" rx="1.5" />
-                <rect className="lp-il-win" x="48" y="112" width="11" height="11" rx="1.5" />
-                <rect className="lp-il-win" x="67" y="112" width="11" height="11" rx="1.5" />
-
-                <rect className="lp-il-tree-trunk" x="306" y="102" width="8" height="32" rx="2" />
-                <circle className="lp-il-tree-top" cx="310" cy="94" r="21" />
-
-                <rect className="lp-il-roof" x="196" y="50" width="8" height="20" rx="1" />
-                <polygon className="lp-il-roof" points="148,66 212,66 228,94 132,94" />
-                <rect className="lp-il-wall" x="150" y="94" width="62" height="44" />
-                <rect className="lp-il-door" x="172" y="112" width="17" height="26" rx="1" />
-                <rect className="lp-il-win" x="157" y="102" width="13" height="13" rx="1.5" />
-                <rect className="lp-il-win" x="192" y="102" width="13" height="13" rx="1.5" />
-
-                <path
-                  className="lp-il-pin"
-                  d="M181 40c-7 0-12 5-12 12 0 8 12 18 12 18s12-10 12-18c0-7-5-12-12-12z"
-                />
-                <circle className="lp-il-pin-dot" cx="181" cy="52" r="4" />
-              </svg>
+              <Image
+                src="/showcase/apto-ribeirao-preto.jpg"
+                alt=""
+                width={800}
+                height={500}
+                priority
+                sizes="(max-width: 860px) 100vw, 460px"
+              />
+              <span className="lp-disc">-40% sobre a avaliação</span>
               <div className="lp-uses">
                 <span>Moradia</span>
                 <span>Temporada</span>
@@ -273,30 +247,44 @@ export default async function LandingPage() {
             </div>
             <div className="lp-mrow">
               <div className="lp-info">
-                <b>Lance inicial</b>
-                <span className="lp-loc">Avaliação Caixa · preço vs. mercado do bairro</span>
+                <b>Apartamento 3 dorm. · 64 m²</b>
+                <span className="lp-loc">Jd. Palma Travassos · Ribeirão Preto/SP</span>
               </div>
+              <div className="lp-price">
+                <span>Lance inicial</span>
+                <b>R$ 137.390</b>
+                <small>avaliação R$ 228.983</small>
+              </div>
+            </div>
+            <div className="lp-mockbars">
+              <ScoreBars
+                items={[
+                  { k: "Preço vs. mercado", v: 94 },
+                  { k: "Qualidade da região", v: 87 },
+                  { k: "Liquidez na revenda", v: 89 },
+                ]}
+              />
             </div>
             <div className="lp-scorebar">
               <svg className="lp-ring" width="56" height="56" viewBox="0 0 56 56">
-                <circle className="lp-track" cx="28" cy="28" r="23" strokeWidth="6" />
+                <circle className="lp-track" cx="28" cy="28" r="23" strokeWidth="5" />
                 <circle
                   className="lp-bar"
                   cx="28"
                   cy="28"
                   r="23"
-                  strokeWidth="6"
+                  strokeWidth="5"
                   strokeDasharray="144.5"
                   strokeDashoffset="144.5"
-                  data-off="18.8"
+                  data-off="15.9"
                   transform="rotate(-90 28 28)"
                 />
-                <text x="28" y="32" textAnchor="middle" fontSize="12">
-                  0-100
+                <text x="28" y="34" textAnchor="middle" fontSize="18">
+                  89
                 </text>
               </svg>
               <div className="lp-lbl">
-                Nota de investimento<b>Cada imóvel chega com essa leitura pronta</b>
+                Nota de investimento<b>preço, região e revenda em um número só</b>
               </div>
             </div>
           </div>

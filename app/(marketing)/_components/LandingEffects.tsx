@@ -104,7 +104,6 @@ export default function LandingEffects() {
       anchors.forEach((a) => a.removeEventListener("click", onAnchor));
       reveal.disconnect();
       mocks.disconnect();
-      stop();
       sliderCleanups.forEach((fn) => fn());
     };
   }, []);

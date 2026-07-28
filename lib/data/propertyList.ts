@@ -50,6 +50,7 @@ function toRpcFilters(f: PropertyFilters = {}): Record<string, unknown> {
   if (f.maxCenterM) out.max_center_m = f.maxCenterM;
   if (f.minDiscount) out.min_discount = f.minDiscount;
   if (f.minInvestment) out.min_investment = f.minInvestment;
+  if (f.minVisualScore) out.min_visual_score = f.minVisualScore;
   if (f.scoreKey) out.score_key = f.scoreKey;
   if (f.scoreMin) out.score_min = f.scoreMin;
   if (f.financing) out.financing = true;
@@ -360,7 +361,9 @@ export function getMapPoints(
   return cachedMapPoints(JSON.stringify(toRpcFilters(filters)));
 }
 
-async function loadFilterOptions(): Promise<FilterOptions> {
+type RawFilterOptions = Omit<FilterOptions, "visualScore">;
+
+async function loadFilterOptions(): Promise<RawFilterOptions> {
   const data = await rpcJson("property_filter_options", {});
   return {
     ufs: data?.ufs ?? [],
@@ -372,7 +375,29 @@ async function loadFilterOptions(): Promise<FilterOptions> {
 }
 
 // Five full scans of the MV on every search, but it only changes when the batch refreshes it.
-export const getFilterOptions = cached(loadFilterOptions, "filter-options", 3600);
+// The search path takes this one directly: it needs the city list, not the probe below.
+export const getFilterOptionsRaw = cached(loadFilterOptions, "filter-options", 3600);
+
+// property_list_page ignores filter keys it doesn't know, so a visual-score control would
+// look active while doing nothing. An impossible floor tells the two apart: a supported key
+// matches nothing, an ignored one matches the whole base.
+async function loadVisualScoreSupport(): Promise<boolean> {
+  const [all, probe] = await Promise.all([
+    loadCount("{}"),
+    loadCount(JSON.stringify({ min_visual_score: 101 })),
+  ]);
+  return all > 0 && probe < all;
+}
+
+const cachedVisualScoreSupport = cached(loadVisualScoreSupport, "visual-score-support", 3600);
+
+export async function getFilterOptions(): Promise<FilterOptions> {
+  const [options, visualScore] = await Promise.all([
+    getFilterOptionsRaw(),
+    cachedVisualScoreSupport(),
+  ]);
+  return { ...options, visualScore };
+}
 
 async function loadAnalysis(filtersJson: string): Promise<AnalysisData> {
   const finite = (edges: number[]) => edges.filter((e) => Number.isFinite(e));

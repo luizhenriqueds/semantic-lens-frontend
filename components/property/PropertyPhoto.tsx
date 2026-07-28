@@ -1,4 +1,7 @@
+"use client";
+
 import Image from "next/image";
+import { useState } from "react";
 import PlaceholderImage from "@/components/property/PlaceholderImage";
 
 export default function PropertyPhoto({
@@ -13,7 +16,11 @@ export default function PropertyPhoto({
   /** Only for an above-the-fold LCP image; everything else stays lazy. */
   priority?: boolean;
 }) {
-  if (!src) return <PlaceholderImage />;
+  // Listings keep their photo URL after the source takes the file down. Keyed by src so a
+  // new photo isn't hidden by the previous one's failure.
+  const [failedSrc, setFailedSrc] = useState<string | null>(null);
+
+  if (!src || src === failedSrc) return <PlaceholderImage />;
   return (
     <Image
       src={src}
@@ -22,6 +29,7 @@ export default function PropertyPhoto({
       sizes={sizes}
       priority={priority}
       unoptimized
+      onError={() => setFailedSrc(src)}
       style={{ objectFit: "cover" }}
     />
   );
