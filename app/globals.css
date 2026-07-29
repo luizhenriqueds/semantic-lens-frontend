@@ -487,7 +487,6 @@ button {
   margin: 0;
   color: var(--ink-soft);
   font-size: 16px;
-  max-width: 64ch;
 }
 .btn {
   display: inline-flex;
@@ -4067,6 +4066,33 @@ select.selectish {
 }
 
 /* ================= responsive ================= */
+
+/* Tablet landscape: the full sidebar costs 248px of a ~1024px viewport, leaving the
+   dashboards narrower than the same tablet held in portrait. Collapse it to an icon
+   rail instead of hiding it — the nav stays one tap away and the content gets the width. */
+@media (min-width: 921px) and (max-width: 1180px) {
+  .app {
+    grid-template-columns: 74px 1fr;
+  }
+  .sidebar {
+    padding: 20px 12px;
+  }
+  .brand {
+    justify-content: center;
+    padding: 6px 0 20px;
+  }
+  .brand > div,
+  .navlabel,
+  .navbtn .txt {
+    display: none;
+  }
+  .navbtn {
+    justify-content: center;
+    gap: 0;
+    padding: 13px 0;
+  }
+}
+
 @media (max-width: 920px) {
   .app {
     grid-template-columns: 1fr;
@@ -7329,16 +7355,33 @@ select.selectish {
   color: var(--ink);
 }
 
+/* Tablets keep two columns: dropping straight to one left half the width empty and
+   pushed the page past three screens of scroll. */
 @media (max-width: 1080px) {
-  .insights,
+  .market .grid2.wide,
   .market .grid3 {
-    grid-template-columns: 1fr;
+    grid-template-columns: 1fr 1fr;
   }
-  .market .grid2,
-  .market .grid2.wide {
-    grid-template-columns: 1fr;
+  /* a card left alone on the last row fills it instead of sitting beside a gap */
+  .market .grid3 > *:nth-child(odd):last-child {
+    grid-column: 1 / -1;
   }
   .oppgrid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 900px) {
+  .market .statgrid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 860px) {
+  .insights,
+  .market .grid2,
+  .market .grid2.wide,
+  .market .grid3 {
     grid-template-columns: 1fr;
   }
 }

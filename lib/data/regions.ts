@@ -1,6 +1,15 @@
 import { supabase } from "@/lib/supabase";
 import { titleCase } from "@/lib/format";
 import { dominantStreet, streetOf } from "@/lib/geo";
+import {
+  regionComboKey,
+  regionTags,
+  REGION_SORT_KEYS,
+  type RegionInsightKey,
+  type RegionListItem,
+  type RegionsIndex,
+  type RegionSortKey,
+} from "@/lib/region";
 import type { Region } from "@/lib/types";
 import { cached, fetchAllRows, num, REVALIDATE, rows, withRetry } from "./client";
 import { countProperties } from "./propertyList";
@@ -51,8 +60,95 @@ async function addressesByCell(
   return map;
 }
 
-// Slim list for /regions: no features/summary/neighbors. Module-level TTL cache
-// because the payload can exceed unstable_cache's 2MB limit.
+// /regions ranks ~9k cells by a blend of the sort keys. Shipping them all to the browser
+// cost megabytes, so the rankings for every possible chip combination are built here and
+// only the regions that actually surface are serialized.
+const RANK_LIMIT = 30;
+
+const slim = (r: Region): RegionListItem => ({
+  h3: r.h3,
+  name: r.name,
+  city: r.city,
+  subLabel: r.subLabel,
+  numProps: r.numProps,
+  scores: r.scores,
+  tags: regionTags(r),
+});
+
+// Share of the population strictly below each value, in [0, 1]. A value's first index in
+// the sorted array is exactly the count of values below it.
+function percentiles(values: number[]): number[] {
+  const n = values.length;
+  const below = new Map<number, number>();
+  [...values]
+    .sort((a, b) => a - b)
+    .forEach((v, i) => {
+      if (!below.has(v)) below.set(v, i);
+    });
+  return values.map((v) => (n > 1 ? below.get(v)! / (n - 1) : 1));
+}
+
+function buildIndex(regions: Region[]): RegionsIndex {
+  const ranked = regions.filter((r) => r.numProps > 0);
+
+  const pct = new Map<RegionSortKey, number[]>();
+  for (const k of REGION_SORT_KEYS) {
+    pct.set(
+      k,
+      percentiles(ranked.map((r) => (k === "numProps" ? r.numProps : (r.scores[k] ?? 0)))),
+    );
+  }
+
+  const items: RegionListItem[] = [];
+  const indexOf = new Map<string, number>();
+  const intern = (r: Region) => {
+    const known = indexOf.get(r.h3);
+    if (known != null) return known;
+    const i = items.push(slim(r)) - 1;
+    indexOf.set(r.h3, i);
+    return i;
+  };
+
+  const rankings: Record<string, number[]> = {};
+  const blended = new Float64Array(ranked.length);
+  // 15 combinations for 4 keys; keep the key list short or this grows as 2^n.
+  for (let mask = 1; mask < 1 << REGION_SORT_KEYS.length; mask++) {
+    const keys = REGION_SORT_KEYS.filter((_, i) => mask & (1 << i));
+    // Summed, not averaged: the divisor is constant within a combo, so the order is the same.
+    blended.fill(0);
+    for (const k of keys) {
+      const p = pct.get(k)!;
+      for (let i = 0; i < blended.length; i++) blended[i] += p[i];
+    }
+    rankings[regionComboKey(keys)] = [...ranked.keys()]
+      .sort((a, b) => blended[b] - blended[a] || ranked[b].numProps - ranked[a].numProps)
+      .slice(0, RANK_LIMIT)
+      .map((i) => intern(ranked[i]));
+  }
+
+  const bestBy = (field: RegionInsightKey) => {
+    let top: Region | null = null;
+    for (const r of regions) {
+      if (!top || (r.scores[field] ?? 0) > (top.scores[field] ?? 0)) top = r;
+    }
+    return top ? intern(top) : null;
+  };
+
+  return {
+    total: regions.length,
+    totalProps: regions.reduce((s, r) => s + r.numProps, 0),
+    items,
+    rankings,
+    best: {
+      airbnb: bestBy("airbnb"),
+      student: bestBy("student"),
+      family: bestBy("family"),
+      convenience: bestBy("convenience"),
+      commercial: bestBy("commercial"),
+    },
+  };
+}
+
 const hasProfile = (r: any) =>
   r.convenience != null ||
   r.walkability != null ||
@@ -61,26 +157,27 @@ const hasProfile = (r: any) =>
   r.student != null ||
   r.family != null;
 
+const PAGE = 1000;
+
+const regionIndexPage = (i: number, count?: "exact") =>
+  withRetry(() =>
+    supabase
+      .rpc("region_index", {}, count ? { count } : undefined)
+      .order("h3")
+      .range(i * PAGE, (i + 1) * PAGE - 1),
+  );
+
 async function loadRegionsIndex(): Promise<Region[]> {
-  // region_index() joins cells + scores + dna + counts server-side; page it in
-  // parallel since PostgREST caps each response at 1000 rows.
-  const countRes = await withRetry(() =>
-    supabase.from("region_cells").select("h3", { count: "exact", head: true }),
-  );
-  const total = (countRes as { count?: number | null }).count ?? 0;
-  const PAGE = 1000;
+  // region_index() joins cells + scores + dna + counts server-side; page it in parallel
+  // since PostgREST caps each response at 1000 rows. Page 0 carries the total, so sizing
+  // the fanout costs no extra query.
+  const firstPage = await regionIndexPage(0, "exact");
+  const total = (firstPage as { count?: number | null }).count ?? 0;
   const pages = Math.max(1, Math.ceil(total / PAGE));
-  const pageResults = await Promise.all(
-    Array.from({ length: pages }, (_, i) =>
-      withRetry(() =>
-        supabase
-          .rpc("region_index", {})
-          .order("h3")
-          .range(i * PAGE, (i + 1) * PAGE - 1),
-      ),
-    ),
+  const restPages = await Promise.all(
+    Array.from({ length: pages - 1 }, (_, i) => regionIndexPage(i + 1)),
   );
-  const idxRows = pageResults.flatMap((r) => rows<any>("region_index", r));
+  const idxRows = [firstPage, ...restPages].flatMap((r) => rows<any>("region_index", r));
 
   const regions = idxRows.filter(hasProfile).map((r): Region => ({
     h3: r.h3,
@@ -111,16 +208,39 @@ async function loadRegionsIndex(): Promise<Region[]> {
   return regions;
 }
 
-let regionsCache: { at: number; promise: Promise<Region[]> } | null = null;
+// Module-level rather than unstable_cache, so the refresh can happen off the request path.
+let regionsCache: { at: number; promise: Promise<RegionsIndex> } | null = null;
+let refreshing = false;
 
-export function getRegions(): Promise<Region[]> {
+function loadRegions(): Promise<RegionsIndex> {
+  return loadRegionsIndex().then(buildIndex);
+}
+
+export function getRegions(): Promise<RegionsIndex> {
   const now = Date.now();
-  if (!regionsCache || now - regionsCache.at > REVALIDATE * 1000) {
-    const promise = loadRegionsIndex().catch((e) => {
-      regionsCache = null;
-      throw e;
-    });
-    regionsCache = { at: now, promise };
+  if (!regionsCache) {
+    regionsCache = {
+      at: now,
+      promise: loadRegions().catch((e) => {
+        regionsCache = null;
+        throw e;
+      }),
+    };
+  } else if (now - regionsCache.at > REVALIDATE * 1000 && !refreshing) {
+    // Serve the stale index and swap it in once the refresh lands, so nobody waits
+    // out the ~10 round trips just because the TTL expired on their request.
+    refreshing = true;
+    loadRegions()
+      .then((index) => {
+        regionsCache = { at: Date.now(), promise: Promise.resolve(index) };
+      })
+      .catch(() => {
+        // Back off a full TTL; otherwise a failing DB gets retried on every request.
+        if (regionsCache) regionsCache.at = Date.now();
+      })
+      .finally(() => {
+        refreshing = false;
+      });
   }
   return regionsCache.promise;
 }

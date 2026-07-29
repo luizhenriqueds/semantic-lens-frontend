@@ -23,8 +23,15 @@ export default function Sidebar() {
       </Link>
 
       <div className="navlabel">Menu</div>
+      {/* title + aria-label carry the name when the tablet rail hides .txt */}
       {NAV.map(({ href, label, Icon }) => (
-        <Link key={href} href={href} className={`navbtn${isActive(href) ? " active" : ""}`}>
+        <Link
+          key={href}
+          href={href}
+          title={label}
+          aria-label={label}
+          className={`navbtn${isActive(href) ? " active" : ""}`}
+        >
           <Icon />
           <span className="txt">{label}</span>
         </Link>

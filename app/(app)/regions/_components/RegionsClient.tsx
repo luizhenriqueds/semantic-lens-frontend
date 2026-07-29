@@ -1,24 +1,17 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import EmptyState from "@/components/ui/EmptyState";
 import { IconBuilding, IconGroups, IconHouse, IconPin, IconStar } from "@/lib/icons";
-import { regionTags } from "@/lib/region";
-import type { Region } from "@/lib/types";
-
-type SortKey = "commercial" | "convenience" | "airbnb" | "numProps";
-
-const SORTS: { key: SortKey; label: string }[] = [
-  { key: "numProps", label: "Mais imóveis" },
-  { key: "commercial", label: "Comercial" },
-  { key: "convenience", label: "Conveniência" },
-  { key: "airbnb", label: "Temporada" },
-];
-
-function maxBy(regions: Region[], fn: (r: Region) => number): Region | null {
-  return regions.reduce<Region | null>((best, r) => (!best || fn(r) > fn(best) ? r : best), null);
-}
+import {
+  regionComboKey,
+  REGION_SORTS,
+  type RegionInsightKey,
+  type RegionListItem,
+  type RegionsIndex,
+  type RegionSortKey,
+} from "@/lib/region";
 
 function Spark({ seed }: { seed: number }) {
   const base = [10, 16, 13, 22, 18, 27, 24, 30];
@@ -51,7 +44,7 @@ function RegionStat({
   Icon: typeof IconStar;
   label: string;
   value: number | string;
-  region: Region | null;
+  region: RegionListItem | null;
 }) {
   const inner = (
     <>
@@ -72,86 +65,38 @@ function RegionStat({
   );
 }
 
-export default function RegionsClient({ regions }: { regions: Region[] }) {
-  // Selected criteria are blended: the ranking sorts by the average of the
-  // chosen metrics (each normalized to 0–1), so every selection visibly shapes
-  // the order. Clicking a pill toggles it in/out of the mix.
-  const [sortKeys, setSortKeys] = useState<SortKey[]>(["numProps"]);
-  const ranked = useMemo(() => regions.filter((r) => r.numProps > 0), [regions]);
+export default function RegionsClient({ index }: { index: RegionsIndex }) {
+  // Clicking a pill toggles it in/out of the blend; the loader precomputed a ranking
+  // for every combination.
+  const [sortKeys, setSortKeys] = useState<RegionSortKey[]>(["numProps"]);
 
-  const toggleSort = (k: SortKey) =>
+  const toggleSort = (k: RegionSortKey) =>
     setSortKeys((prev) => (prev.includes(k) ? prev.filter((x) => x !== k) : [...prev, k]));
 
-  const rows = useMemo(() => {
-    const keys = sortKeys.length ? sortKeys : (["numProps"] as SortKey[]);
-    const valueOf = (r: Region, k: SortKey) => (k === "numProps" ? r.numProps : (r.scores[k] ?? 0));
-    const n = ranked.length;
-    // Rank each region by its percentile on every selected metric, so being the
-    // single top region on one metric no longer dominates the blend.
-    const pct = new Map<SortKey, Map<string, number>>();
-    for (const k of keys) {
-      const vals = ranked.map((r) => valueOf(r, k));
-      const m = new Map<string, number>();
-      for (const r of ranked) {
-        const v = valueOf(r, k);
-        const lower = vals.filter((x) => x < v).length;
-        m.set(r.h3, n > 1 ? lower / (n - 1) : 1);
-      }
-      pct.set(k, m);
-    }
-    const combined = (r: Region) =>
-      keys.reduce((s, k) => s + (pct.get(k)?.get(r.h3) ?? 0), 0) / keys.length;
-    return [...ranked]
-      .sort((a, b) => combined(b) - combined(a) || b.numProps - a.numProps)
-      .slice(0, 30);
-  }, [ranked, sortKeys]);
+  const combo = regionComboKey(sortKeys.length ? sortKeys : ["numProps"]);
+  const rows = (index.rankings[combo] ?? []).map((i) => index.items[i]);
 
-  const isSorted = (k: SortKey) => sortKeys.includes(k);
+  const isSorted = (k: RegionSortKey) => sortKeys.includes(k);
+  const bestOf = (k: RegionInsightKey) => {
+    const i = index.best[k];
+    return i == null ? null : index.items[i];
+  };
 
-  const totalProps = regions.reduce((s, r) => s + r.numProps, 0);
-  const bestConv = maxBy(regions, (r) => r.scores.convenience ?? 0);
-  const bestComm = maxBy(regions, (r) => r.scores.commercial ?? 0);
-  const bestAir = maxBy(regions, (r) => r.scores.airbnb ?? 0);
+  const bestConv = bestOf("convenience");
+  const bestComm = bestOf("commercial");
+  const bestAir = bestOf("airbnb");
 
-  const insights: {
-    Icon: typeof IconStar;
-    label: string;
-    region: Region | null;
-    field: keyof Region["scores"];
-    seed: number;
-  }[] = [
-    {
-      Icon: IconHouse,
-      label: "Maior potencial de temporada",
-      region: bestAir,
-      field: "airbnb",
-      seed: 0,
-    },
-    {
-      Icon: IconGroups,
-      label: "Melhor para estudantes",
-      region: maxBy(regions, (r) => r.scores.student ?? 0),
-      field: "student",
-      seed: 1,
-    },
-    {
-      Icon: IconStar,
-      label: "Região mais familiar",
-      region: maxBy(regions, (r) => r.scores.family ?? 0),
-      field: "family",
-      seed: 2,
-    },
-    { Icon: IconPin, label: "Maior conveniência", region: bestConv, field: "convenience", seed: 3 },
-    {
-      Icon: IconBuilding,
-      label: "Maior potencial comercial",
-      region: bestComm,
-      field: "commercial",
-      seed: 4,
-    },
-  ];
+  const insights = (
+    [
+      { Icon: IconHouse, label: "Maior potencial de temporada", field: "airbnb" },
+      { Icon: IconGroups, label: "Melhor para estudantes", field: "student" },
+      { Icon: IconStar, label: "Região mais familiar", field: "family" },
+      { Icon: IconPin, label: "Maior conveniência", field: "convenience" },
+      { Icon: IconBuilding, label: "Maior potencial comercial", field: "commercial" },
+    ] as const
+  ).map((it, seed) => ({ ...it, seed, region: bestOf(it.field) }));
 
-  if (regions.length === 0) {
+  if (index.total === 0) {
     return (
       <EmptyState icon={<IconPin />} title="Nenhuma região disponível">
         Ainda não há regiões com perfil calculado. Assim que os dados de mapa forem processados, as
@@ -168,7 +113,7 @@ export default function RegionsClient({ regions }: { regions: Region[] }) {
             <IconPin />
           </div>
           <div className="l">Regiões acompanhadas</div>
-          <div className="v">{regions.length}</div>
+          <div className="v">{index.total}</div>
           <div className="s">com perfil calculado</div>
         </div>
         <div className="rstat">
@@ -176,7 +121,7 @@ export default function RegionsClient({ regions }: { regions: Region[] }) {
             <IconHouse />
           </div>
           <div className="l">Imóveis em leilão</div>
-          <div className="v">{totalProps.toLocaleString("pt-BR")}</div>
+          <div className="v">{index.totalProps.toLocaleString("pt-BR")}</div>
           <div className="s">nessas regiões</div>
         </div>
         <RegionStat
@@ -206,7 +151,7 @@ export default function RegionsClient({ regions }: { regions: Region[] }) {
           combiná-los no ranking. Toque numa linha para ver os detalhes.
         </p>
         <div className="chiprow" style={{ marginBottom: sortKeys.length > 1 ? 8 : 14 }}>
-          {SORTS.map((s) => (
+          {REGION_SORTS.map((s) => (
             <button
               key={s.key}
               className={`rchip${isSorted(s.key) ? " on" : ""}`}
@@ -225,7 +170,7 @@ export default function RegionsClient({ regions }: { regions: Region[] }) {
           <p className="sortsummary" style={{ marginBottom: 14 }}>
             Combinando{" "}
             {sortKeys
-              .map((k) => SORTS.find((s) => s.key === k)?.label)
+              .map((k) => REGION_SORTS.find((s) => s.key === k)?.label)
               .filter(Boolean)
               .join(" + ")}
           </p>
@@ -255,7 +200,7 @@ export default function RegionsClient({ regions }: { regions: Region[] }) {
                   </span>
                 </div>
                 <div className="rtags">
-                  {regionTags(r).map((t) => (
+                  {r.tags.map((t) => (
                     <span className="t" key={t}>
                       {t}
                     </span>

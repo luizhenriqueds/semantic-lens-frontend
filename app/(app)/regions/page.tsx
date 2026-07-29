@@ -2,7 +2,7 @@ import RegionsClient from "./_components/RegionsClient";
 import { getRegions } from "@/lib/data";
 
 export default async function RegionsPage() {
-  const regions = await getRegions();
+  const index = await getRegions();
   return (
     <section className="view">
       <div className="pagehead">
@@ -12,7 +12,7 @@ export default async function RegionsPage() {
           (OpenStreetMap): o que existe por perto, a quantidade de serviços e o perfil do bairro.
         </p>
       </div>
-      <RegionsClient regions={regions} />
+      <RegionsClient index={index} />
     </section>
   );
 }
