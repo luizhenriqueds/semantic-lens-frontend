@@ -613,11 +613,31 @@
 }
 @media (max-width: 900px) {
   .lp-stats {
-    grid-template-columns: 1fr 1fr;
     row-gap: 24px;
   }
-  /* 2x2 rather than a single column: four stacked numbers cost ~400px of
-     scroll and read as a list instead of a block of facts. */
+  .lp-stat .lp-note {
+    display: none;
+  }
+}
+/* Three across on tablets, two below: either beats a single column, where five
+   stacked numbers read as a list instead of a block of facts. */
+@media (min-width: 620px) and (max-width: 900px) {
+  .lp-stats {
+    grid-template-columns: repeat(3, 1fr);
+  }
+  .lp-stat:nth-child(3n + 1) {
+    padding-left: 0;
+    border-left: 0;
+  }
+  .lp-stat:nth-child(n + 4) {
+    padding-top: 24px;
+    border-top: 1px solid var(--line-soft);
+  }
+}
+@media (max-width: 619px) {
+  .lp-stats {
+    grid-template-columns: 1fr 1fr;
+  }
   .lp-stat:nth-child(odd) {
     padding-left: 0;
     border-left: 0;
@@ -629,9 +649,6 @@
   /* the odd tile out spans the row so its rule isn't left half-drawn */
   .lp-stat:last-child:nth-child(odd) {
     grid-column: 1 / -1;
-  }
-  .lp-stat .lp-note {
-    display: none;
   }
 }
 @media (max-width: 420px) {

@@ -10,6 +10,14 @@ import type { Cluster, ProfileKey } from "@/lib/types";
 
 const BATCH = 24;
 
+type SortKey = "size" | "score" | "discount";
+
+const SORTS: { key: SortKey; label: string }[] = [
+  { key: "size", label: "mais imóveis" },
+  { key: "score", label: "maior nota média" },
+  { key: "discount", label: "maior desconto" },
+];
+
 const norm = (s: string) =>
   s
     .toLowerCase()
@@ -25,6 +33,7 @@ export default function GroupsClient({
 }) {
   const [query, setQuery] = useState("");
   const [profile, setProfile] = useState<ProfileKey | "all">("all");
+  const [sort, setSort] = useState<SortKey>("size");
   const [visible, setVisible] = useState(BATCH);
   const sentinelRef = useRef<HTMLDivElement>(null);
 
@@ -36,15 +45,23 @@ export default function GroupsClient({
 
   const filtered = useMemo(() => {
     const q = norm(query.trim());
-    return clusters.filter((c) => {
+    const kept = clusters.filter((c) => {
       if (profile !== "all" && c.profile !== profile) return false;
       if (q && !norm(`${c.label} ${c.description ?? ""}`).includes(q)) return false;
       return true;
     });
-  }, [clusters, query, profile]);
+    if (sort === "size") return kept;
+    // Groups without stats rank last rather than as a zero.
+    const valueOf = (c: Cluster) => {
+      const s = stats[c.clusterId];
+      const v = sort === "score" ? s?.avgScore : s?.medianDiscount;
+      return v ?? -Infinity;
+    };
+    return [...kept].sort((a, b) => valueOf(b) - valueOf(a) || b.size - a.size);
+  }, [clusters, stats, query, profile, sort]);
 
-  // Reset the incremental window whenever the filter changes.
-  useEffect(() => setVisible(BATCH), [query, profile]);
+  // Reset the incremental window whenever the filter or the order changes.
+  useEffect(() => setVisible(BATCH), [query, profile, sort]);
 
   const hasMore = visible < filtered.length;
   useEffect(() => {
@@ -81,6 +98,18 @@ export default function GroupsClient({
           {profiles.map((p) => (
             <option key={p} value={p}>
               {PROFILE_LABEL[p]}
+            </option>
+          ))}
+        </select>
+        <select
+          className="selectish"
+          value={sort}
+          onChange={(e) => setSort(e.target.value as SortKey)}
+          aria-label="Ordenar grupos"
+        >
+          {SORTS.map((s) => (
+            <option key={s.key} value={s.key}>
+              Ordenar: {s.label}
             </option>
           ))}
         </select>

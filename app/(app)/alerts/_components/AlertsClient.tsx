@@ -4,10 +4,11 @@ import { useEffect, useMemo, useState } from "react";
 import { countAlertMatches, countDescriptionMatches } from "@/app/actions/alerts";
 import ConfirmDialog from "@/components/ui/ConfirmDialog";
 import EmptyState from "@/components/ui/EmptyState";
+import SearchableSelect from "@/components/ui/SearchableSelect";
 import SkeletonText from "@/components/ui/SkeletonText";
 import { useToast } from "@/components/ui/Toaster";
 import { describeFilters, filterChips, hasAnyFilter, type Alert, useAlerts } from "@/lib/alerts";
-import { FREQS } from "@/lib/alerts/cadence";
+import { FREQS, freqOptions } from "@/lib/alerts/cadence";
 import { SCORE_DIMS, SCORE_LABEL, titleCase } from "@/lib/format";
 import { IconBell, IconPencil, IconPlus, IconTrash } from "@/lib/icons";
 import type { AlertFilters, FilterOptions, Scores } from "@/lib/types";
@@ -312,39 +313,33 @@ export default function AlertsClient({ options }: { options: FilterOptions }) {
                     ))}
                   </select>
                 </label>
-                <label className="afield">
+                <div className="afield">
                   <span>Estado</span>
-                  <select
-                    className="selectish"
-                    value={uf}
-                    onChange={(e) => {
-                      setUf(e.target.value);
+                  <SearchableSelect
+                    label="Estado"
+                    allLabel="Todos"
+                    showLabel={false}
+                    className="fwide"
+                    value={uf || "all"}
+                    options={ufs.map((u) => ({ value: u, label: u }))}
+                    onChange={(v) => {
+                      setUf(v === "all" ? "" : v);
                       setCidade("");
                     }}
-                  >
-                    <option value="">Todos</option>
-                    {ufs.map((u) => (
-                      <option key={u} value={u}>
-                        {u}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-                <label className="afield">
+                  />
+                </div>
+                <div className="afield">
                   <span>Cidade</span>
-                  <select
-                    className="selectish"
-                    value={cidade}
-                    onChange={(e) => setCidade(e.target.value)}
-                  >
-                    <option value="">Todas</option>
-                    {cidades.map((c) => (
-                      <option key={c} value={c}>
-                        {c}
-                      </option>
-                    ))}
-                  </select>
-                </label>
+                  <SearchableSelect
+                    label="Cidade"
+                    allLabel="Todas"
+                    showLabel={false}
+                    className="fwide"
+                    value={cidade || "all"}
+                    options={cidades.map((c) => ({ value: c, label: c }))}
+                    onChange={(v) => setCidade(v === "all" ? "" : v)}
+                  />
+                </div>
                 <label className="afield">
                   <span>Tipo</span>
                   <select
@@ -397,7 +392,7 @@ export default function AlertsClient({ options }: { options: FilterOptions }) {
                     value={freq}
                     onChange={(e) => setFreq(e.target.value)}
                   >
-                    {FREQS.map((f) => (
+                    {freqOptions(freq).map((f) => (
                       <option key={f} value={f}>
                         {f}
                       </option>
@@ -448,7 +443,7 @@ export default function AlertsClient({ options }: { options: FilterOptions }) {
                   value={freq}
                   onChange={(e) => setFreq(e.target.value)}
                 >
-                  {FREQS.map((f) => (
+                  {freqOptions(freq).map((f) => (
                     <option key={f} value={f}>
                       {f}
                     </option>

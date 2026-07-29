@@ -625,16 +625,16 @@ export default async function LandingPage() {
                   </div>
                   <h3>A oportunidade chega no seu e-mail</h3>
                   <p>
-                    Salve os critérios que você procura e escolha a frequência: <b>diária</b>,{" "}
-                    <b>semanal</b> ou <b>mensal</b>. A Lavra varre a base atualizada e manda por
-                    e-mail só o que combina - com a nota já calculada.
+                    Salve os critérios que você procura e escolha a frequência: <b>diária</b> ou{" "}
+                    <b>semanal</b>. A Lavra varre a base atualizada e manda por e-mail só o que
+                    combina - com a nota já calculada.
                   </p>
                   <ul className="lp-lpoints">
                     <li>
                       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
                         <path d="m5 13 4 4L19 7" />
                       </svg>
-                      Você escolhe a cadência: diária, semanal ou mensal
+                      Você escolhe a cadência: diária ou semanal
                     </li>
                     <li>
                       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
@@ -1395,8 +1395,8 @@ export default async function LandingPage() {
               <div>
                 <h3>“Não posso perder a data”</h3>
                 <p>
-                  Salve os critérios, escolha o aviso diário, semanal ou mensal e acompanhe as datas
-                  dos seus favoritos na carteira.
+                  Salve os critérios, escolha o aviso diário ou semanal e acompanhe as datas dos
+                  seus favoritos na carteira.
                 </p>
                 <div className="lp-flow">
                   <span>alerta por e-mail</span>
@@ -1741,8 +1741,8 @@ export default async function LandingPage() {
                 <p>
                   Diariamente. Novos imóveis entram, arrematados saem e as notas são recalculadas
                   para refletir a base ativa daquele dia. Com uma conta, você pode salvar buscas e
-                  receber por e-mail o que apareceu de novo, no ritmo que escolher: diário, semanal
-                  ou mensal.
+                  receber por e-mail o que apareceu de novo, no ritmo que escolher: diário ou
+                  semanal.
                 </p>
               </div>
             </details>
