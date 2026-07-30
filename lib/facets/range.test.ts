@@ -31,7 +31,8 @@ describe("parseRange", () => {
 describe("rangeHref", () => {
   it("round-trips through parseRange", () => {
     const url = new URL(rangeHref("area", 60, 80), "http://x");
-    expect(parseRange(url.searchParams.get("dim")!, "60", "80")).toEqual({
+    const sp = url.searchParams;
+    expect(parseRange(sp.get("range_dim")!, sp.get("range_from")!, sp.get("range_to")!)).toEqual({
       dim: "area",
       from: 60,
       to: 80,
@@ -39,7 +40,7 @@ describe("rangeHref", () => {
   });
 
   it("leaves the upper bound empty when open-ended", () => {
-    expect(rangeHref("price", 1_000_000, Infinity)).toContain("to=&");
+    expect(rangeHref("price", 1_000_000, Infinity)).toContain("range_to=&");
   });
 });
 

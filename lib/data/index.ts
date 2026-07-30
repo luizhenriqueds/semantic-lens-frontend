@@ -2,6 +2,8 @@ export {
   isListable,
   getPropertiesPage,
   countProperties,
+  countMatched,
+  getMatchedPage,
   getPropertiesByIds,
   getPropertyById,
   getUpcomingAuctions,
@@ -32,4 +34,11 @@ export {
   getRecommendations,
   getPropertyDetailText,
 } from "./details";
-export { hybridSearch, RESULT_LIMIT, type SearchHit, type SearchResult } from "./search";
+export {
+  hybridSearch,
+  parseQuery,
+  searchPoisByName,
+  RESULT_LIMIT,
+  type SearchHit,
+  type SearchResult,
+} from "./search";

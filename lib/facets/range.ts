@@ -37,7 +37,7 @@ export function parseRange(
 }
 
 export function rangeHref(dim: RangeDim, from: number, to: number): string {
-  return `/properties?dim=${dim}&from=${from}&to=${to === Infinity ? "" : to}&view=list`;
+  return `/properties?range_dim=${dim}&range_from=${from}&range_to=${to === Infinity ? "" : to}&view=list`;
 }
 
 export function rangeLabel(r: RangeFilter): string {

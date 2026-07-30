@@ -23,7 +23,11 @@ export default function CollectionCard({ c, stats }: { c: Cluster; stats?: Clust
   return (
     <div className="plcard">
       {/* Stretched link makes the whole card open the group's imóveis list */}
-      <Link className="plmain" href={`/properties?cluster=${c.clusterId}`} aria-label={c.label} />
+      <Link
+        className="plmain"
+        href={`/properties?cluster_id=${c.clusterId}`}
+        aria-label={c.label}
+      />
       <div className="plcover">
         <ClusterThumb images={stats?.sampleImages ?? []} label={c.label} />
         <span className="plcount">{count} imóveis</span>
@@ -70,7 +74,7 @@ export default function CollectionCard({ c, stats }: { c: Cluster; stats?: Clust
         )}
         <div className="foot">
           {c.profile && <span className="perfil">{PROFILE_LABEL[c.profile]}</span>}
-          <Link className="open" href={`/properties?cluster=${c.clusterId}&view=analysis`}>
+          <Link className="open" href={`/properties?cluster_id=${c.clusterId}&view=analysis`}>
             Ver análise ›
           </Link>
         </div>

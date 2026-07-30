@@ -1,17 +1,35 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { countAlertMatches, countDescriptionMatches } from "@/app/actions/alerts";
+import Link from "next/link";
+import {
+  countAlertMatches,
+  countDescriptionMatches,
+  resolveAlertQuery,
+} from "@/app/actions/alerts";
 import ConfirmDialog from "@/components/ui/ConfirmDialog";
 import EmptyState from "@/components/ui/EmptyState";
 import SearchableSelect from "@/components/ui/SearchableSelect";
 import SkeletonText from "@/components/ui/SkeletonText";
 import { useToast } from "@/components/ui/Toaster";
-import { describeFilters, filterChips, hasAnyFilter, type Alert, useAlerts } from "@/lib/alerts";
+import {
+  criteriaChips,
+  describeCriteria,
+  hasAnyCriteria,
+  isAnyCriteria,
+  type Alert,
+  useAlerts,
+} from "@/lib/alerts";
 import { FREQS, freqOptions } from "@/lib/alerts/cadence";
 import { SCORE_DIMS, SCORE_LABEL, titleCase } from "@/lib/format";
-import { IconBell, IconPencil, IconPlus, IconTrash } from "@/lib/icons";
-import type { AlertFilters, FilterOptions, Scores } from "@/lib/types";
+import { IconArrow, IconBell, IconPencil, IconPlus, IconTrash } from "@/lib/icons";
+import type {
+  AlertCriteria,
+  AlertCriteriaSet,
+  FilterOptions,
+  ResolvedAlertQuery,
+  Scores,
+} from "@/lib/types";
 
 type Confirm = {
   title: string;
@@ -20,6 +38,16 @@ type Confirm = {
   danger?: boolean;
   action: () => void;
 };
+
+const CONTROLLED_KEYS = [
+  "score_key",
+  "score_min",
+  "uf",
+  "city",
+  "type",
+  "min_discount",
+  "max_price",
+] as const;
 
 const SCORES = [50, 60, 70, 80, 90];
 const DESCONTOS = [20, 30, 40, 50];
@@ -47,9 +75,11 @@ export default function AlertsClient({ options }: { options: FilterOptions }) {
   const [tipo, setTipo] = useState("");
   const [minDesconto, setMinDesconto] = useState("");
   const [maxPreco, setMaxPreco] = useState("");
-  // Advanced filters carried through from the properties page — no controls here,
-  // but preserved on edit rather than dropped.
-  const [extra, setExtra] = useState<Partial<AlertFilters>>({});
+  // Carried through from the properties page; no controls here.
+  const [extra, setExtra] = useState<AlertCriteriaSet>({});
+  const [resolved, setResolved] = useState<{ query: string; result: ResolvedAlertQuery } | null>(
+    null,
+  );
 
   const ufs = options.ufs;
   const cidades = useMemo(
@@ -61,27 +91,48 @@ export default function AlertsClient({ options }: { options: FilterOptions }) {
   );
   const tipos = options.types;
 
-  const draft = useMemo<AlertFilters>(() => {
-    const f: AlertFilters = { ...extra };
-    if (scoreKey) f.scoreKey = scoreKey as keyof Scores;
-    if (minScore) f.minScore = Number(minScore);
-    if (uf) f.uf = uf;
-    if (cidade) f.city = cidade;
-    if (tipo) f.propertyType = tipo;
-    if (minDesconto) f.minDiscount = Number(minDesconto);
-    if (maxPreco) f.maxPrice = Number(maxPreco);
-    return f;
+  const draft = useMemo<AlertCriteriaSet>(() => {
+    const c: AlertCriteriaSet = { ...extra };
+    if (scoreKey || minScore) c.score_key = (scoreKey || "investment") as keyof Scores;
+    if (minScore) c.score_min = Number(minScore);
+    if (uf) c.uf = uf;
+    if (cidade) c.city = cidade;
+    if (tipo) c.type = tipo;
+    if (minDesconto) c.min_discount = Number(minDesconto);
+    if (maxPreco) c.max_price = Number(maxPreco);
+    return c;
   }, [extra, scoreKey, minScore, uf, cidade, tipo, minDesconto, maxPreco]);
+
+  const phrase = nome.trim();
+  const resolvedFor = resolved?.query === phrase ? resolved.result : null;
+  const preview =
+    mode === "filtros" ? (hasAnyCriteria(draft) ? draft : null) : resolvedFor?.criteria;
+
+  useEffect(() => {
+    if (mode !== "descricao" || !phrase || resolved?.query === phrase) return;
+    let cancelled = false;
+    const t = setTimeout(() => {
+      resolveAlertQuery(phrase)
+        .then((result) => {
+          if (!cancelled) setResolved({ query: phrase, result });
+        })
+        .catch(() => {});
+    }, 400);
+    return () => {
+      cancelled = true;
+      clearTimeout(t);
+    };
+  }, [mode, phrase, resolved]);
 
   const [draftCount, setDraftCount] = useState<number | null>(null);
   useEffect(() => {
-    if (!hasAnyFilter(draft)) {
+    if (!preview) {
       setDraftCount(null);
       return;
     }
     let cancelled = false;
     const t = setTimeout(() => {
-      countAlertMatches(draft)
+      countAlertMatches(preview)
         .then((n) => {
           if (!cancelled) setDraftCount(n);
         })
@@ -91,16 +142,16 @@ export default function AlertsClient({ options }: { options: FilterOptions }) {
       cancelled = true;
       clearTimeout(t);
     };
-  }, [draft]);
+  }, [preview]);
 
   const [filterCounts, setFilterCounts] = useState<Record<string, number | null>>({});
-  const filterKey = JSON.stringify(alerts.filter((a) => a.filters).map((a) => [a.id, a.filters]));
+  const filterKey = JSON.stringify(alerts.filter((a) => a.criteria).map((a) => [a.id, a.criteria]));
   useEffect(() => {
-    const items: [string, AlertFilters][] = JSON.parse(filterKey);
+    const items: [string, AlertCriteria][] = JSON.parse(filterKey);
     if (!items.length) return;
     let cancelled = false;
     Promise.all(
-      items.map(async ([id, f]) => [id, await countAlertMatches(f).catch(() => null)] as const),
+      items.map(async ([id, c]) => [id, await countAlertMatches(c).catch(() => null)] as const),
     ).then((entries) => {
       if (!cancelled) setFilterCounts(Object.fromEntries(entries));
     });
@@ -111,7 +162,7 @@ export default function AlertsClient({ options }: { options: FilterOptions }) {
 
   const [descCounts, setDescCounts] = useState<Record<string, DescCount | null>>({});
   const descKey = JSON.stringify(
-    alerts.filter((a) => !a.filters && a.name.trim()).map((a) => [a.id, a.name]),
+    alerts.filter((a) => !a.criteria && a.name.trim()).map((a) => [a.id, a.name]),
   );
 
   useEffect(() => {
@@ -148,6 +199,7 @@ export default function AlertsClient({ options }: { options: FilterOptions }) {
     setMinDesconto("");
     setMaxPreco("");
     setExtra({});
+    setResolved(null);
     setCreating(false);
     setEditingId(null);
     setMode("filtros");
@@ -157,25 +209,21 @@ export default function AlertsClient({ options }: { options: FilterOptions }) {
     setEditingId(a.id);
     setCreating(true);
     setFreq(a.freq);
-    if (a.filters) {
-      const f = a.filters;
+    setResolved(null);
+    const c = a.criteria && !isAnyCriteria(a.criteria) ? a.criteria : null;
+    if (c) {
       setMode("filtros");
-      setNome(a.name === describeFilters(f) ? "" : a.name);
-      setScoreKey(f.scoreKey ?? "");
-      setMinScore(f.minScore != null ? String(f.minScore) : "");
-      setUf(f.uf ?? "");
-      setCidade(f.city ?? "");
-      setTipo(f.propertyType ?? "");
-      setMinDesconto(f.minDiscount != null ? String(f.minDiscount) : "");
-      setMaxPreco(f.maxPrice != null ? String(f.maxPrice) : "");
-      setExtra({
-        q: f.q,
-        minBedrooms: f.minBedrooms,
-        minArea: f.minArea,
-        poiCats: f.poiCats,
-        poiRadius: f.poiRadius,
-        maxCenter: f.maxCenter,
-      });
+      setNome(a.name === describeCriteria(c) ? "" : a.name);
+      setScoreKey(c.score_key ?? "");
+      setMinScore(c.score_min != null ? String(c.score_min) : "");
+      setUf(c.uf ?? "");
+      setCidade(c.city ?? "");
+      setTipo(c.type ?? "");
+      setMinDesconto(c.min_discount != null ? String(c.min_discount) : "");
+      setMaxPreco(c.max_price != null ? String(c.max_price) : "");
+      const rest = { ...c };
+      for (const k of CONTROLLED_KEYS) delete rest[k];
+      setExtra(rest);
     } else {
       setMode("descricao");
       setNome(a.name);
@@ -183,34 +231,33 @@ export default function AlertsClient({ options }: { options: FilterOptions }) {
   }
 
   async function commit() {
-    if (editingId) {
-      const name = mode === "descricao" ? nome.trim() : nome.trim() || describeFilters(draft);
-      const ok = await update(editingId, {
-        name,
-        freq,
-        filters: mode === "descricao" ? null : draft,
-      });
-      if (!ok) {
-        toast("Você já tem um alerta com esse nome");
+    let criteria: AlertCriteriaSet = draft;
+    let dropped: string[] = [];
+    if (mode === "descricao") {
+      const result = resolvedFor ?? (await resolveAlertQuery(phrase));
+      if (!result.criteria) {
+        toast("Não conseguimos transformar essa descrição em filtros");
         return;
       }
-      toast("Alterações salvas");
-      reset();
-      return;
+      criteria = result.criteria;
+      dropped = result.dropped;
     }
-    const name = mode === "descricao" ? nome.trim() : nome.trim() || describeFilters(draft);
-    const ok = mode === "descricao" ? await add(name, freq) : await add(name, freq, draft);
+    const name = mode === "descricao" ? phrase : phrase || describeCriteria(draft);
+    const ok = editingId
+      ? await update(editingId, { name, freq, criteria })
+      : await add(name, freq, criteria);
     if (!ok) {
       toast("Você já tem um alerta com esse nome");
       return;
     }
-    toast("Alerta criado");
+    const saved = editingId ? "Alterações salvas" : "Alerta criado";
+    toast(dropped.length ? `${saved}, sem ${dropped.join(" e ")}` : saved);
     reset();
   }
 
   function create(e: React.FormEvent) {
     e.preventDefault();
-    const valid = mode === "descricao" ? Boolean(nome.trim()) : hasAnyFilter(draft);
+    const valid = mode === "descricao" ? Boolean(phrase) : hasAnyCriteria(draft);
     if (!valid) return;
     if (editingId) {
       setConfirm({
@@ -402,14 +449,14 @@ export default function AlertsClient({ options }: { options: FilterOptions }) {
               </div>
 
               <div className="apreview">
-                {hasAnyFilter(draft) ? (
+                {hasAnyCriteria(draft) ? (
                   draftCount == null ? (
                     <SkeletonText width={148} />
                   ) : (
                     <>
                       <b>{draftCount}</b>{" "}
                       {draftCount === 1 ? "imóvel corresponde" : "imóveis correspondem"} hoje
-                      <span className="apreview-sum"> · {describeFilters(draft)}</span>
+                      <span className="apreview-sum"> · {describeCriteria(draft)}</span>
                     </>
                   )
                 ) : (
@@ -418,7 +465,7 @@ export default function AlertsClient({ options }: { options: FilterOptions }) {
               </div>
 
               <div style={{ display: "flex", gap: 10, marginTop: 16 }}>
-                <button className="btn solid" type="submit" disabled={!hasAnyFilter(draft)}>
+                <button className="btn solid" type="submit" disabled={!hasAnyCriteria(draft)}>
                   {editingId ? "Salvar alterações" : "Criar alerta"}
                 </button>
                 <button className="btn ghost" type="button" onClick={reset}>
@@ -449,9 +496,40 @@ export default function AlertsClient({ options }: { options: FilterOptions }) {
                     </option>
                   ))}
                 </select>
-                <button className="btn solid" type="submit">
+                <button className="btn solid" type="submit" disabled={!phrase}>
                   Salvar
                 </button>
+              </div>
+
+              <div className="apreview">
+                {!phrase ? (
+                  "Descreva o que você procura e nós transformamos em filtros."
+                ) : !resolvedFor ? (
+                  <SkeletonText width={220} />
+                ) : !resolvedFor.criteria ? (
+                  "Não reconhecemos filtros nessa descrição. Tente citar a cidade, o tipo de imóvel ou um lugar de referência."
+                ) : (
+                  <>
+                    {draftCount == null ? (
+                      <SkeletonText width={148} />
+                    ) : (
+                      <>
+                        <b>{draftCount}</b>{" "}
+                        {draftCount === 1 ? "imóvel corresponde" : "imóveis correspondem"} hoje
+                      </>
+                    )}
+                    {resolvedFor.dropped.length > 0 && (
+                      <span className="apreview-sum"> · sem {resolvedFor.dropped.join(" e ")}</span>
+                    )}
+                    <div className="achips" style={{ marginTop: 8 }}>
+                      {criteriaChips(resolvedFor.criteria).map((c) => (
+                        <span className="achip" key={c}>
+                          {c}
+                        </span>
+                      ))}
+                    </div>
+                  </>
+                )}
               </div>
             </>
           )}
@@ -460,12 +538,12 @@ export default function AlertsClient({ options }: { options: FilterOptions }) {
 
       {alerts.length ? (
         alerts.map((a) => {
-          const isDesc = !a.filters && Boolean(a.name.trim());
+          const isDesc = !a.criteria && Boolean(a.name.trim());
           const desc = isDesc ? descCounts[a.id] : null;
           const counting =
-            (isDesc && desc === undefined) || (!!a.filters && filterCounts[a.id] === undefined);
-          const count = a.filters ? (filterCounts[a.id] ?? null) : (desc?.count ?? null);
-          const chips = a.filters ? filterChips(a.filters) : [];
+            (isDesc && desc === undefined) || (!!a.criteria && filterCounts[a.id] === undefined);
+          const count = a.criteria ? (filterCounts[a.id] ?? null) : (desc?.count ?? null);
+          const chips = a.criteria ? criteriaChips(a.criteria) : [];
           return (
             <div className="alertrow" key={a.id}>
               <div className="ai">
@@ -504,6 +582,13 @@ export default function AlertsClient({ options }: { options: FilterOptions }) {
                 </p>
               </div>
               <div className="aactions">
+                <Link
+                  className="iconbtn"
+                  href={`/alerts/${a.id}`}
+                  aria-label={`Ver imóveis de ${a.name}`}
+                >
+                  <IconArrow width={17} height={17} strokeWidth={1.8} />
+                </Link>
                 <button
                   className="iconbtn"
                   type="button"

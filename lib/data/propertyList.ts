@@ -2,9 +2,11 @@ import { supabase } from "@/lib/supabase";
 import { escapeLike } from "@/lib/facets";
 import { deriveTitle, titleCase } from "@/lib/format";
 import { ANALYSIS_EDGES, type AnalysisData } from "@/lib/facets/analysis";
+import { toRpcFilters } from "@/lib/filters/contract";
 import { LIST_PAGE_SIZE } from "@/lib/filters/propertiesUrl";
 import type { ClusterStats } from "@/lib/clusters";
 import type {
+  AlertCriteriaSet,
   FilterOptions,
   MapPoint,
   ProfileKey,
@@ -26,45 +28,6 @@ import {
 const MAP_POINT_LIMIT = 4000;
 
 export const isListable = (p: Property): boolean => !p.inactive && p.scores.investment != null;
-
-function toRpcFilters(f: PropertyFilters = {}): Record<string, unknown> {
-  const out: Record<string, unknown> = {};
-  if (f.q?.trim()) out.q = f.q.trim();
-  if (f.uf) out.uf = f.uf;
-  if (f.city) out.city = f.city;
-  if (f.type) out.type = f.type;
-  if (f.modalities?.length) out.modalities = f.modalities;
-  if (f.clusterId != null) out.cluster_id = f.clusterId;
-  if (f.h3) out.h3 = f.h3;
-  if (f.range) {
-    out.range_dim = f.range.dim;
-    out.range_from = f.range.from;
-    if (f.range.to !== Infinity) out.range_to = f.range.to;
-  }
-  if (f.minBedrooms) out.min_bedrooms = f.minBedrooms;
-  if (f.maxPrice) out.max_price = f.maxPrice;
-  if (f.minArea) out.min_area = f.minArea;
-  if (f.poiCats?.length) {
-    out.poi_cats = f.poiCats;
-    out.poi_radius_m = f.poiRadiusM ?? 2000;
-  }
-  if (f.maxCenterM) out.max_center_m = f.maxCenterM;
-  if (f.minDiscount) out.min_discount = f.minDiscount;
-  if (f.minInvestment) out.min_investment = f.minInvestment;
-  if (f.minVisualScore) out.min_visual_score = f.minVisualScore;
-  if (f.changeKind) {
-    out.change_kind = f.changeKind;
-    if (f.changedWithinDays) out.changed_within_days = f.changedWithinDays;
-  }
-  if (f.scoreKey) out.score_key = f.scoreKey;
-  if (f.scoreMin) out.score_min = f.scoreMin;
-  if (f.financing) out.financing = true;
-  if (f.fgts) out.fgts = true;
-  if (f.auctionWithinDays) out.auction_within_days = f.auctionWithinDays;
-  if (f.includeInactive) out.include_inactive = true;
-  if (f.ids) out.ids = f.ids;
-  return out;
-}
 
 function mapListRow(r: any): Property {
   return {
@@ -175,6 +138,19 @@ const cachedCount = cached(loadCount, "property-count");
 
 export function countProperties(filters: PropertyFilters): Promise<number> {
   return cachedCount(JSON.stringify(toRpcFilters(filters)));
+}
+
+export function countMatched(criteria: AlertCriteriaSet): Promise<number> {
+  return cachedCount(JSON.stringify(criteria));
+}
+
+export function getMatchedPage(
+  criteria: AlertCriteriaSet,
+  sort: PropertySort = "desconto",
+  page = 1,
+  pageSize = LIST_PAGE_SIZE,
+): Promise<PropertyPage> {
+  return cachedPage(JSON.stringify(criteria), sort, Math.max(1, page), pageSize);
 }
 
 const MV_COLS = "*";

@@ -13,12 +13,13 @@ import AuctionCalendar from "./AuctionCalendar";
 import PropertiesAnalysis from "./PropertiesAnalysis";
 import { useToast } from "@/components/ui/Toaster";
 import { fmtDist, moneyShort, SCORE_LABEL } from "@/lib/format";
-import { describeFilters, hasAnyFilter, useAlerts } from "@/lib/alerts";
+import { describeCriteria, hasAnyCriteria, useAlerts } from "@/lib/alerts";
 import { mapPointToProperty } from "@/lib/mapPoints";
 import { rangeLabel, type RangeDim } from "@/lib/facets/range";
+import { toRpcFilters } from "@/lib/filters/contract";
 import type { AnalysisData } from "@/lib/facets/analysis";
 import type {
-  AlertFilters,
+  AlertCriteriaSet,
   Cluster,
   FilterOptions,
   MapPoint,
@@ -32,7 +33,10 @@ import { IconArrow, IconBell, IconBuilding, IconSearch, IconSliders, POI_ICON } 
 import { MAX_NEAR_M, POI_LABEL, POI_ORDER } from "@/lib/pois";
 import {
   CHANGE_WINDOW_DAYS,
+  DEFAULT_SORT,
   LIST_PAGE_SIZE,
+  PROPERTY_SORTS,
+  sortParam,
   type PropertiesView,
 } from "@/lib/filters/propertiesUrl";
 
@@ -40,15 +44,6 @@ const PropertiesMap = dynamic(() => import("@/components/property/PropertiesMap"
   ssr: false,
   loading: () => <div className="lmap propmap loading">Carregando mapa…</div>,
 });
-
-const SORTS: { key: PropertySort; label: string }[] = [
-  { key: "desconto", label: "Maior desconto" },
-  { key: "leilao", label: "Data do leilão (mais próxima)" },
-  { key: "investimento", label: "Melhor investimento" },
-  { key: "score", label: "Melhor nota do objetivo" },
-  { key: "menor", label: "Menor preço" },
-  { key: "maior", label: "Maior preço" },
-];
 
 // Score dimensions offered by the "filter by goal" control (investment has its
 // own control, so it is excluded here).
@@ -278,6 +273,7 @@ export default function PropertiesClient({
   const maxPreco = filters.maxPrice ?? 0;
   const minArea = filters.minArea ?? 0;
   const poiCats = useMemo(() => filters.poiCats ?? [], [filters.poiCats]);
+  const poiIds = useMemo(() => filters.poiIds ?? [], [filters.poiIds]);
   const poiRadius = filters.poiRadiusM ?? 2000;
   const maxCenter = filters.maxCenterM ?? 0;
   const minDesconto = filters.minDiscount ?? 0;
@@ -304,7 +300,7 @@ export default function PropertiesClient({
   useEffect(() => {
     const target = Math.max(0, Number(precoInput) || 0);
     if (target === maxPreco) return;
-    const t = setTimeout(() => patch({ preco: target ? String(target) : null }), 400);
+    const t = setTimeout(() => patch({ max_price: target ? String(target) : null }), 400);
     return () => clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [precoInput]);
@@ -313,20 +309,31 @@ export default function PropertiesClient({
     (v: PropertiesView) => setParams({ view: v === "list" ? null : v, day: null }),
     [setParams],
   );
-  const clearRange = useCallback(() => patch({ dim: null, from: null, to: null }), [patch]);
+  const clearRange = useCallback(
+    () => patch({ range_dim: null, range_from: null, range_to: null }),
+    [patch],
+  );
   const pickRange = useCallback(
     (dim: RangeDim, from: number, to: number) =>
-      patch({ dim, from: String(from), to: to === Infinity ? "" : String(to), view: "list" }),
+      patch({
+        range_dim: dim,
+        range_from: String(from),
+        range_to: to === Infinity ? "" : String(to),
+        view: "list",
+      }),
     [patch],
   );
 
   const setPreco = (v: number) => {
     setPrecoInput(v ? String(v) : "");
-    patch({ preco: v ? String(v) : null });
+    patch({ max_price: v ? String(v) : null });
   };
   const toggleCat = (c: string) => {
     const next = poiCats.includes(c) ? poiCats.filter((x) => x !== c) : [...poiCats, c];
-    patch({ poi: next.join(",") || null, raio: next.length ? String(poiRadius) : null });
+    patch({
+      poi_cats: next.join(",") || null,
+      poi_radius_m: next.length ? String(poiRadius) : null,
+    });
   };
 
   const { alerts, add: addAlert } = useAlerts();
@@ -378,42 +385,16 @@ export default function PropertiesClient({
     };
   }, [drawerOpen]);
 
-  const priceCapped = maxPreco > 0;
+  const alertCriteria = useMemo<AlertCriteriaSet>(() => toRpcFilters(filters), [filters]);
 
-  const alertFilters = useMemo<AlertFilters>(() => {
-    const f: AlertFilters = {};
-    if (filters.q?.trim()) f.q = filters.q.trim();
-    if (uf !== "all") f.uf = uf;
-    if (cidade !== "all") f.city = cidade;
-    if (tipo !== "all") f.propertyType = tipo;
-    if (modalidade.length) f.modalities = modalidade;
-    if (minDesconto) f.minDiscount = minDesconto;
-    if (priceCapped) f.maxPrice = maxPreco;
-    if (minQuartos) f.minBedrooms = minQuartos;
-    if (minArea) f.minArea = minArea;
-    if (poiCats.length) {
-      f.poiCats = poiCats;
-      f.poiRadius = poiRadius;
-    }
-    if (maxCenter) f.maxCenter = maxCenter;
-    if (scoreKey !== "none" && scoreMin) {
-      f.scoreKey = scoreKey;
-      f.minScore = scoreMin;
-    } else if (minInvest) {
-      f.minScore = minInvest; // no scoreKey → applies to Investimento
-    }
-    return f;
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [filters]);
-
-  const canAlert = hasAnyFilter(alertFilters);
-  const alertLabel = useMemo(() => describeFilters(alertFilters), [alertFilters]);
+  const canAlert = hasAnyCriteria(alertCriteria);
+  const alertLabel = useMemo(() => describeCriteria(alertCriteria), [alertCriteria]);
   const alertExists =
     canAlert && alerts.some((a) => a.name.trim().toLowerCase() === alertLabel.trim().toLowerCase());
 
   const createAlert = async () => {
     if (!canAlert) return;
-    const ok = await addAlert(alertLabel, "Aviso diário", alertFilters);
+    const ok = await addAlert(alertLabel, "Aviso diário", alertCriteria);
     toast(ok ? "Alerta criado" : "Você já tem um alerta com estes filtros");
   };
 
@@ -438,68 +419,78 @@ export default function PropertiesClient({
       f.push({
         key: "quartos",
         label: `${minQuartos}+ quartos`,
-        clear: () => patch({ quartos: null }),
+        clear: () => patch({ min_bedrooms: null }),
       });
     if (minArea > 0)
-      f.push({ key: "area", label: `${minArea}+ m²`, clear: () => patch({ area: null }) });
+      f.push({ key: "area", label: `${minArea}+ m²`, clear: () => patch({ min_area: null }) });
     for (const c of poiCats)
       f.push({
         key: `poi-${c}`,
         label: `${POI_LABEL[c] ?? c} · até ${fmtDist(poiRadius)}`,
         clear: () => toggleCat(c),
       });
+    if (poiIds.length)
+      f.push({
+        key: "pois",
+        label: `${poiIds.length > 1 ? "Locais selecionados" : "Local selecionado"} · até ${fmtDist(poiRadius)}`,
+        clear: () => patch({ poi_ids: null }),
+      });
     if (maxCenter > 0)
       f.push({
         key: "center",
         label: `Até ${fmtDist(maxCenter)} do centro`,
-        clear: () => patch({ centro: null }),
+        clear: () => patch({ max_center_m: null }),
       });
     if (minDesconto > 0)
       f.push({
         key: "desc",
         label: `Desconto ≥ ${minDesconto}%`,
-        clear: () => patch({ desconto: null }),
+        clear: () => patch({ min_discount: null }),
       });
     if (minInvest > 0)
       f.push({
         key: "inv",
         label: `Investimento ≥ ${minInvest}`,
-        clear: () => patch({ invest: null }),
+        clear: () => patch({ min_investment: null }),
       });
     if (minVisual > 0)
       f.push({
         key: "visual",
         label: `Fachada ≥ ${minVisual}`,
-        clear: () => patch({ fachada: null }),
+        clear: () => patch({ min_visual_score: null }),
       });
     if (scoreKey !== "none" && scoreMin > 0)
       f.push({
         key: "goal",
         label: `${SCORE_LABEL[scoreKey]} ≥ ${scoreMin}`,
-        clear: () => patch({ goal: null, goalMin: null }),
+        clear: () => patch({ score_key: null, score_min: null }),
       });
     if (cluster !== "all") {
       const cl = clusters.find((c) => c.clusterId === cluster);
       f.push({
         key: "cluster",
         label: cl?.label ?? "Grupo",
-        clear: () => patch({ cluster: null }),
+        clear: () => patch({ cluster_id: null }),
       });
     }
     if (prazoLeilao > 0)
       f.push({
         key: "prazo",
         label: PRAZOS.find((p) => p.days === prazoLeilao)?.label ?? `${prazoLeilao} dias`,
-        clear: () => patch({ prazo: null }),
+        clear: () => patch({ auction_within_days: null }),
       });
     if (financiamento)
-      f.push({ key: "fin", label: "Aceita financiamento", clear: () => patch({ fin: null }) });
+      f.push({
+        key: "fin",
+        label: "Aceita financiamento",
+        clear: () => patch({ financing: null }),
+      });
     if (fgts) f.push({ key: "fgts", label: "Aceita FGTS", clear: () => patch({ fgts: null }) });
     if (changeKind)
       f.push({
         key: "mudou",
         label: CHANGE_LABEL[changeKind],
-        clear: () => patch({ mudou: null, dias: null }),
+        clear: () => patch({ change_kind: null, changed_within_days: null }),
       });
     return f;
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -519,26 +510,27 @@ export default function PropertiesClient({
   const leilaoCount = [prazoLeilao > 0, financiamento, fgts, !!changeKind].filter(Boolean).length;
 
   const ADVANCED_NULL: Record<string, string | null> = {
-    dim: null,
-    from: null,
-    to: null,
-    quartos: null,
-    preco: null,
-    area: null,
-    poi: null,
-    raio: null,
-    centro: null,
-    desconto: null,
-    invest: null,
-    fachada: null,
-    goal: null,
-    goalMin: null,
-    fin: null,
+    range_dim: null,
+    range_from: null,
+    range_to: null,
+    min_bedrooms: null,
+    max_price: null,
+    min_area: null,
+    poi_cats: null,
+    poi_ids: null,
+    poi_radius_m: null,
+    max_center_m: null,
+    min_discount: null,
+    min_investment: null,
+    min_visual_score: null,
+    score_key: null,
+    score_min: null,
+    financing: null,
     fgts: null,
-    prazo: null,
-    cluster: null,
-    mudou: null,
-    dias: null,
+    auction_within_days: null,
+    cluster_id: null,
+    change_kind: null,
+    changed_within_days: null,
   };
 
   const clearAdvanced = () => {
@@ -549,7 +541,7 @@ export default function PropertiesClient({
   const clearAll = () => {
     setQInput("");
     setPrecoInput("");
-    patch({ ...ADVANCED_NULL, q: null, uf: null, city: null, tipo: null, mod: null });
+    patch({ ...ADVANCED_NULL, q: null, uf: null, city: null, type: null, modalities: null });
   };
 
   const filtered =
@@ -637,7 +629,7 @@ export default function PropertiesClient({
         <select
           className="selectish"
           value={tipo}
-          onChange={(e) => patch({ tipo: e.target.value === "all" ? null : e.target.value })}
+          onChange={(e) => patch({ type: e.target.value === "all" ? null : e.target.value })}
         >
           <option value="all">Tipo: todos</option>
           {tipos.map((t) => (
@@ -649,7 +641,7 @@ export default function PropertiesClient({
         <ModalityFilter
           options={modalidades}
           selected={modalidade}
-          onChange={(v) => patch({ mod: v.join(",") || null })}
+          onChange={(v) => patch({ modalities: v.join(",") || null })}
         />
         <button
           className={`selectish${advActive ? " on" : ""}`}
@@ -722,7 +714,7 @@ export default function PropertiesClient({
                       value: String(c.clusterId),
                       label: c.label,
                     }))}
-                    onChange={(v) => patch({ cluster: v === "all" ? null : v })}
+                    onChange={(v) => patch({ cluster_id: v === "all" ? null : v })}
                   />
                 </Section>
                 <Section
@@ -733,14 +725,14 @@ export default function PropertiesClient({
                 >
                   <div className="flabel">Quartos (mínimo)</div>
                   <div className="fchiprow">
-                    <Chip active={!minQuartos} onClick={() => patch({ quartos: null })}>
+                    <Chip active={!minQuartos} onClick={() => patch({ min_bedrooms: null })}>
                       Qualquer
                     </Chip>
                     {QUARTOS_STEPS.map((v) => (
                       <Chip
                         key={v}
                         active={minQuartos === v}
-                        onClick={() => patch({ quartos: String(v) })}
+                        onClick={() => patch({ min_bedrooms: String(v) })}
                       >
                         {v}+
                       </Chip>
@@ -773,14 +765,14 @@ export default function PropertiesClient({
 
                   <div className="flabel">Área mínima</div>
                   <div className="fchiprow">
-                    <Chip active={!minArea} onClick={() => patch({ area: null })}>
+                    <Chip active={!minArea} onClick={() => patch({ min_area: null })}>
                       Qualquer
                     </Chip>
                     {AREA_STEPS.map((v) => (
                       <Chip
                         key={v}
                         active={minArea === v}
-                        onClick={() => patch({ area: String(v) })}
+                        onClick={() => patch({ min_area: String(v) })}
                       >
                         {v}+ m²
                       </Chip>
@@ -829,7 +821,7 @@ export default function PropertiesClient({
                         key={v}
                         type="button"
                         className={poiRadius === v ? "on" : ""}
-                        onClick={() => poiCats.length && patch({ raio: String(v) })}
+                        onClick={() => poiCats.length && patch({ poi_radius_m: String(v) })}
                       >
                         {fmtDist(v)}
                       </button>
@@ -842,14 +834,14 @@ export default function PropertiesClient({
 
                   <div className="flabel">Distância do centro (máx.)</div>
                   <div className="fchiprow">
-                    <Chip active={!maxCenter} onClick={() => patch({ centro: null })}>
+                    <Chip active={!maxCenter} onClick={() => patch({ max_center_m: null })}>
                       Qualquer
                     </Chip>
                     {CENTER_STEPS.map((v) => (
                       <Chip
                         key={v}
                         active={maxCenter === v}
-                        onClick={() => patch({ centro: String(v) })}
+                        onClick={() => patch({ max_center_m: String(v) })}
                       >
                         ≤ {fmtDist(v)}
                       </Chip>
@@ -865,14 +857,14 @@ export default function PropertiesClient({
                 >
                   <div className="flabel">Desconto mínimo</div>
                   <div className="fchiprow">
-                    <Chip active={!minDesconto} onClick={() => patch({ desconto: null })}>
+                    <Chip active={!minDesconto} onClick={() => patch({ min_discount: null })}>
                       Qualquer
                     </Chip>
                     {DESCONTO_STEPS.map((v) => (
                       <Chip
                         key={v}
                         active={minDesconto === v}
-                        onClick={() => patch({ desconto: String(v) })}
+                        onClick={() => patch({ min_discount: String(v) })}
                       >
                         ≥ {v}%
                       </Chip>
@@ -881,14 +873,14 @@ export default function PropertiesClient({
 
                   <div className="flabel">Nota de investimento</div>
                   <div className="fchiprow">
-                    <Chip active={!minInvest} onClick={() => patch({ invest: null })}>
+                    <Chip active={!minInvest} onClick={() => patch({ min_investment: null })}>
                       Qualquer
                     </Chip>
                     {INVEST_STEPS.map((v) => (
                       <Chip
                         key={v}
                         active={minInvest === v}
-                        onClick={() => patch({ invest: String(v) })}
+                        onClick={() => patch({ min_investment: String(v) })}
                       >
                         ≥ {v}
                       </Chip>
@@ -899,14 +891,14 @@ export default function PropertiesClient({
                     <>
                       <div className="flabel">Avaliação visual da fachada</div>
                       <div className="fchiprow">
-                        <Chip active={!minVisual} onClick={() => patch({ fachada: null })}>
+                        <Chip active={!minVisual} onClick={() => patch({ min_visual_score: null })}>
                           Qualquer
                         </Chip>
                         {VISUAL_STEPS.map((v) => (
                           <Chip
                             key={v}
                             active={minVisual === v}
-                            onClick={() => patch({ fachada: String(v) })}
+                            onClick={() => patch({ min_visual_score: String(v) })}
                           >
                             ≥ {v}
                           </Chip>
@@ -925,8 +917,8 @@ export default function PropertiesClient({
                     value={scoreKey}
                     onChange={(e) => {
                       const v = e.target.value as keyof Scores | "none";
-                      if (v === "none") patch({ goal: null, goalMin: null });
-                      else patch({ goal: v, goalMin: String(scoreMin || 70) });
+                      if (v === "none") patch({ score_key: null, score_min: null });
+                      else patch({ score_key: v, score_min: String(scoreMin || 70) });
                     }}
                   >
                     <option value="none">Escolha um objetivo…</option>
@@ -944,7 +936,7 @@ export default function PropertiesClient({
                           <Chip
                             key={v}
                             active={scoreMin === v}
-                            onClick={() => patch({ goalMin: String(v) })}
+                            onClick={() => patch({ score_min: String(v) })}
                           >
                             ≥ {v}
                           </Chip>
@@ -962,14 +954,17 @@ export default function PropertiesClient({
                 >
                   <div className="flabel">Data do leilão</div>
                   <div className="fchiprow">
-                    <Chip active={!prazoLeilao} onClick={() => patch({ prazo: null })}>
+                    <Chip
+                      active={!prazoLeilao}
+                      onClick={() => patch({ auction_within_days: null })}
+                    >
                       Qualquer data
                     </Chip>
                     {PRAZOS.map((pr) => (
                       <Chip
                         key={pr.days}
                         active={prazoLeilao === pr.days}
-                        onClick={() => patch({ prazo: String(pr.days) })}
+                        onClick={() => patch({ auction_within_days: String(pr.days) })}
                       >
                         {pr.days} dias
                       </Chip>
@@ -981,7 +976,7 @@ export default function PropertiesClient({
                     <input
                       type="checkbox"
                       checked={financiamento}
-                      onChange={(e) => patch({ fin: e.target.checked ? "1" : null })}
+                      onChange={(e) => patch({ financing: e.target.checked ? "1" : null })}
                     />
                     Aceita financiamento
                   </label>
@@ -996,14 +991,22 @@ export default function PropertiesClient({
 
                   <div className="flabel">Mudou recentemente</div>
                   <div className="fchiprow">
-                    <Chip active={!changeKind} onClick={() => patch({ mudou: null, dias: null })}>
+                    <Chip
+                      active={!changeKind}
+                      onClick={() => patch({ change_kind: null, changed_within_days: null })}
+                    >
                       Qualquer
                     </Chip>
                     {Object.entries(CHANGE_LABEL).map(([key, label]) => (
                       <Chip
                         key={key}
                         active={changeKind === key}
-                        onClick={() => patch({ mudou: key, dias: String(CHANGE_WINDOW_DAYS) })}
+                        onClick={() =>
+                          patch({
+                            change_kind: key,
+                            changed_within_days: String(CHANGE_WINDOW_DAYS),
+                          })
+                        }
                       >
                         {label}
                       </Chip>
@@ -1058,11 +1061,13 @@ export default function PropertiesClient({
         {(view === "list" || (view === "calendar" && calDayOpen)) && (
           <select
             className="selectish"
-            value={sort}
-            onChange={(e) => patch({ sort: e.target.value === "desconto" ? null : e.target.value })}
+            value={sortParam(sort)}
+            onChange={(e) =>
+              patch({ sort: e.target.value === DEFAULT_SORT ? null : e.target.value })
+            }
           >
-            {SORTS.map((s) => (
-              <option key={s.key} value={s.key}>
+            {PROPERTY_SORTS.map((s) => (
+              <option key={s.param} value={s.param}>
                 Ordenar: {s.label}
               </option>
             ))}

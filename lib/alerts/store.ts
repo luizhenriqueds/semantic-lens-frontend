@@ -3,7 +3,7 @@
 import { useCallback } from "react";
 import * as api from "@/app/actions/alerts";
 import { createClientStore } from "@/lib/clientStore";
-import type { Alert, AlertFilters, AlertPatch } from "@/lib/types";
+import type { Alert, AlertCriteria, AlertPatch } from "@/lib/types";
 
 export type { Alert } from "@/lib/types";
 
@@ -13,8 +13,8 @@ export function useAlerts() {
   const alerts = store.useValue();
 
   const add = useCallback(
-    async (name: string, freq: string, filters?: AlertFilters): Promise<boolean> => {
-      const created = await api.createAlert(name, freq, filters ?? null);
+    async (name: string, freq: string, criteria?: AlertCriteria): Promise<boolean> => {
+      const created = await api.createAlert(name, freq, criteria ?? null);
       if (!created) return false;
       store.set([created, ...store.get()]);
       return true;
@@ -44,7 +44,7 @@ export function useAlerts() {
               ...a,
               ...(patch.name != null && { name: patch.name }),
               ...(patch.freq != null && { freq: patch.freq }),
-              ...(patch.filters !== undefined && { filters: patch.filters ?? undefined }),
+              ...(patch.criteria !== undefined && { criteria: patch.criteria ?? undefined }),
               ...(patch.on != null && { on: patch.on }),
             }
           : a,
