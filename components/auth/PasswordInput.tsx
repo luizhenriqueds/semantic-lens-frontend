@@ -8,16 +8,19 @@ export default function PasswordInput({
   onChange,
   autoComplete = "current-password",
   minLength = 6,
+  className,
 }: {
   value: string;
   onChange: (v: string) => void;
   autoComplete?: "current-password" | "new-password";
   minLength?: number;
+  className?: string;
 }) {
   const [shown, setShown] = useState(false);
   return (
     <div className="au-pwd">
       <input
+        className={className}
         type={shown ? "text" : "password"}
         autoComplete={autoComplete}
         minLength={minLength}

@@ -1742,6 +1742,129 @@ select.selectish {
   }
 }
 
+.alertstools {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 20px;
+}
+.alertstools-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--ink-soft);
+}
+.alertstools-link:hover {
+  color: var(--primary);
+}
+.alertstools-link svg {
+  color: var(--ink-faint);
+}
+.alertstools-link:hover svg {
+  color: var(--primary);
+}
+@media (max-width: 640px) {
+  .alertstools {
+    flex-direction: column-reverse;
+    align-items: stretch;
+    gap: 12px;
+  }
+  .alertstools .btn.solid {
+    justify-content: center;
+  }
+  .alertstools-link {
+    justify-content: center;
+  }
+}
+
+/* settings */
+.settabs {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 20px;
+  border-bottom: 1px solid var(--line);
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.settabs::-webkit-scrollbar {
+  display: none;
+}
+.settabs button {
+  flex: none;
+  padding: 11px 16px;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  background: none;
+  font: inherit;
+  font-size: 14.5px;
+  font-weight: 600;
+  color: var(--ink-soft);
+  cursor: pointer;
+  white-space: nowrap;
+}
+.settabs button:hover {
+  color: var(--ink);
+}
+.settabs button.on {
+  color: var(--primary);
+  border-bottom-color: var(--primary);
+}
+.setlink {
+  border: 0;
+  padding: 0;
+  background: none;
+  font: inherit;
+  font-weight: 600;
+  color: var(--primary);
+  cursor: pointer;
+}
+.setblock {
+  margin-bottom: 20px;
+}
+.setblock-head {
+  margin-bottom: 16px;
+}
+.setblock-head h2 {
+  font-size: 19px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  margin: 0 0 4px;
+}
+.setblock-head p {
+  margin: 0;
+  font-size: 14px;
+  color: var(--ink-soft);
+}
+.setblock-head a {
+  color: var(--primary);
+  font-weight: 600;
+}
+.setactions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 20px;
+}
+.setblock .alertrow:last-of-type {
+  margin-bottom: 0;
+}
+.setwarn {
+  margin: 14px 0 0;
+}
+.achip.soon {
+  color: var(--ink-soft);
+  background: var(--surface-2);
+}
+.setpwd {
+  max-width: 340px;
+}
+.selectish:disabled {
+  cursor: not-allowed;
+  color: var(--ink-faint);
+}
+
 /* alert filter builder */
 .afilters {
   display: grid;
@@ -1881,6 +2004,38 @@ select.selectish {
   height: 17px;
   accent-color: var(--primary);
   cursor: pointer;
+}
+/* two-line .checkitem: label, "em breve" chip, then a description under it */
+.setchannels {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(270px, 1fr));
+  gap: 12px;
+}
+.setchannel {
+  align-items: flex-start;
+  padding: 14px 16px;
+  font-weight: 600;
+  color: var(--ink);
+}
+.setchannel:hover {
+  border-color: var(--primary-soft);
+}
+.setchannel input {
+  flex: none;
+  margin-top: 2px;
+}
+.setchannel b {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14.5px;
+}
+.setchannel span {
+  display: block;
+  margin-top: 3px;
+  font-size: 12.5px;
+  font-weight: 500;
+  color: var(--ink-soft);
 }
 .apreview {
   margin-top: 14px;
@@ -6246,6 +6401,7 @@ select.selectish {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+.usermenu-item,
 .usermenu-signout {
   display: flex;
   align-items: center;
@@ -6260,15 +6416,21 @@ select.selectish {
   font-weight: 600;
   color: var(--ink);
 }
+.usermenu-item {
+  border-bottom: 1px solid var(--line-soft);
+}
+.usermenu-item svg,
 .usermenu-signout svg {
   width: 17px;
   height: 17px;
   color: var(--ink-faint);
 }
+.usermenu-item:hover,
 .usermenu-signout:hover {
   background: var(--surface-2);
   color: var(--primary);
 }
+.usermenu-item:hover svg,
 .usermenu-signout:hover svg {
   color: var(--primary);
 }
