@@ -1,24 +1,20 @@
 "use server";
 
 import * as data from "@/lib/data/alerts";
-import { countProperties, hybridSearch, RESULT_LIMIT } from "@/lib/data";
-import { alertToPropertyFilters } from "@/lib/alerts/filters";
+import { countMatched, hybridSearch, RESULT_LIMIT } from "@/lib/data";
+import { isAnyCriteria } from "@/lib/alerts/criteria";
+import { resolveQueryCriteria } from "@/lib/alerts/resolve";
 import { requireUser } from "@/lib/supabase/server";
-import type { Alert, AlertFilters, AlertPatch } from "@/lib/types";
+import type { Alert, AlertCriteria, AlertPatch, ResolvedAlertQuery } from "@/lib/types";
 
-export async function countAlertMatches(filters: AlertFilters): Promise<number> {
+export async function countAlertMatches(criteria: AlertCriteria): Promise<number | null> {
   await requireUser();
-  const q = filters.q?.trim();
-  const rest = alertToPropertyFilters({ ...filters, q: undefined });
-  if (!q) return countProperties(rest);
+  return isAnyCriteria(criteria) ? null : countMatched(criteria);
+}
 
-  // property_list_page matches q as a substring of search_text ("apartamento vila moreira sao
-  // paulo sp"), so a natural-language alert counts 0. Run the real pipeline, then intersect.
-  const { hits } = await hybridSearch(q);
-  if (!hits.length) return 0;
-  return Object.keys(rest).length
-    ? countProperties({ ...rest, ids: hits.map((h) => h.id) })
-    : hits.length;
+export async function resolveAlertQuery(query: string): Promise<ResolvedAlertQuery> {
+  await requireUser();
+  return resolveQueryCriteria(query);
 }
 
 export async function countDescriptionMatches(
@@ -39,10 +35,10 @@ export async function listAlerts(): Promise<Alert[]> {
 export async function createAlert(
   name: string,
   freq: string,
-  filters?: AlertFilters | null,
+  criteria?: AlertCriteria | null,
 ): Promise<Alert | null> {
   const { supabase, user } = await requireUser();
-  return data.createAlert(supabase, user.id, user.email ?? "", name, freq, filters);
+  return data.createAlert(supabase, user.id, user.email ?? "", name, freq, criteria);
 }
 
 export async function updateAlert(id: string, patch: AlertPatch): Promise<boolean> {

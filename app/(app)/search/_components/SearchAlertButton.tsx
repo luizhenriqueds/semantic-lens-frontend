@@ -1,6 +1,8 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
+import { resolveAlertQuery } from "@/app/actions/alerts";
 import { useAlerts } from "@/lib/alerts";
 import { useToast } from "@/components/ui/Toaster";
 import { IconArrow, IconBell } from "@/lib/icons";
@@ -8,6 +10,7 @@ import { IconArrow, IconBell } from "@/lib/icons";
 export default function SearchAlertButton({ query }: { query: string }) {
   const { alerts, add: addAlert } = useAlerts();
   const toast = useToast();
+  const [saving, setSaving] = useState(false);
 
   const q = query.trim();
   if (!q) return null;
@@ -23,9 +26,27 @@ export default function SearchAlertButton({ query }: { query: string }) {
     );
   }
 
+  // The alert is sent from the resolved filters, never from the query text - so the
+  // search is resolved once, here, and the phrase is kept only as the alert's name.
   const createAlert = async () => {
-    const ok = await addAlert(q, "Aviso diário", { q });
-    toast(ok ? "Alerta criado" : "Você já tem um alerta com esse nome");
+    setSaving(true);
+    try {
+      const { criteria, dropped } = await resolveAlertQuery(q);
+      if (!criteria) {
+        toast("Não conseguimos transformar esta busca em um alerta");
+        return;
+      }
+      const ok = await addAlert(q, "Aviso diário", criteria);
+      if (!ok) {
+        toast("Você já tem um alerta com esse nome");
+        return;
+      }
+      toast(dropped.length ? `Alerta criado, sem ${dropped.join(" e ")}` : "Alerta criado");
+    } catch {
+      toast("Não foi possível criar o alerta");
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
@@ -33,9 +54,11 @@ export default function SearchAlertButton({ query }: { query: string }) {
       type="button"
       className="btn ghost"
       style={{ alignSelf: "center", flexShrink: 0 }}
+      disabled={saving}
       onClick={createAlert}
     >
-      <IconBell width={16} height={16} strokeWidth={1.8} /> Criar alerta desta busca
+      <IconBell width={16} height={16} strokeWidth={1.8} />{" "}
+      {saving ? "Criando alerta…" : "Criar alerta desta busca"}
     </button>
   );
 }

@@ -1,26 +1,27 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { toCadence, toFreq } from "@/lib/alerts/cadence";
-import type { Alert, AlertFilters, AlertPatch } from "@/lib/types";
+import { fromLegacyCriteria, isLegacyCriteria, sanitizeCriteria } from "@/lib/alerts/criteria";
+import type { Alert, AlertCriteria, AlertPatch } from "@/lib/types";
 
 type AlertRow = {
   id: string;
   label: string | null;
   cadence: string;
   is_active: boolean;
-  criteria: AlertFilters | null;
+  criteria: unknown;
 };
 
 const SELECT = "id,label,cadence,is_active,criteria";
 
-const hasCriteria = (c: AlertFilters | null): c is AlertFilters =>
-  c != null && Object.keys(c).length > 0;
+const readCriteria = (raw: unknown): AlertCriteria | null =>
+  isLegacyCriteria(raw) ? fromLegacyCriteria(raw) : sanitizeCriteria(raw);
 
 const toAlert = (r: AlertRow): Alert => ({
   id: r.id,
   name: r.label ?? "",
   freq: toFreq(r.cadence),
   on: r.is_active,
-  filters: hasCriteria(r.criteria) ? r.criteria : undefined,
+  criteria: readCriteria(r.criteria) ?? undefined,
 });
 
 const nameKey = (name: string) => name.trim().toLowerCase();
@@ -33,6 +34,25 @@ async function nameTaken(db: SupabaseClient, name: string, exceptId?: string): P
   );
 }
 
+async function migrateLegacy(db: SupabaseClient, rows: AlertRow[]): Promise<void> {
+  const stale = rows
+    .filter((r) => isLegacyCriteria(r.criteria))
+    .map((r) => ({ id: r.id, criteria: fromLegacyCriteria(r.criteria) }))
+    .filter((r) => r.criteria != null);
+  if (!stale.length) return;
+  const results = await Promise.all(
+    stale.map((r) =>
+      db
+        .from("alerts")
+        .update({ criteria: r.criteria, updated_at: new Date().toISOString() })
+        .eq("id", r.id),
+    ),
+  );
+  for (const { error } of results) {
+    if (error) console.error(`[data] alert criteria migration failed: ${error.message}`);
+  }
+}
+
 export async function listAlerts(db: SupabaseClient): Promise<Alert[]> {
   const { data, error } = await db
     .from("alerts")
@@ -42,7 +62,18 @@ export async function listAlerts(db: SupabaseClient): Promise<Alert[]> {
     console.error(`[data] alerts load failed: ${error.message}`);
     return [];
   }
-  return (data ?? []).map((r) => toAlert(r as AlertRow));
+  const rows = (data ?? []) as AlertRow[];
+  await migrateLegacy(db, rows);
+  return rows.map(toAlert);
+}
+
+export async function getAlert(db: SupabaseClient, id: string): Promise<Alert | null> {
+  const { data, error } = await db.from("alerts").select(SELECT).eq("id", id).maybeSingle();
+  if (error) {
+    console.error(`[data] alert load failed: ${error.message}`);
+    return null;
+  }
+  return data ? toAlert(data as AlertRow) : null;
 }
 
 export async function createAlert(
@@ -51,7 +82,7 @@ export async function createAlert(
   email: string,
   name: string,
   freq: string,
-  filters?: AlertFilters | null,
+  criteria?: AlertCriteria | null,
 ): Promise<Alert | null> {
   if (await nameTaken(db, name)) return null;
   const { data, error } = await db
@@ -61,7 +92,7 @@ export async function createAlert(
       email,
       label: name,
       cadence: toCadence(freq),
-      criteria: filters ?? {},
+      criteria: sanitizeCriteria(criteria) ?? {},
     })
     .select(SELECT)
     .single();
@@ -81,7 +112,7 @@ export async function updateAlert(
   const row: Record<string, unknown> = { updated_at: new Date().toISOString() };
   if (patch.name != null) row.label = patch.name;
   if (patch.freq != null) row.cadence = toCadence(patch.freq);
-  if (patch.filters !== undefined) row.criteria = patch.filters ?? {};
+  if (patch.criteria !== undefined) row.criteria = sanitizeCriteria(patch.criteria) ?? {};
   if (patch.on != null) row.is_active = patch.on;
   const { error } = await db.from("alerts").update(row).eq("id", id);
   if (error) {

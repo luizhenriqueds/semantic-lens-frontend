@@ -20,33 +20,33 @@ export const HIGHLIGHTS: Pool = {
   filters: { minInvestment: 74, minDiscount: 40 },
   sort: "score",
   pageSize: 60,
-  href: "/properties?invest=74&desconto=40&sort=score",
+  href: "/properties?min_investment=74&min_discount=40&sort=score",
 };
 
 // The closing rail reads getUpcomingAuctions rather than a Pool - see the note on
 // `auction_within_days` in lib/data/propertyList.ts. The calendar view is still the
 // right destination for "ver agenda".
-export const CLOSING_HREF = "/properties?prazo=7&view=calendar";
+export const CLOSING_HREF = "/properties?auction_within_days=7&view=calendar";
 
 export const DISCOUNT: Pool = {
   filters: { minDiscount: 58, minInvestment: 60 },
   sort: "desconto",
   pageSize: 40,
-  href: "/properties?desconto=58&invest=60&sort=desconto",
+  href: "/properties?min_discount=58&min_investment=60&sort=discount",
 };
 
 export const BUDGET: Pool = {
   filters: { maxPrice: 100_000, minInvestment: 68 },
   sort: "score",
   pageSize: 40,
-  href: "/properties?preco=100000&invest=68&sort=score",
+  href: "/properties?max_price=100000&min_investment=68&sort=score",
 };
 
 export const FINANCING: Pool = {
   filters: { financing: true, minInvestment: 60 },
   sort: "score",
   pageSize: 40,
-  href: "/properties?fin=1&invest=60&sort=score",
+  href: "/properties?financing=1&min_investment=60&sort=score",
 };
 
 // No occupancy filter in the RPC contract, so this over-fetches and filters in JS.
@@ -68,7 +68,7 @@ const changePool = (kind: PropertyChangeKind): Pool => ({
   },
   sort: "score",
   pageSize: 40,
-  href: `/properties?mudou=${kind}&dias=${CHANGE_WINDOW_DAYS}&invest=${CHANGE_INVEST_MIN}&sort=score`,
+  href: `/properties?change_kind=${kind}&changed_within_days=${CHANGE_WINDOW_DAYS}&min_investment=${CHANGE_INVEST_MIN}&sort=score`,
 });
 
 export const MODALITY_CHANGE = changePool("modality");
@@ -82,6 +82,6 @@ export function goalPool(goal: ProfileKey): Pool {
     filters: { scoreKey: key, scoreMin: GOAL_SCORE_MIN },
     sort: "score",
     pageSize: 40,
-    href: `/properties?goal=${key}&goalMin=${GOAL_SCORE_MIN}&sort=score`,
+    href: `/properties?score_key=${key}&score_min=${GOAL_SCORE_MIN}&sort=score`,
   };
 }

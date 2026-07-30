@@ -19,6 +19,8 @@ export type PropertyFilters = {
   maxPrice?: number;
   minArea?: number;
   poiCats?: string[];
+  /** Named places, by `pois.id` — within `poiRadiusM` of any of them. */
+  poiIds?: number[];
   poiRadiusM?: number;
   maxCenterM?: number;
   minDiscount?: number;

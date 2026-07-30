@@ -16,7 +16,9 @@ export default function InsightStrip({ d }: { d: MarketDashboard }) {
           A agenda está concentrada nesta janela — quase tudo com data marcada fecha em poucos dias.
           A triagem é agora.
         </p>
-        <Link href="/properties?prazo=7&sort=leilao">Ver o que fecha primeiro →</Link>
+        <Link href="/properties?auction_within_days=7&sort=auction">
+          Ver o que fecha primeiro →
+        </Link>
       </div>
       <div className="ins">
         <div className="lab">Oportunidade</div>
@@ -27,7 +29,7 @@ export default function InsightStrip({ d }: { d: MarketDashboard }) {
           São <b>{pctOfBase}%</b> da base ativa. É onde mora a margem — e onde mais vale conferir a
           matrícula.
         </p>
-        <Link href="/properties?desconto=50&sort=desconto">Ver deságios agressivos →</Link>
+        <Link href="/properties?min_discount=50&sort=discount">Ver deságios agressivos →</Link>
       </div>
       <div className="ins">
         <div className="lab">Atenção</div>
@@ -36,7 +38,7 @@ export default function InsightStrip({ d }: { d: MarketDashboard }) {
           Só <b>{countShort(d.occ.vacant)}</b> imóveis estão desocupados. E apenas{" "}
           <b>{d.insights.financing_pct}%</b> aceitam financiamento — planeje o caixa.
         </p>
-        <Link href="/properties?fin=1&sort=score">Ver com financiamento →</Link>
+        <Link href="/properties?financing=1&sort=score">Ver com financiamento →</Link>
       </div>
     </div>
   );

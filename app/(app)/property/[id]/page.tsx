@@ -205,7 +205,7 @@ export default async function PropertyPage({ params }: { params: Promise<{ id: s
                 <>
                   {" "}
                   Faz parte do grupo{" "}
-                  <Link className="inlinelink" href={`/properties?cluster=${p.clusterId}`}>
+                  <Link className="inlinelink" href={`/properties?cluster_id=${p.clusterId}`}>
                     “{p.clusterLabel}”
                   </Link>
                   .

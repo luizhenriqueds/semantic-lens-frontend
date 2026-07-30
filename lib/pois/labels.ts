@@ -1,3 +1,9 @@
+import { titleCase } from "@/lib/format";
+
+// Short single words read as acronyms ("UFMS"); anything longer is a name.
+export const poiPlaceLabel = (name: string): string =>
+  name.length <= 5 && !name.includes(" ") ? name.toUpperCase() : titleCase(name);
+
 export const POI_LABEL: Record<string, string> = {
   university: "Universidade",
   hospital: "Hospital",

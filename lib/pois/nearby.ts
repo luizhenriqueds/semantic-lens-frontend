@@ -14,6 +14,9 @@ export function haversine(lat1: number, lon1: number, lat2: number, lon2: number
 // Max distance for a POI to still count as "nearby" (fallback cap + grid cutoff).
 export const MAX_NEAR_M = 5000;
 
+// Default proximity radius when a filter or phrase names no distance.
+export const POI_RADIUS_M = 2000;
+
 // Returns POIs within `radius` metres of a point, sorted nearest-first and
 // capped at `limit`. Also guarantees the single nearest POI of each category is
 // kept even if it sits just beyond the radius (up to `fallbackRadius`), so the

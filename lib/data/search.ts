@@ -13,7 +13,7 @@ import {
   type PoiQuery,
 } from "@/lib/facets";
 import { semanticCached } from "@/lib/semanticCache";
-import { titleCase } from "@/lib/format";
+import { poiPlaceLabel } from "@/lib/pois";
 import type { Poi, Property } from "@/lib/types";
 import { cached, rows, SEARCH_REVALIDATE, withRetry } from "./client";
 import {
@@ -50,6 +50,10 @@ const rank = (items: Property[], score: (p: Property, i: number) => number): Ran
 async function getCities(): Promise<string[]> {
   const { cities } = await getFilterOptionsRaw();
   return [...new Set(cities.map((c) => c.city).filter(Boolean))];
+}
+
+export async function parseQuery(query: string): Promise<Facets> {
+  return parseFacets(canonicalQuery(query), await getCities());
 }
 
 const SEARCH_INSTRUCTION =
@@ -161,7 +165,7 @@ const POI_FANOUT = 40;
 
 // resolve_pois handles accents, acronyms and same-named places (via city)
 // server-side, so the frontend just relaxes its hints and reads the result.
-async function searchPoisByName(q: PoiQuery, city: string | null): Promise<Poi[]> {
+export async function searchPoisByName(q: PoiQuery, city: string | null): Promise<Poi[]> {
   const name = normalize(q.name);
 
   // Relax the guessed category first, then the city, keeping the strongest
@@ -372,12 +376,6 @@ async function rerankScores(pool: PoolRow[], normalized: string): Promise<number
 function exactFirst(hits: SearchHit[], exact: Set<string>): SearchHit[] {
   if (!exact.size) return hits;
   return [...hits.filter((h) => exact.has(h.id)), ...hits.filter((h) => !exact.has(h.id))];
-}
-
-function poiPlaceLabel(poi: PoiQuery): string {
-  return poi.name.length <= 5 && !poi.name.includes(" ")
-    ? poi.name.toUpperCase()
-    : titleCase(poi.name);
 }
 
 const EMPTY: SearchResult = { hits: [], items: [], fallback: false, fallbackNote: null };
@@ -658,7 +656,7 @@ async function runHybridSearch(query: string): Promise<SearchResult> {
           hits: await semanticRank(pool, facets.normalized, !!facets.type),
           items: null,
           fallback: true,
-          fallbackNote: `Não encontramos imóveis próximos a “${poiPlaceLabel(facets.poi)}”. Mostrando os resultados mais relevantes para o restante da sua busca.`,
+          fallbackNote: `Não encontramos imóveis próximos a “${poiPlaceLabel(facets.poi.name)}”. Mostrando os resultados mais relevantes para o restante da sua busca.`,
         };
       }
 

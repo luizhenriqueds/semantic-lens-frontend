@@ -1,45 +1,48 @@
 import { describe, expect, it } from "vitest";
-import { alertToPropertyFilters, hasAnyFilter } from "./filters";
+import { criteriaChips, describeCriteria } from "./filters";
 
-describe("hasAnyFilter", () => {
-  it("is false for an empty filter and true once any field is set", () => {
-    expect(hasAnyFilter({})).toBe(false);
-    expect(hasAnyFilter({ city: "São Paulo" })).toBe(true);
-    expect(hasAnyFilter({ poiCats: [] })).toBe(false);
-    expect(hasAnyFilter({ poiCats: ["university"] })).toBe(true);
+describe("describeCriteria", () => {
+  it("reads a filter set back as a phrase", () => {
+    expect(
+      describeCriteria({
+        uf: "SP",
+        city: "São Paulo",
+        type: "Casa",
+        max_price: 400_000,
+        min_discount: 20,
+      }),
+    ).toBe("Casa · em São Paulo/SP · desconto ≥ 20% · até R$ 400 mil");
+  });
+
+  it("labels resolved places without names, as the send pipeline does", () => {
+    expect(describeCriteria({ poi_ids: [1412752], poi_radius_m: 3000 })).toBe(
+      "Perto do local selecionado (3,0 km)",
+    );
+    expect(describeCriteria({ poi_ids: [1, 2] })).toBe("Perto dos locais selecionados (2,0 km)");
+  });
+
+  it("joins the branches of an OR", () => {
+    expect(describeCriteria({ any: [{ type: "Casa" }, { type: "Apartamento" }] })).toBe(
+      "Casa ou Apartamento",
+    );
   });
 });
 
-describe("alertToPropertyFilters", () => {
-  it("maps alert fields onto the server filter contract", () => {
-    expect(
-      alertToPropertyFilters({
-        uf: "SP",
-        city: "São Paulo",
-        propertyType: "Casa",
-        maxPrice: 400_000,
-        minDiscount: 20,
-        poiCats: ["university"],
-      }),
-    ).toEqual({
-      uf: "SP",
-      city: "São Paulo",
-      type: "Casa",
-      maxPrice: 400_000,
-      minDiscount: 20,
-      poiCats: ["university"],
-      poiRadiusM: 2000,
-    });
+describe("criteriaChips", () => {
+  it("gives every category its own chip, at the shared radius", () => {
+    expect(criteriaChips({ poi_cats: ["university", "hospital"], poi_radius_m: 1000 })).toEqual([
+      "Universidade · até 1,0 km",
+      "Hospital · até 1,0 km",
+    ]);
   });
 
-  it("defaults a bare minimum score to the investment objective", () => {
-    expect(alertToPropertyFilters({ minScore: 60 })).toEqual({
-      scoreKey: "investment",
-      scoreMin: 60,
-    });
-    expect(alertToPropertyFilters({ minScore: 60, scoreKey: "airbnb" })).toEqual({
-      scoreKey: "airbnb",
-      scoreMin: 60,
-    });
+  it("defaults the radius when the criteria leave it out", () => {
+    expect(criteriaChips({ poi_cats: ["university"] })).toEqual(["Universidade · até 2,0 km"]);
+  });
+
+  it("keeps each branch of an OR whole", () => {
+    expect(
+      criteriaChips({ any: [{ type: "Casa", city: "Bauru" }, { type: "Apartamento" }] }),
+    ).toEqual(["Casa · Bauru", "Apartamento"]);
   });
 });
