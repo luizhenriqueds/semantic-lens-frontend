@@ -22,7 +22,7 @@ import {
 } from "@/lib/alerts";
 import { FREQS, freqOptions } from "@/lib/alerts/cadence";
 import { SCORE_DIMS, SCORE_LABEL, titleCase } from "@/lib/format";
-import { IconArrow, IconBell, IconPencil, IconPlus, IconTrash } from "@/lib/icons";
+import { IconArrow, IconBell, IconPencil, IconPlus, IconSliders, IconTrash } from "@/lib/icons";
 import type {
   AlertCriteria,
   AlertCriteriaSet,
@@ -286,13 +286,15 @@ export default function AlertsClient({ options }: { options: FilterOptions }) {
 
   return (
     <>
-      <button
-        className="btn solid"
-        style={{ marginBottom: 20 }}
-        onClick={() => setCreating((v) => !v)}
-      >
-        <IconPlus /> Criar novo alerta
-      </button>
+      <div className="alertstools">
+        <Link className="alertstools-link" href="/settings">
+          <IconSliders width={17} height={17} strokeWidth={1.8} />
+          Alertas automáticos e canais de envio
+        </Link>
+        <button className="btn solid" onClick={() => setCreating((v) => !v)}>
+          <IconPlus /> Criar novo alerta
+        </button>
+      </div>
 
       {creating && (
         <form className="searchhero" onSubmit={create} style={{ padding: 22 }}>

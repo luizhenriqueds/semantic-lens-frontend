@@ -52,6 +52,18 @@ export function fmtDay(iso: string | null | undefined): string | null {
   return d.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric" });
 }
 
+/** Digits only, capped at a BR mobile number with DDD. */
+export const phoneDigits = (v: string) => v.replace(/\D/g, "").slice(0, 11);
+
+/** Progressive BR mask: 11 9 8765-4321 -> (11) 98765-4321, landlines -> (11) 8765-4321. */
+export function fmtPhone(v: string): string {
+  const d = phoneDigits(v);
+  if (d.length <= 2) return d;
+  if (d.length <= 6) return `(${d.slice(0, 2)}) ${d.slice(2)}`;
+  const tail = d.length <= 10 ? 6 : 7;
+  return `(${d.slice(0, 2)}) ${d.slice(2, tail)}-${d.slice(tail)}`;
+}
+
 export function deriveTitle(tipo: string, quartos: number | null, bairro: string): string {
   const t = tipo || "Imóvel";
   if (quartos && quartos > 0) {

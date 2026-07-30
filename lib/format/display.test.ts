@@ -1,5 +1,14 @@
 import { describe, expect, it } from "vitest";
-import { deriveTitle, fmtDate, fmtDist, money, moneyShort, titleCase } from "./display";
+import {
+  deriveTitle,
+  fmtDate,
+  fmtDist,
+  fmtPhone,
+  money,
+  moneyShort,
+  phoneDigits,
+  titleCase,
+} from "./display";
 
 const EMPTY = "—";
 
@@ -60,5 +69,24 @@ describe("fmtDate", () => {
 
   it("returns a formatted string for a valid ISO date", () => {
     expect(typeof fmtDate("2026-03-05")).toBe("string");
+  });
+});
+
+describe("fmtPhone", () => {
+  it("masks progressively as digits arrive", () => {
+    expect(fmtPhone("1")).toBe("1");
+    expect(fmtPhone("11")).toBe("11");
+    expect(fmtPhone("1198")).toBe("(11) 98");
+    expect(fmtPhone("1198765")).toBe("(11) 9876-5");
+  });
+
+  it("splits landlines at 4 digits and mobiles at 5", () => {
+    expect(fmtPhone("1187654321")).toBe("(11) 8765-4321");
+    expect(fmtPhone("11987654321")).toBe("(11) 98765-4321");
+  });
+
+  it("ignores punctuation and caps at 11 digits", () => {
+    expect(fmtPhone("(11) 98765-4321")).toBe("(11) 98765-4321");
+    expect(phoneDigits("+55 (11) 98765-4321")).toBe("55119876543");
   });
 });

@@ -13,6 +13,7 @@ const SECTION: Record<string, string> = {
   regions: "Regiões",
   alerts: "Meus alertas",
   portfolio: "Minha carteira",
+  settings: "Configurações",
 };
 
 function trail(path: string): Crumb[] {

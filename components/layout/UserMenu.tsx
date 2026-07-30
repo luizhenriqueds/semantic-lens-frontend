@@ -1,8 +1,10 @@
 "use client";
 
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import type { Account } from "@/lib/account";
+import { IconSliders } from "@/lib/icons";
 import { createClient } from "@/lib/supabase/client";
 
 export default function UserMenu({ account }: { account: Account }) {
@@ -66,6 +68,15 @@ export default function UserMenu({ account }: { account: Account }) {
               <span>{email}</span>
             </div>
           </div>
+          <Link
+            className="usermenu-item"
+            href="/settings"
+            role="menuitem"
+            onClick={() => setOpen(false)}
+          >
+            <IconSliders width={18} height={18} strokeWidth={1.8} />
+            Configurações
+          </Link>
           <button className="usermenu-signout" onClick={signOut} disabled={busy} role="menuitem">
             <svg
               viewBox="0 0 24 24"
