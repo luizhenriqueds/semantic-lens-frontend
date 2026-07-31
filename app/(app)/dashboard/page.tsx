@@ -10,6 +10,7 @@ import {
   pickHero,
   seededPick,
 } from "@/lib/discovery";
+import { getEntitlements } from "@/lib/entitlements/server";
 import { getUser } from "@/lib/supabase/server";
 import GoalSection from "./_components/GoalSection";
 import HeroPick from "./_components/HeroPick";
@@ -43,7 +44,7 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
     pageSize: HIGHLIGHTS.pageSize,
   });
 
-  const { supabase, user } = await getUser();
+  const [{ supabase, user }, ent] = await Promise.all([getUser(), getEntitlements()]);
   const seed = daySeed(user?.id ?? null);
   const now = new Date();
 
@@ -74,9 +75,9 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
         <MarketSlot />
       </Suspense>
 
-      {favIds.length > 0 && (
+      {favIds.length > 0 && ent.can("recommendations") && (
         <Suspense fallback={null}>
-          <SavedRailSlot ids={favIds} seed={seed} now={now} />
+          <SavedRailSlot ids={favIds} seed={seed} now={now} limit={ent.limit("recommendations")} />
         </Suspense>
       )}
 
@@ -121,9 +122,11 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
         <CitiesSlot seed={seed} />
       </Suspense>
 
-      <Suspense fallback={<GridSkeleton cells={3} />}>
-        <CollectionsSlot />
-      </Suspense>
+      {ent.can("groups") && (
+        <Suspense fallback={<GridSkeleton cells={3} />}>
+          <CollectionsSlot />
+        </Suspense>
+      )}
     </section>
   );
 }

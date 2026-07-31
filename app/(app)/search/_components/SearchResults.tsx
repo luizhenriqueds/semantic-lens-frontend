@@ -86,7 +86,7 @@ export default async function SearchResults({
             </Link>
           }
         >
-          Tente descrever de outro jeito — o tipo, a cidade e o objetivo ajudam (por exemplo, “casa
+          Tente descrever de outro jeito - o tipo, a cidade e o objetivo ajudam (por exemplo, “casa
           para família em Campo Grande”).
         </EmptyState>
       ) : (

@@ -24,6 +24,7 @@ import {
   VACANT,
   byInvestment,
   goalPool,
+  isDwelling,
   isVacant,
   railSeed,
   seededPick,
@@ -107,7 +108,9 @@ export async function BudgetRailSlot({ seed, now }: SlotProps) {
 }
 
 export async function VacantRailSlot({ seed, now }: SlotProps) {
-  const pool = (await fetchPool(VACANT)).filter((p) => isVacant(p.occupancyStatus));
+  const pool = (await fetchPool(VACANT)).filter(
+    (p) => isVacant(p.occupancyStatus) && isDwelling(p.propertyType),
+  );
   const items = railItems(pool, "vacant", seed);
   return (
     <RailSection
@@ -179,7 +182,12 @@ export async function GoalRailSlot({ goal, seed, now }: SlotProps & { goal: Prof
   );
 }
 
-export async function SavedRailSlot({ ids, seed, now }: SlotProps & { ids: string[] }) {
+export async function SavedRailSlot({
+  ids,
+  seed,
+  now,
+  limit,
+}: SlotProps & { ids: string[]; limit: number | null }) {
   if (!ids.length) return null;
 
   // A saved property can go inactive or lose its photo, and the chip shows its thumbnail.
@@ -190,7 +198,10 @@ export async function SavedRailSlot({ ids, seed, now }: SlotProps & { ids: strin
 
   const recs = await getRecommendations(anchor.id);
 
-  const recIds = [...new Set(recs.filter((r) => (r.similarity ?? 0) >= 0.75).map((r) => r.recId))];
+  // Sliced here, not inside getRecommendations - that read is unstable_cache'd and shared.
+  const recIds = [
+    ...new Set(recs.filter((r) => (r.similarity ?? 0) >= 0.75).map((r) => r.recId)),
+  ].slice(0, limit ?? undefined);
 
   // Not every property has recommendations computed; same city + same type is the fallback.
   let pool = recIds.length ? await getPropertiesByIds(recIds) : [];
@@ -210,7 +221,7 @@ export async function SavedRailSlot({ ids, seed, now }: SlotProps & { ids: strin
   return (
     <RailSection
       title="Porque você salvou este imóvel"
-      why={`mesma cidade e mesmo tipo de ${anchor.propertyType.toLowerCase()} — ordenados por nota`}
+      why={`mesma cidade e mesmo tipo de ${anchor.propertyType.toLowerCase()} - ordenados por nota`}
       moreHref="/portfolio"
       moreLabel="Ver a carteira"
       aside={

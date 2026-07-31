@@ -45,7 +45,7 @@ export default function RegionMarket({ stats }: { stats: MarketStats[] }) {
                   </div>
                 </>
               ) : (
-                <span>—</span>
+                <span>-</span>
               )}
             </div>
           </div>

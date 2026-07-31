@@ -1,9 +1,26 @@
+import UpgradeWall from "@/components/plan/UpgradeWall";
 import EmptyState from "@/components/ui/EmptyState";
 import { getClusters, getClusterStatsAll } from "@/lib/data";
+import { getEntitlements } from "@/lib/entitlements/server";
 import { IconGroups } from "@/lib/icons";
 import GroupsClient from "./_components/GroupsClient";
 
 export default async function GroupsPage() {
+  const ent = await getEntitlements();
+  if (!ent.can("groups")) {
+    return (
+      <section className="view">
+        <div className="pagehead">
+          <h1>Grupos de imóveis parecidos</h1>
+        </div>
+        <UpgradeWall feature="groups" role={ent.role} trial={ent.trial}>
+          Reunimos automaticamente imóveis parecidos entre si, para você comparar opções do mesmo
+          tipo lado a lado.
+        </UpgradeWall>
+      </section>
+    );
+  }
+
   const [clusters, clusterStats] = await Promise.all([getClusters(), getClusterStatsAll()]);
   return (
     <section className="view">

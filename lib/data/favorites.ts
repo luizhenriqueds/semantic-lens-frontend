@@ -20,7 +20,7 @@ export async function setFavorite(
   userId: string,
   propertyId: string,
   saved: boolean,
-): Promise<void> {
+): Promise<boolean> {
   if (saved) {
     const { error } = await db
       .from("favorites")
@@ -28,8 +28,12 @@ export async function setFavorite(
         { user_id: userId, source: SOURCE, property_id: propertyId },
         { onConflict: "user_id,source,property_id", ignoreDuplicates: true },
       );
-    if (error) throw new Error(error.message);
-    return;
+    // The 0078 trigger owns the cap, so a plan_limit hint is the "over quota" answer.
+    if (error) {
+      if (error.hint?.includes("plan_limit")) return false;
+      throw new Error(error.message);
+    }
+    return true;
   }
   const { error } = await db
     .from("favorites")
@@ -37,4 +41,5 @@ export async function setFavorite(
     .eq("source", SOURCE)
     .eq("property_id", propertyId);
   if (error) throw new Error(error.message);
+  return true;
 }

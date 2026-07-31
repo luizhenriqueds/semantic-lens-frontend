@@ -8,6 +8,8 @@ import RegionMapTabs from "@/components/region/RegionMapTabs";
 import SameAddressGroups from "@/components/region/SameAddressGroups";
 import RegionScoreBars from "@/components/region/RegionScoreBars";
 import RegionMarket from "@/components/market/RegionMarket";
+import UpgradeWall from "@/components/plan/UpgradeWall";
+import { getEntitlements } from "@/lib/entitlements/server";
 import {
   getMarketStatsForCity,
   getPoisNear,
@@ -40,6 +42,18 @@ export const dynamic = "force-dynamic";
 
 export default async function RegionPage({ params }: { params: Promise<{ h3: string }> }) {
   const { h3 } = await params;
+  const ent = await getEntitlements();
+  if (!ent.can("regions")) {
+    return (
+      <section className="view">
+        <UpgradeWall feature="regions" role={ent.role} trial={ent.trial}>
+          A leitura completa de cada região: perfil, DNA do bairro, o que existe por perto, preços
+          de mercado e regiões semelhantes.
+        </UpgradeWall>
+      </section>
+    );
+  }
+
   const [region, cellPage, cellPois] = await Promise.all([
     getRegion(h3),
     getPropertiesPage({ filters: { h3 }, sort: "leilao", pageSize: 500 }),
@@ -180,7 +194,7 @@ export default async function RegionPage({ params }: { params: Promise<{ h3: str
               {MEDIA_ROWS.map(({ field, label }) => (
                 <div className="media" key={field}>
                   <span className="l">{label}</span>
-                  <span className="v">{avg(here, field) ?? "—"}</span>
+                  <span className="v">{avg(here, field) ?? "-"}</span>
                 </div>
               ))}
             </div>

@@ -45,7 +45,7 @@ function Histogram({
               key={i}
               className="histo-bar link"
               href={rangeHref(dim, b.from, b.to)}
-              title={`${title} — ver na lista`}
+              title={`${title} - ver na lista`}
               prefetch={false}
               onClick={(e) => {
                 // Plain clicks filter in place; the href stays real for new-tab/share.
@@ -169,21 +169,21 @@ export default function PropertiesAnalysis({
     { k: "Imóveis", v: data.count.toLocaleString("pt-BR") },
     { k: "Preço mediano", v: moneyShort(data.medianPrice) },
     {
-      k: "Faixa (p25–p75)",
+      k: "Faixa (p25-p75)",
       v:
         data.p25Price != null && data.p75Price != null
-          ? `${moneyShort(data.p25Price)} – ${moneyShort(data.p75Price)}`
-          : "—",
+          ? `${moneyShort(data.p25Price)} - ${moneyShort(data.p75Price)}`
+          : "-",
     },
     {
       k: "Desconto mediano",
-      v: data.medianDiscount != null ? `−${Math.round(data.medianDiscount)}%` : "—",
+      v: data.medianDiscount != null ? `−${Math.round(data.medianDiscount)}%` : "-",
     },
-    { k: "Área mediana", v: data.medianArea != null ? `${Math.round(data.medianArea)} m²` : "—" },
+    { k: "Área mediana", v: data.medianArea != null ? `${Math.round(data.medianArea)} m²` : "-" },
     { k: "R$/m² mediano", v: moneyM2(data.medianM2) },
     {
       k: "Nota média",
-      v: data.avgScore != null ? String(data.avgScore) : "—",
+      v: data.avgScore != null ? String(data.avgScore) : "-",
       s:
         data.avgScore != null
           ? `de investimento · ${data.scoredCount} com nota`

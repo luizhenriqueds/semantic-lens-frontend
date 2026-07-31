@@ -10,7 +10,7 @@ import {
   titleCase,
 } from "./display";
 
-const EMPTY = "—";
+const EMPTY = "-";
 
 describe("money", () => {
   it("formats BRL with pt-BR thousands separators", () => {

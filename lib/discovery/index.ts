@@ -2,7 +2,7 @@ export { daySeed, railSeed, seededShuffle } from "./seed";
 export { DISCOVERY_GOALS, parseGoal } from "./goals";
 export { byInvestment, seededPick } from "./sample";
 export { pickHero } from "./hero";
-export { isVacant } from "./occupancy";
+export { isDwelling, isVacant } from "./occupancy";
 export { heroReasons, reasonsFor, type Reason, type ReasonContext } from "./reasons";
 export {
   BUDGET,

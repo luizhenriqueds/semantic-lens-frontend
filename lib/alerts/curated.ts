@@ -1,3 +1,4 @@
+import type { Role } from "@/lib/entitlements";
 import type { CuratedSlug } from "@/lib/types";
 
 export type CuratedAlert = {
@@ -7,12 +8,15 @@ export type CuratedAlert = {
   href: string;
   /** Resolved from the user's carteira, so it sends nothing while the carteira is empty. */
   perUser?: boolean;
+  /** Digests built on a paid surface are reserved for the plan that includes it. */
+  minRole: Role;
 };
 
-// Copy mirrors `pipeline/alerts/curated/types.py:CATALOGUE` in the batch repo, by hand.
+// Copy and minRole mirror `pipeline/alerts/curated/types.py:CATALOGUE` in the batch repo, by hand.
 const CATALOGUE = [
   {
     slug: "closing",
+    minRole: "investor",
     title: "Seus favoritos terminam em breve",
     why: "imóveis que você salvou e cujo prazo está estourando",
     href: "/portfolio",
@@ -20,36 +24,42 @@ const CATALOGUE = [
   },
   {
     slug: "highlights",
+    minRole: "investor",
     title: "Destaques da rodada",
     why: "nota alta de investimento e fachada bem avaliada",
     href: "/properties?min_investment=74&min_visual_score=75&sort=investment",
   },
   {
     slug: "discount",
+    minRole: "professional",
     title: "Deságios que chamam atenção",
     why: "58% ou mais abaixo da avaliação oficial",
     href: "/properties?min_discount=58&min_investment=60&sort=investment",
   },
   {
     slug: "modality-change",
+    minRole: "professional",
     title: "Mudaram de modalidade",
-    why: "mudaram de modalidade nos últimos 30 dias — a maioria com redução de preço",
+    why: "mudaram de modalidade nos últimos 30 dias - a maioria com redução de preço",
     href: "/properties?change_kind=modality&changed_within_days=30&min_investment=60&sort=investment",
   },
   {
     slug: "group",
+    minRole: "professional",
     title: "Coleções em alta",
     why: "grupos de imóveis semelhantes, ordenados pela melhor nota média da rodada",
     href: "/groups",
   },
   {
     slug: "region",
+    minRole: "professional",
     title: "A região em destaque",
     why: "o bairro com a melhor nota média de investimento nesta rodada",
     href: "/regions",
   },
   {
     slug: "goal",
+    minRole: "investor",
     title: "Para o seu objetivo",
     why: "alinhados ao perfil que você mais salva na carteira",
     href: "/properties",
@@ -57,6 +67,7 @@ const CATALOGUE = [
   },
   {
     slug: "saved",
+    minRole: "investor",
     title: "Parecidos com a sua carteira",
     why: "semelhantes aos imóveis que você salvou",
     href: "/portfolio",

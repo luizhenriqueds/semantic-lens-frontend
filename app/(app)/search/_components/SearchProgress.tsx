@@ -8,7 +8,7 @@ const STEPS = [
   { at: 700, text: "Procurando imóveis parecidos…" },
   { at: 1800, text: "Comparando milhares de anúncios…" },
   { at: 3200, text: "Ordenando pelos mais relevantes…" },
-  { at: 6000, text: "Quase lá — esta busca está levando um pouco mais que o normal." },
+  { at: 6000, text: "Quase lá - esta busca está levando um pouco mais que o normal." },
 ];
 
 export default function SearchProgress() {

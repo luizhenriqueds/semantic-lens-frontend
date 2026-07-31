@@ -3,9 +3,21 @@
 import { useCallback } from "react";
 import * as api from "@/app/actions/alerts";
 import { createClientStore } from "@/lib/clientStore";
-import type { Alert, AlertCriteria, AlertPatch } from "@/lib/types";
+import { PLANS } from "@/lib/entitlements";
+import type {
+  Alert,
+  AlertCreateFailure,
+  AlertCreateResult,
+  AlertCriteria,
+  AlertPatch,
+} from "@/lib/types";
 
 export type { Alert } from "@/lib/types";
+
+export const alertError = (reason: AlertCreateFailure) =>
+  reason === "limit"
+    ? `O plano ${PLANS.basic.label} permite ${PLANS.basic.limits.savedSearches} alertas. Veja os planos para criar mais.`
+    : "Você já tem um alerta com esse nome";
 
 const store = createClientStore<Alert[]>([], () => api.listAlerts());
 
@@ -13,11 +25,10 @@ export function useAlerts() {
   const alerts = store.useValue();
 
   const add = useCallback(
-    async (name: string, freq: string, criteria?: AlertCriteria): Promise<boolean> => {
-      const created = await api.createAlert(name, freq, criteria ?? null);
-      if (!created) return false;
-      store.set([created, ...store.get()]);
-      return true;
+    async (name: string, freq: string, criteria?: AlertCriteria): Promise<AlertCreateResult> => {
+      const res = await api.createAlert(name, freq, criteria ?? null);
+      if (res.ok) store.set([res.alert, ...store.get()]);
+      return res;
     },
     [],
   );

@@ -89,7 +89,7 @@ export default function ScoreBreakdown({
     <details className="scorebreak">
       <summary>Como calculamos a nota de investimento</summary>
       <div className="sb-explain">
-        A nota geral de 0 a 100 é um índice ponderado que combina os sinais abaixo — quanto mais
+        A nota geral de 0 a 100 é um índice ponderado que combina os sinais abaixo - quanto mais
         fortes, maior a nota final.
       </div>
       <div className="sb-factors">

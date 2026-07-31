@@ -1,6 +1,8 @@
 import Link from "next/link";
+import UpgradeWall from "@/components/plan/UpgradeWall";
 import EmptyState from "@/components/ui/EmptyState";
 import { getMarketDashboard } from "@/lib/data";
+import { getEntitlements } from "@/lib/entitlements/server";
 import { fmtDay, money } from "@/lib/format";
 import { PROFILE_SHORT, SCORE_LABEL } from "@/lib/format/scores";
 import { IconBuilding } from "@/lib/icons";
@@ -158,6 +160,18 @@ function HBars({
 }
 
 export default async function MarketPage() {
+  const ent = await getEntitlements();
+  if (!ent.can("market")) {
+    return (
+      <section className="view market">
+        <UpgradeWall feature="market" role={ent.role} trial={ent.trial}>
+          Preço por m², tendências de deságio e comparáveis de cada cidade, atualizados a cada
+          rodada.
+        </UpgradeWall>
+      </section>
+    );
+  }
+
   const d = await getMarketDashboard();
 
   if (!d) {
@@ -194,7 +208,7 @@ export default async function MarketPage() {
       <div className="pagehead">
         <h1>Panorama do mercado de leilões</h1>
         <p>
-          Uma leitura de <b>{int(d.kpi.available)} imóveis</b> em oferta hoje no Brasil — deságios,
+          Uma leitura de <b>{int(d.kpi.available)} imóveis</b> em oferta hoje no Brasil - deságios,
           notas de investimento, onde estão e o que se destaca. Recalculado a cada rodada.
         </p>
         {d.computedAt && <p className="updated">Atualizado em {fmtDay(d.computedAt)}</p>}
@@ -232,7 +246,7 @@ export default async function MarketPage() {
           <div className="lab">Oportunidade</div>
           <div className="big">{int(d.insights.discount_50plus)} imóveis</div>
           <p>
-            estão com <b>50% ou mais de deságio</b> sobre a avaliação — é onde mora a margem.
+            estão com <b>50% ou mais de deságio</b> sobre a avaliação - é onde mora a margem.
           </p>
         </div>
         <div className="ins">
@@ -269,7 +283,7 @@ export default async function MarketPage() {
         <div className="card pad">
           <div className="cardhead">
             <h3>Nota de investimento</h3>
-            <span className="k">índice 0–100</span>
+            <span className="k">índice 0-100</span>
           </div>
           <ColBars arr={d.inv} softIdx={[0, 4]} />
         </div>
@@ -302,12 +316,12 @@ export default async function MarketPage() {
                   <span>{c.uf}</span>
                 </div>
                 <div className="num">{int(c.n)}</div>
-                <div className="num dim">{c.sale_median != null ? money(c.sale_median) : "—"}</div>
+                <div className="num dim">{c.sale_median != null ? money(c.sale_median) : "-"}</div>
                 <div className="num dim">
-                  {c.price_m2_median != null ? money(c.price_m2_median) : "—"}
+                  {c.price_m2_median != null ? money(c.price_m2_median) : "-"}
                 </div>
                 <div className="num">
-                  {c.discount_median != null ? `${Math.round(c.discount_median)}%` : "—"}
+                  {c.discount_median != null ? `${Math.round(c.discount_median)}%` : "-"}
                 </div>
                 <div className="num notacell">
                   {c.investment_median != null ? (
@@ -318,7 +332,7 @@ export default async function MarketPage() {
                       <span>{Math.round(c.investment_median)}</span>
                     </>
                   ) : (
-                    "—"
+                    "-"
                   )}
                 </div>
               </Link>
@@ -357,7 +371,7 @@ export default async function MarketPage() {
         <div className="card pad">
           <div className="cardhead">
             <h3>Nota média do mercado por objetivo</h3>
-            <span className="k">média 0–100</span>
+            <span className="k">média 0-100</span>
           </div>
           <div className="dna">
             {dnaRows.map((r) => (
@@ -375,7 +389,7 @@ export default async function MarketPage() {
         </div>
         <div className="card pad">
           <div className="cardhead">
-            <h3>Melhor uso — imóveis classificados</h3>
+            <h3>Melhor uso - imóveis classificados</h3>
             <span className="k">perfil dominante</span>
           </div>
           <HBars arr={profRows.map((p) => ({ key: p.key, label: p.label, n: p.n }))} />

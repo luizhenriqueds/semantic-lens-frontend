@@ -30,7 +30,7 @@ export function regionTags(region: Pick<Region, "topTags" | "dna">): string[] {
 
 /* ---------- /regions index: shape shared by the loader and the client ---------- */
 
-// Each added key doubles the rankings the loader precomputes — see buildIndex.
+// Each added key doubles the rankings the loader precomputes - see buildIndex.
 export const REGION_SORTS = [
   { key: "numProps", label: "Mais imóveis" },
   { key: "commercial", label: "Comercial" },

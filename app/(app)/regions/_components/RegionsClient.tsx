@@ -127,19 +127,19 @@ export default function RegionsClient({ index }: { index: RegionsIndex }) {
         <RegionStat
           Icon={IconPin}
           label="Maior conveniência"
-          value={bestConv ? Math.round(bestConv.scores.convenience ?? 0) : "—"}
+          value={bestConv ? Math.round(bestConv.scores.convenience ?? 0) : "-"}
           region={bestConv}
         />
         <RegionStat
           Icon={IconBuilding}
           label="Maior potencial comercial"
-          value={bestComm ? Math.round(bestComm.scores.commercial ?? 0) : "—"}
+          value={bestComm ? Math.round(bestComm.scores.commercial ?? 0) : "-"}
           region={bestComm}
         />
         <RegionStat
           Icon={IconStar}
           label="Maior potencial de temporada"
-          value={bestAir ? Math.round(bestAir.scores.airbnb ?? 0) : "—"}
+          value={bestAir ? Math.round(bestAir.scores.airbnb ?? 0) : "-"}
           region={bestAir}
         />
       </div>

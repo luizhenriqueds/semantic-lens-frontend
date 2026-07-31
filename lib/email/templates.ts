@@ -16,7 +16,7 @@ export function signupVerification({ name, url }: { name?: string; url: string }
         p("Clique no botão abaixo para validar seu e-mail e concluir o cadastro."),
         button(url, "Confirmar e-mail"),
         note(
-          `O link vale por <b>24 horas</b> e pode ser usado uma única vez. Se você não criou uma conta na Lavra, é só ignorar esta mensagem — nada será ativado.`,
+          `O link vale por <b>24 horas</b> e pode ser usado uma única vez. Se você não criou uma conta na Lavra, é só ignorar esta mensagem - nada será ativado.`,
         ),
         `<div style="margin:24px 0 0">${fallbackLink(url)}</div>`,
       ].join(""),
@@ -31,14 +31,14 @@ export function welcome({ name, url }: { name?: string; url: string }): Email {
       preheader: "Sua conta está ativa. Veja por onde começar.",
       title: "Sua conta está ativa",
       body: [
-        p(`${hi(name)} Tudo certo com seu e-mail — sua conta na Lavra já está liberada.`),
+        p(`${hi(name)} Tudo certo com seu e-mail - sua conta na Lavra já está liberada.`),
         p(
           "Reunimos milhares de leilões em um painel só, com notas fáceis de comparar. Um bom começo:",
         ),
         features([
           {
             title: "Busque em português, sem dropdowns",
-            body: "Descreva o imóvel que você quer — “casa para reformar e revender na zona sul de SP” — e os resultados vêm ordenados por afinidade com o seu objetivo.",
+            body: "Descreva o imóvel que você quer - “casa para reformar e revender na zona sul de SP” - e os resultados vêm ordenados por afinidade com o seu objetivo.",
           },
           {
             title: "Alertas na hora certa",
@@ -76,7 +76,7 @@ export function signin({ name, url }: { name?: string; url: string }): Email {
         p(`${hi(name)} Use o botão abaixo para acessar sua conta.`),
         button(url, "Entrar na minha conta"),
         note(
-          `O link expira em <b>1 hora</b> e só pode ser usado uma vez. Se você não pediu este acesso, ignore este e-mail — sua conta segue protegida.`,
+          `O link expira em <b>1 hora</b> e só pode ser usado uma vez. Se você não pediu este acesso, ignore este e-mail - sua conta segue protegida.`,
         ),
         `<div style="margin:24px 0 0">${fallbackLink(url)}</div>`,
       ].join(""),

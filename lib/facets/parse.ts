@@ -59,7 +59,7 @@ export function isStructural(f: Facets): boolean {
 const POI_CATEGORY_WORDS = new Set(POI_CATEGORY_KEYWORDS.flatMap(([kws]) => kws));
 
 // True when the POI phrase is only a category word (e.g. a university type) with
-// no specific place name — "near any of this kind" vs a named place.
+// no specific place name - "near any of this kind" vs a named place.
 export function isPoiCategoryOnly(name: string): boolean {
   const words = normalize(name).split(" ").filter(Boolean);
   return words.length > 0 && words.every((w) => POI_CATEGORY_WORDS.has(w));

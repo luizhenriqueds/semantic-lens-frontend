@@ -28,7 +28,7 @@ export default function ScoreBars({ scores }: { scores: Scores }) {
                   {v == null && " Esta nota não se aplica a este tipo de imóvel."}
                 </Hint>
               </span>
-              <span className="num">{v == null ? "—" : Math.round(v)}</span>
+              <span className="num">{v == null ? "-" : Math.round(v)}</span>
             </div>
             <div className="track">
               <i style={{ width: `${v == null ? 0 : Math.round(v)}%` }} />

@@ -15,11 +15,11 @@ const DIMS: Record<RangeDim, { label: string; fmt: (v: number) => string }> = {
 
 export const fmtValue = (dim: RangeDim, v: number) => DIMS[dim].fmt(v);
 
-// "R$ 100 mil – R$ 200 mil" / "90 ou mais"
+// "R$ 100 mil - R$ 200 mil" / "90 ou mais"
 export function fmtBucket(dim: RangeDim, from: number, to: number): string {
   return to === Infinity
     ? `${fmtValue(dim, from)} ou mais`
-    : `${fmtValue(dim, from)} – ${fmtValue(dim, to)}`;
+    : `${fmtValue(dim, from)} - ${fmtValue(dim, to)}`;
 }
 
 const isDim = (v: string): v is RangeDim => v in DIMS;

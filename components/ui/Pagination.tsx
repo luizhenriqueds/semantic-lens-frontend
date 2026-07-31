@@ -52,7 +52,7 @@ export default function Pagination({
         ›
       </button>
       <div className="info">
-        Mostrando {from}–{to} de {total}
+        Mostrando {from}-{to} de {total}
       </div>
     </div>
   );

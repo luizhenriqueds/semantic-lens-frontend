@@ -5,6 +5,10 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { setCuratedState, updateUserSettings } from "@/app/actions/settings";
 import PasswordInput from "@/components/auth/PasswordInput";
+import PlansPanel from "./PlansPanel";
+import ThemeChoice from "./ThemeChoice";
+import PlanBadge from "@/components/plan/PlanBadge";
+import { usePlan } from "@/components/plan/PlanProvider";
 import { useToast } from "@/components/ui/Toaster";
 import { CURATED_ALERTS } from "@/lib/alerts/curated";
 import { fmtPhone, phoneDigits } from "@/lib/format";
@@ -12,10 +16,11 @@ import { IconArrow, IconBell } from "@/lib/icons";
 import { createClient } from "@/lib/supabase/client";
 import type { CuratedSlug, CuratedStates, NotificationChannel, UserSettings } from "@/lib/types";
 
-type Tab = "conta" | "notificacoes" | "seguranca";
+type Tab = "conta" | "plano" | "notificacoes" | "seguranca";
 
 const TABS: { key: Tab; label: string }[] = [
   { key: "conta", label: "Conta" },
+  { key: "plano", label: "Plano" },
   { key: "notificacoes", label: "Notificações" },
   { key: "seguranca", label: "Segurança" },
 ];
@@ -50,6 +55,8 @@ export default function SettingsClient({
 
   const [states, setStates] = useState(curated);
   const [pending, setPending] = useState<CuratedSlug | null>(null);
+  const { atLeast, isAdmin } = usePlan();
+  const tabs = isAdmin ? TABS.filter((t) => t.key !== "plano") : TABS;
 
   const digits = phoneDigits(phone);
   const phoneShort = digits.length > 0 && digits.length < 10;
@@ -117,7 +124,7 @@ export default function SettingsClient({
   return (
     <>
       <div className="settabs" role="tablist">
-        {TABS.map((t) => (
+        {tabs.map((t) => (
           <button
             key={t.key}
             type="button"
@@ -181,24 +188,43 @@ export default function SettingsClient({
         </form>
       )}
 
+      {tab === "conta" && (
+        <div className="infoblock setblock">
+          <div className="setblock-head">
+            <h2>Aparência</h2>
+            <p>Vale só neste navegador - a preferência fica salva no aparelho.</p>
+          </div>
+          <ThemeChoice />
+        </div>
+      )}
+
+      {tab === "plano" && !isAdmin && <PlansPanel />}
+
       {tab === "notificacoes" && (
         <>
           <form className="infoblock setblock" onSubmit={saveChannels}>
             <div className="setblock-head">
               <h2>Canais de envio</h2>
-              <p>Por onde os avisos chegam — vale para os seus alertas e para os automáticos.</p>
+              <p>Por onde os avisos chegam - vale para os seus alertas e para os automáticos.</p>
             </div>
 
             <div className="setchannels">
               {CHANNEL_COPY.map((c) => {
-                const on = channels.includes(c.key);
+                const locked = c.key === "whatsapp" && !atLeast("professional");
+                const on = !locked && channels.includes(c.key);
                 return (
                   <label className={`checkitem setchannel${on ? " on" : ""}`} key={c.key}>
-                    <input type="checkbox" checked={on} onChange={() => toggleChannel(c.key)} />
+                    <input
+                      type="checkbox"
+                      checked={on}
+                      disabled={locked}
+                      onChange={() => toggleChannel(c.key)}
+                    />
                     <div>
                       <b>
                         {c.label}
                         {c.soon && <span className="achip soon">em breve</span>}
+                        {locked && <PlanBadge minRole="professional" />}
                       </b>
                       <span>{c.hint}</span>
                     </div>
@@ -212,7 +238,7 @@ export default function SettingsClient({
               <p className="searchnote setwarn">
                 {channels.length
                   ? "Só o e-mail está em funcionamento hoje. Sem ele marcado, você não receberá avisos."
-                  : "Sem nenhum canal marcado você não receberá avisos — nem dos seus alertas, nem dos automáticos."}
+                  : "Sem nenhum canal marcado você não receberá avisos - nem dos seus alertas, nem dos automáticos."}
               </p>
             )}
             {missingPhone && (
@@ -235,14 +261,15 @@ export default function SettingsClient({
             <div className="setblock-head">
               <h2>Alertas automáticos</h2>
               <p>
-                Seleções que a Lavra monta e envia toda semana — você não precisa criar nenhuma
+                Seleções que a Lavra monta e envia toda semana - você não precisa criar nenhuma
                 regra. Desative as que não interessam. Para alertas com seus próprios filtros, use{" "}
                 <Link href="/alerts">Meus alertas</Link>.
               </p>
             </div>
 
             {CURATED_ALERTS.map((a) => {
-              const on = states[a.slug] ?? true;
+              const locked = !atLeast(a.minRole);
+              const on = !locked && (states[a.slug] ?? true);
               return (
                 <div className="alertrow" key={a.slug}>
                   <div className="ai">
@@ -250,9 +277,10 @@ export default function SettingsClient({
                   </div>
                   <div className="info">
                     <b>{a.title}</b>
-                    {a.perUser && (
+                    {(a.perUser || locked) && (
                       <div className="achips">
-                        <span className="achip">usa a sua carteira</span>
+                        {a.perUser && <span className="achip">usa a sua carteira</span>}
+                        {locked && <PlanBadge minRole={a.minRole} />}
                       </div>
                     )}
                     <p>{a.why}</p>
@@ -268,7 +296,7 @@ export default function SettingsClient({
                     <button
                       className={`toggle${on ? " on" : ""}`}
                       type="button"
-                      disabled={pending === a.slug}
+                      disabled={locked || pending === a.slug}
                       aria-label={`Ativar ou desativar ${a.title}`}
                       aria-pressed={on}
                       onClick={() => toggleCurated(a.slug, a.title, !on)}

@@ -1,7 +1,14 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { toCadence, toFreq } from "@/lib/alerts/cadence";
 import { fromLegacyCriteria, isLegacyCriteria, sanitizeCriteria } from "@/lib/alerts/criteria";
-import type { Alert, AlertCriteria, AlertPatch, CuratedSlug, CuratedStates } from "@/lib/types";
+import type {
+  Alert,
+  AlertCreateResult,
+  AlertCriteria,
+  AlertPatch,
+  CuratedSlug,
+  CuratedStates,
+} from "@/lib/types";
 
 type AlertRow = {
   id: string;
@@ -30,12 +37,18 @@ const toAlert = (r: AlertRow): Alert => ({
 
 const nameKey = (name: string) => name.trim().toLowerCase();
 
-async function nameTaken(db: SupabaseClient, name: string, exceptId?: string): Promise<boolean> {
+/** One read serves both checks: the name clash and how many saved searches already exist. */
+async function savedSearches(db: SupabaseClient): Promise<{ id: string; label: string }[]> {
   const { data, error } = await db.from("alerts").select("id,label").eq("kind", KIND);
   if (error) throw new Error(error.message);
-  return (data ?? []).some(
-    (a) => a.id !== exceptId && nameKey((a.label as string) ?? "") === nameKey(name),
-  );
+  return (data ?? []) as { id: string; label: string }[];
+}
+
+const taken = (rows: { id: string; label: string }[], name: string, exceptId?: string) =>
+  rows.some((a) => a.id !== exceptId && nameKey(a.label ?? "") === nameKey(name));
+
+async function nameTaken(db: SupabaseClient, name: string, exceptId?: string): Promise<boolean> {
+  return taken(await savedSearches(db), name, exceptId);
 }
 
 async function migrateLegacy(db: SupabaseClient, rows: AlertRow[]): Promise<void> {
@@ -93,8 +106,11 @@ export async function createAlert(
   name: string,
   freq: string,
   criteria?: AlertCriteria | null,
-): Promise<Alert | null> {
-  if (await nameTaken(db, name)) return null;
+  limit?: number | null,
+): Promise<AlertCreateResult> {
+  const existing = await savedSearches(db);
+  if (taken(existing, name)) return { ok: false, reason: "duplicate" };
+  if (limit != null && existing.length >= limit) return { ok: false, reason: "limit" };
   const { data, error } = await db
     .from("alerts")
     .insert({
@@ -109,9 +125,10 @@ export async function createAlert(
     .single();
   if (error) {
     console.error(`[data] alert create failed: ${error.message}`);
-    return null;
+    // The 0078 trigger is the backstop when the count above races another tab.
+    return { ok: false, reason: error.hint?.includes("plan_limit") ? "limit" : "duplicate" };
   }
-  return toAlert(data as AlertRow);
+  return { ok: true, alert: toAlert(data as AlertRow) };
 }
 
 export async function updateAlert(

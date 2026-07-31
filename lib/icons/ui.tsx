@@ -52,6 +52,12 @@ export const IconBell = (p: P) => (
     <path d="M10 20a2 2 0 0 0 4 0" />
   </svg>
 );
+export const IconLock = (p: P) => (
+  <svg {...base(p)}>
+    <rect x="4.5" y="10.5" width="15" height="10" rx="2.5" />
+    <path d="M8 10.5V7.5a4 4 0 0 1 8 0v3" />
+  </svg>
+);
 export const IconInfo = (p: P) => (
   <svg {...base(p)}>
     <circle cx="12" cy="12" r="9" />

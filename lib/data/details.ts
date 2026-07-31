@@ -2,7 +2,7 @@ import { supabase } from "@/lib/supabase";
 import type { PriceHistoryPoint, Recommendation, ScoreExplain, ScoreTerm } from "@/lib/types";
 import { cached, num, rows, withRetry } from "./client";
 
-const dashless = (s: string) => s.replace(/[—–]/g, "-");
+const dashless = (s: string) => s.replace(/[--]/g, "-");
 const IMPACTS = ["ajuda", "neutro", "pesa"];
 
 // The `components` JSONB is heavy, so it is fetched per-property rather than

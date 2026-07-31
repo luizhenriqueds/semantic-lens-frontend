@@ -3,12 +3,14 @@
 import { useState } from "react";
 import Link from "next/link";
 import { resolveAlertQuery } from "@/app/actions/alerts";
-import { useAlerts } from "@/lib/alerts";
+import { usePlan } from "@/components/plan/PlanProvider";
+import { alertError, useAlerts } from "@/lib/alerts";
 import { useToast } from "@/components/ui/Toaster";
 import { IconArrow, IconBell } from "@/lib/icons";
 
 export default function SearchAlertButton({ query }: { query: string }) {
   const { alerts, add: addAlert } = useAlerts();
+  const { require } = usePlan();
   const toast = useToast();
   const [saving, setSaving] = useState(false);
 
@@ -29,6 +31,7 @@ export default function SearchAlertButton({ query }: { query: string }) {
   // The alert is sent from the resolved filters, never from the query text - so the
   // search is resolved once, here, and the phrase is kept only as the alert's name.
   const createAlert = async () => {
+    if (!require("savedSearches")) return;
     setSaving(true);
     try {
       const { criteria, dropped } = await resolveAlertQuery(q);
@@ -36,9 +39,9 @@ export default function SearchAlertButton({ query }: { query: string }) {
         toast("Não conseguimos transformar esta busca em um alerta");
         return;
       }
-      const ok = await addAlert(q, "Aviso diário", criteria);
-      if (!ok) {
-        toast("Você já tem um alerta com esse nome");
+      const res = await addAlert(q, "Aviso diário", criteria);
+      if (!res.ok) {
+        toast(alertError(res.reason));
         return;
       }
       toast(dropped.length ? `Alerta criado, sem ${dropped.join(" e ")}` : "Alerta criado");

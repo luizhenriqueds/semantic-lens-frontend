@@ -64,7 +64,7 @@ export type MarketDashboard = {
 };
 
 // The MV picks `opp` on nota + deságio alone, so a bad facade photo can lead the
-// section. Same selection, plus a floor on the visual score — re-queried rather
+// section. Same selection, plus a floor on the visual score - re-queried rather
 // than filtered so the grid still fills eight cards.
 const OPP_MIN_VISUAL_SCORE = 70;
 const OPP_MIN_DISCOUNT = 50;

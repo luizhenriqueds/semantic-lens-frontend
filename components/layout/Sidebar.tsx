@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import LavraLogo from "@/components/brand/LavraLogo";
+import NavLink from "@/components/layout/NavLink";
 import { NAV } from "@/components/layout/navItems";
 
 export default function Sidebar() {
@@ -24,17 +25,8 @@ export default function Sidebar() {
 
       <div className="navlabel">Menu</div>
       {/* title + aria-label carry the name when the tablet rail hides .txt */}
-      {NAV.map(({ href, label, Icon }) => (
-        <Link
-          key={href}
-          href={href}
-          title={label}
-          aria-label={label}
-          className={`navbtn${isActive(href) ? " active" : ""}`}
-        >
-          <Icon />
-          <span className="txt">{label}</span>
-        </Link>
+      {NAV.map((item) => (
+        <NavLink key={item.href} item={item} active={isActive(item.href)} />
       ))}
 
       <div className="spacer" />

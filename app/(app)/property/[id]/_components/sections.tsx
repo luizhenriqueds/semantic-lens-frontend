@@ -15,6 +15,7 @@ import {
   getScoreExplain,
   isListable,
 } from "@/lib/data";
+import { getEntitlements } from "@/lib/entitlements/server";
 import type { Property } from "@/lib/types";
 
 // Each section owns its query and streams in independently, so the slowest one
@@ -72,6 +73,9 @@ export async function MarketSlot({ p }: { p: Property }) {
 }
 
 export async function RecommendationsSlot({ id }: { id: string }) {
+  const ent = await getEntitlements();
+  if (!ent.can("recommendations")) return null;
+  const limit = ent.limit("recommendations") ?? undefined;
   const recs = await getRecommendations(id);
   // Only surface recommendations that are a strong match (≥ 75%).
   const strong = recs.filter((r) => Math.round((r.similarity ?? 0) * 100) >= 75);
@@ -86,7 +90,8 @@ export async function RecommendationsSlot({ id }: { id: string }) {
         const p = byId.get(r.recId);
         return p ? { p, match: Math.min(100, Math.round((r.similarity ?? 0) * 100)) } : null;
       })
-      .filter((x): x is RecItem => x !== null);
+      .filter((x): x is RecItem => x !== null)
+      .slice(0, limit);
 
   return (
     <>
