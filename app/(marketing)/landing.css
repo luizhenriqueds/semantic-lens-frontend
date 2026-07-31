@@ -214,6 +214,11 @@
   display: block;
 }
 @media (max-width: 900px) {
+  /* The frosted bar is legible over the airy desktop layout, but on a phone every section
+     scrolls dense text under 72px of it and the headings read as sliced. */
+  .lp-nav {
+    background: var(--bg);
+  }
   .lp-navtoggle {
     display: grid;
   }
@@ -993,6 +998,16 @@ section.lp-deep + section.lp-band {
   font-family: "JetBrains Mono", monospace;
   font-size: 12px;
   color: var(--primary-soft);
+}
+/* One per row: left-aligned art and copy across a full-width card reads as unbalanced. Must
+   follow the base rule, which sets text-align at the same specificity. */
+@media (max-width: 480px) {
+  .lp-usecard {
+    text-align: center;
+  }
+  .lp-usecard .lp-spot {
+    margin-inline: auto;
+  }
 }
 
 /* market price viz */
@@ -2058,6 +2073,20 @@ footer.lp-foot .lp-fine {
   color: var(--ink-soft);
   line-height: 1.45;
 }
+/* Heading over the non-Feature capabilities listed on a card (PLAN_INCLUDES). */
+.lp-plan .lp-pincludes {
+  margin: -8px 0 12px;
+  font-size: 11.5px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+}
+/* Only the last list stretches, so the CTA stays pinned to the bottom of every card. */
+.lp-plan ul:not(:last-of-type) {
+  flex: 0 0 auto;
+  margin-bottom: 18px;
+}
 .lp-plan li svg {
   width: 17px;
   height: 17px;
@@ -2433,6 +2462,12 @@ footer.lp-foot .lp-fine {
   opacity: 0.5;
   cursor: not-allowed;
 }
+.lp-modal-error {
+  margin: 10px 0 0;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--warn);
+}
 .lp-modal-done {
   text-align: center;
   padding: 8px 0;
@@ -2452,6 +2487,257 @@ footer.lp-foot .lp-fine {
   height: 28px;
   stroke-width: 2.2;
 }
+/* ---------- API waitlist: hub variant (.design-experiments/api-waitlist/variant-a-hub.html) ----- */
+.lp-modal.lp-hub {
+  max-width: 920px;
+  max-height: 92vh;
+  padding: 0;
+  border-radius: 22px;
+}
+.lp-hub-top {
+  display: grid;
+  grid-template-columns: 1.05fr 0.95fr;
+}
+.lp-hub-pane {
+  padding: 34px 34px 30px;
+  background: linear-gradient(180deg, var(--primary-wash), transparent 55%);
+  border-right: 1px solid var(--line);
+}
+.lp-modal.lp-hub h3 {
+  margin: 0 0 8px;
+  font-size: 21px;
+  line-height: 1.15;
+}
+.lp-hub-lede {
+  margin: 0 0 22px;
+  max-width: 46ch;
+  font-size: 14px;
+  color: var(--ink-soft);
+}
+
+.lp-hubwrap {
+  position: relative;
+  width: 100%;
+  max-width: 400px;
+  margin: 0 auto 10px;
+  /* The pentagon needs the vertical room to keep the five cards apart. */
+  aspect-ratio: 440 / 392;
+}
+.lp-hublines {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+.lp-hublines line {
+  stroke: var(--line);
+  stroke-width: 2;
+  stroke-dasharray: 5 6;
+  transition:
+    stroke 0.2s ease,
+    stroke-dasharray 0.2s ease;
+}
+.lp-hublines line.lp-on {
+  stroke: var(--primary);
+  stroke-width: 2.4;
+  stroke-dasharray: none;
+}
+.lp-hub-center {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  /* Above the nodes: the pentagon closes in on the hub as the labels wrap. */
+  z-index: 3;
+  transform: translate(-50%, -50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+.lp-hub-badge {
+  width: 64px;
+  height: 64px;
+  border-radius: 18px;
+  background: var(--primary);
+  color: var(--surface);
+  display: grid;
+  place-items: center;
+  box-shadow: 0 10px 24px -8px rgba(var(--shadow), 0.4);
+}
+.lp-hub-badge svg {
+  width: 30px;
+  height: 30px;
+}
+.lp-hub-label {
+  font-family: "JetBrains Mono", ui-monospace, monospace;
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+  color: var(--ink-soft);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 100px;
+  padding: 3px 10px;
+}
+.lp-hub-node {
+  position: absolute;
+  z-index: 2;
+  width: 116px;
+  transform: translate(-50%, -50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 9px 6px;
+  text-align: center;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  cursor: pointer;
+  transition:
+    border-color 0.15s ease,
+    background 0.15s ease,
+    transform 0.15s ease;
+}
+.lp-hub-node:hover {
+  border-color: var(--primary-soft);
+  transform: translate(-50%, -50%) translateY(-2px);
+}
+.lp-hub-node.lp-on {
+  background: var(--primary-wash);
+  border-color: var(--primary-soft);
+}
+.lp-hub-node .lp-ic {
+  width: 30px;
+  height: 30px;
+  border-radius: 9px;
+  display: grid;
+  place-items: center;
+  background: var(--surface-2);
+  color: var(--ink-soft);
+}
+.lp-hub-node.lp-on .lp-ic {
+  background: var(--primary);
+  color: var(--surface);
+}
+.lp-hub-node .lp-ic svg {
+  width: 16px;
+  height: 16px;
+  stroke-width: 2;
+}
+.lp-hub-node b {
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1.2;
+}
+.lp-hub-node > span:last-child {
+  font-size: 10px;
+  line-height: 1.25;
+  color: var(--ink-faint);
+}
+.lp-hub-node.lp-on > span:last-child {
+  color: var(--ink-soft);
+}
+.lp-hub-hint {
+  margin-top: 6px;
+  text-align: center;
+  font-size: 12px;
+  color: var(--ink-faint);
+}
+.lp-hub-hint b {
+  color: var(--ink-soft);
+}
+
+.lp-hub-form {
+  padding: 34px 34px 30px;
+}
+.lp-hub-form h3 {
+  font-size: 18px;
+}
+.lp-modal.lp-hub .lp-modal-done {
+  padding: 56px 34px;
+}
+
+.lp-apipeek {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 22px;
+  align-items: center;
+  padding: 20px 34px 26px;
+  border-top: 1px solid var(--line);
+  background: var(--surface-2);
+}
+.lp-peek-lbl {
+  max-width: 22ch;
+  font-size: 12.5px;
+  color: var(--ink-soft);
+}
+.lp-peek-lbl b {
+  display: block;
+  margin-bottom: 3px;
+  font-size: 14px;
+  color: var(--ink);
+}
+.lp-codebox {
+  margin: 0;
+  padding: 14px 16px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  font-family: "JetBrains Mono", ui-monospace, monospace;
+  font-size: 12px;
+  line-height: 1.6;
+  overflow-x: auto;
+}
+.lp-codebox .lp-req,
+.lp-codebox .lp-k {
+  color: var(--primary-soft);
+  font-weight: 600;
+}
+.lp-codebox .lp-s {
+  color: var(--ink);
+}
+.lp-codebox .lp-n {
+  color: var(--warn);
+}
+.lp-codebox .lp-muted {
+  color: var(--ink-faint);
+}
+
+@media (max-width: 800px) {
+  .lp-hub-top,
+  .lp-apipeek {
+    grid-template-columns: 1fr;
+  }
+  .lp-hub-pane {
+    border-right: 0;
+    border-bottom: 1px solid var(--line);
+  }
+}
+/* Below this the pentagon labels collide, so the nodes drop their second line. */
+@media (max-width: 460px) {
+  .lp-hub-node {
+    width: 104px;
+    padding: 8px 5px;
+  }
+  .lp-hub-node > span:last-child {
+    display: none;
+  }
+  .lp-hub-badge {
+    width: 52px;
+    height: 52px;
+    border-radius: 15px;
+  }
+  .lp-hub-pane,
+  .lp-hub-form {
+    padding: 26px 20px 22px;
+  }
+  .lp-apipeek {
+    padding: 18px 20px 22px;
+  }
+}
+
 .lp-modal-done p {
   color: var(--ink-soft);
   font-size: 14.5px;
@@ -2495,6 +2781,10 @@ footer.lp-foot .lp-fine {
     scroll-snap-align: start;
     min-width: 0;
   }
+  /* The "mais popular" pill hangs above the card, and the scroller clips its overflow. */
+  .lp-plans-grid.lp-m-slide {
+    padding-top: 18px;
+  }
   .lp-m-slide > .lp-reveal {
     opacity: 1;
     transform: none;
@@ -2504,9 +2794,16 @@ footer.lp-foot .lp-fine {
     position: static;
     margin-bottom: 0;
   }
+  /* The vertical rhythm between stacked layers becomes dead space inside a slide. */
+  .lp-m-slide > .lp-layer + .lp-layer {
+    margin-top: 0;
+    padding-top: 0;
+    border-top: 0;
+  }
   .lp-m-slide .lp-lcard {
     height: 100%;
     min-height: 0;
+    align-content: start;
   }
   .lp-m-slide .lp-lviz {
     display: none;
@@ -2811,6 +3108,13 @@ footer.lp-foot .lp-fine {
   }
   .lp-sc-reggrid {
     gap: 20px;
+  }
+  /* Single column across the full wrap turns a card into a poster on a tablet. Phones are
+     narrower than the cap, so they are unaffected. */
+  .lp-showcase,
+  .lp-sc-region {
+    max-width: 620px;
+    margin-inline: auto;
   }
 }
 

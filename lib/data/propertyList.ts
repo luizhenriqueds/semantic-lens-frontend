@@ -153,6 +153,24 @@ export function getMatchedPage(
   return cachedPage(JSON.stringify(criteria), sort, Math.max(1, page), pageSize);
 }
 
+// Uncached on purpose: routing a several-thousand-row export through `cachedPage` would evict the
+// hot 24-row pages. Same RPC; `total` comes back unlimited, so the caller can tell it truncated.
+export function getPropertiesForExport(
+  filters: PropertyFilters,
+  sort: PropertySort,
+  limit: number,
+): Promise<PropertyPage> {
+  return loadPropertiesPage(JSON.stringify(toRpcFilters(filters)), sort, 1, limit);
+}
+
+export function getMatchedForExport(
+  criteria: AlertCriteriaSet,
+  sort: PropertySort,
+  limit: number,
+): Promise<PropertyPage> {
+  return loadPropertiesPage(JSON.stringify(criteria), sort, 1, limit);
+}
+
 const MV_COLS = "*";
 
 // Chunks are independent reads - issued together, not in series.

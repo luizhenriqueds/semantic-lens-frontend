@@ -12,6 +12,7 @@ describe("plan matrix", () => {
       "recommendations",
       "advancedFilters",
       "analysisView",
+      "marketCompare",
       "calendarView",
       "market",
       "regions",
@@ -33,7 +34,13 @@ describe("plan matrix", () => {
 
   it("investor unlocks groups, advanced filters and analysis but not calendar or market", () => {
     const e = ent("investor");
-    for (const f of ["groups", "advancedFilters", "analysisView", "recommendations"] as Feature[]) {
+    for (const f of [
+      "groups",
+      "advancedFilters",
+      "analysisView",
+      "recommendations",
+      "marketCompare",
+    ] as Feature[]) {
       expect(e.can(f), f).toBe(true);
     }
     for (const f of ["calendarView", "market", "regions", "export"] as Feature[]) {
@@ -94,6 +101,8 @@ describe("plan matrix", () => {
     expect(requiredPlan("groups").role).toBe("investor");
     expect(requiredPlan("market").role).toBe("professional");
     expect(requiredPlan("regions").role).toBe("professional");
+    // The per-property comparables block, distinct from the professional-only /market panel.
+    expect(requiredPlan("marketCompare").role).toBe("investor");
   });
 
   it("toRole rejects anon and unknown values so a bad row cannot escalate", () => {

@@ -2,7 +2,7 @@
 
 import PlanCta from "@/components/plan/PlanCta";
 import { usePlan } from "@/components/plan/PlanProvider";
-import { FEATURE_COPY } from "@/lib/entitlements/copy";
+import { FEATURE_COPY, PLAN_INCLUDES } from "@/lib/entitlements/copy";
 import { PLANS, SELLABLE_PLANS, TRIAL_DAYS, TRIAL_ROLE } from "@/lib/entitlements";
 import { fmtDay, money } from "@/lib/format";
 import type { Feature, Role } from "@/lib/entitlements";
@@ -34,6 +34,7 @@ export default function PlansPanel() {
         <div className="planscmp">
           {SELLABLE_PLANS.map((p) => {
             const r = p.role;
+            const includes = PLAN_INCLUDES[r];
             return (
               <div className={`planscmp-col${r === role ? " on" : ""}`} key={r}>
                 <div className="planscmp-head">
@@ -57,6 +58,16 @@ export default function PlansPanel() {
                     <li key={f}>{FEATURE_COPY[f].label}</li>
                   ))}
                 </ul>
+                {includes && (
+                  <>
+                    <div className="planscmp-inc">{includes.heading}</div>
+                    <ul>
+                      {includes.items.map((item) => (
+                        <li key={item}>{item}</li>
+                      ))}
+                    </ul>
+                  </>
+                )}
                 <PlanCta target={r} role={role} trial={trial} className="btn solid" />
               </div>
             );

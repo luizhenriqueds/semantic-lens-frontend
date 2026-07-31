@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import dynamic from "next/dynamic";
 import { usePathname } from "next/navigation";
 import PaywallDialog from "@/components/plan/PaywallDialog";
 import PlanCta from "@/components/plan/PlanCta";
@@ -9,6 +10,9 @@ import { IconLock } from "@/lib/icons";
 import { canTrial, quotaUpsell, upsellBody, upsellTitle } from "@/lib/entitlements/copy";
 import { PLANS, requiredPlan, TRIAL_ROLE } from "@/lib/entitlements";
 import type { Feature, Role, Trial } from "@/lib/entitlements";
+
+// Decoration for a dialog most sessions never open, so it stays out of the shared app bundle.
+const FeatureArt = dynamic(() => import("@/components/plan/FeatureArt"));
 
 export default function UpgradeDialog({
   feature,
@@ -39,33 +43,36 @@ export default function UpgradeDialog({
     : { title: upsellTitle(feature, role, trial), body: upsellBody(feature, role, trial) };
 
   return (
-    <Modal label={copy.title} onClose={onClose}>
-      <div className="mico">
-        <IconLock width={22} height={22} strokeWidth={1.8} />
-      </div>
-      <h3>{copy.title}</h3>
-      <p>{copy.body}</p>
-      <div className="mrow">
-        {role === "anon" ? (
-          <Link
-            className="btn ghost"
-            href={`/login?redirect=${encodeURIComponent(path)}`}
-            onClick={onClose}
-          >
-            Entrar
+    <Modal className="upsell" label={copy.title} onClose={onClose}>
+      <FeatureArt feature={feature} />
+      <div className="upsell-body">
+        <div className="mico">
+          <IconLock width={22} height={22} strokeWidth={1.8} />
+        </div>
+        <h3>{copy.title}</h3>
+        <p>{copy.body}</p>
+        <div className="mrow">
+          {role === "anon" ? (
+            <Link
+              className="btn ghost"
+              href={`/login?redirect=${encodeURIComponent(path)}`}
+              onClick={onClose}
+            >
+              Entrar
+            </Link>
+          ) : (
+            <button className="btn ghost" type="button" onClick={onClose}>
+              Agora não
+            </button>
+          )}
+          <PlanCta target={plan.role} role={role} trial={trial} onDone={onClose} />
+        </div>
+        {role !== "anon" && (
+          <Link className="modal-alt" href="/#planos" onClick={onClose}>
+            Comparar planos
           </Link>
-        ) : (
-          <button className="btn ghost" type="button" onClick={onClose}>
-            Agora não
-          </button>
         )}
-        <PlanCta target={plan.role} role={role} trial={trial} onDone={onClose} />
       </div>
-      {role !== "anon" && (
-        <Link className="modal-alt" href="/#planos" onClick={onClose}>
-          Comparar planos
-        </Link>
-      )}
     </Modal>
   );
 }

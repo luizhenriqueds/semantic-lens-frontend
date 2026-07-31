@@ -4,6 +4,8 @@ export {
   countProperties,
   countMatched,
   getMatchedPage,
+  getPropertiesForExport,
+  getMatchedForExport,
   getPropertiesByIds,
   getPropertyById,
   getUpcomingAuctions,

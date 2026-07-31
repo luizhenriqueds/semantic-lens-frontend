@@ -5,6 +5,7 @@ import { countMatched, hybridSearch, RESULT_LIMIT } from "@/lib/data";
 import { isAnyCriteria } from "@/lib/alerts/criteria";
 import { resolveQueryCriteria } from "@/lib/alerts/resolve";
 import { getEntitlements } from "@/lib/entitlements/server";
+import { gateCriteria } from "@/lib/filters/gate";
 import { getUser, requireUser } from "@/lib/supabase/server";
 import type {
   Alert,
@@ -54,14 +55,17 @@ export async function createAlert(
     user.email ?? "",
     name,
     freq,
-    criteria,
+    criteria ? gateCriteria(criteria, ent) : criteria,
     ent.limit("savedSearches"),
   );
 }
 
 export async function updateAlert(id: string, patch: AlertPatch): Promise<boolean> {
   const { supabase } = await requireUser();
-  return data.updateAlert(supabase, id, patch);
+  // The pause toggle is the hot caller and carries no criteria, so it skips the plan read.
+  if (!patch.criteria) return data.updateAlert(supabase, id, patch);
+  const ent = await getEntitlements();
+  return data.updateAlert(supabase, id, { ...patch, criteria: gateCriteria(patch.criteria, ent) });
 }
 
 export async function deleteAlert(id: string): Promise<void> {

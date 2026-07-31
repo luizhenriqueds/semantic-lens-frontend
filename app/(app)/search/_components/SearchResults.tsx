@@ -73,6 +73,7 @@ export default async function SearchResults({
           total={items.length}
           page={page}
           sort={sort}
+          query={query}
           highlightGoal={highlightGoal}
           heading={heading}
         />

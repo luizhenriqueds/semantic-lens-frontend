@@ -12,6 +12,7 @@ export type Feature =
   | "recommendations"
   | "advancedFilters"
   | "analysisView"
+  | "marketCompare"
   | "calendarView"
   | "market"
   | "regions"
@@ -40,6 +41,7 @@ const NONE: Record<Feature, boolean> = {
   recommendations: false,
   advancedFilters: false,
   analysisView: false,
+  marketCompare: false,
   calendarView: false,
   market: false,
   regions: false,
@@ -55,6 +57,7 @@ const INVESTOR_FEATURES: Record<Feature, boolean> = {
   recommendations: true,
   advancedFilters: true,
   analysisView: true,
+  marketCompare: true,
 };
 
 const PRO_FEATURES: Record<Feature, boolean> = {
@@ -123,6 +126,13 @@ export const PLANS: Record<Role, Plan> = {
 export const VIEW_FEATURE: Partial<Record<PropertiesView, Feature>> = {
   analysis: "analysisView",
   calendar: "calendarView",
+};
+
+/** Routes that are a whole feature. Absent = open to everyone, anon included. */
+export const PATH_FEATURE: Record<string, Feature> = {
+  "/market": "market",
+  "/groups": "groups",
+  "/regions": "regions",
 };
 
 export const TRIAL_DAYS = 7;

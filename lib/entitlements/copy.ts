@@ -28,11 +28,15 @@ export const FEATURE_COPY: Record<Feature, { label: string; blurb: string; quota
   },
   advancedFilters: {
     label: "Filtros avançados",
-    blurb: "Filtre por deságio, nota, pontos de interesse, financiamento e mais.",
+    blurb: "Filtre por deságio, nota, lugares próximos, financiamento e mais.",
   },
   analysisView: {
     label: "Análise de imóveis",
     blurb: "Distribuições de preço, deságio, área e nota do resultado atual.",
+  },
+  marketCompare: {
+    label: "Comparativo de mercado",
+    blurb: "Compare o lance com anúncios reais do bairro e veja o potencial de ganho.",
   },
   calendarView: {
     label: "Calendário de leilões",
@@ -49,6 +53,26 @@ export const FEATURE_COPY: Record<Feature, { label: string; blurb: string; quota
   export: {
     label: "Exportação CSV/PDF",
     blurb: "Exporte buscas, filtros e análises em CSV ou PDF.",
+  },
+};
+
+// Not Feature flags: these are free on every property page, so they cannot be derived from the
+// plan matrix. Keyed by Role so another tier can gain a block later.
+export const PLAN_INCLUDES: Partial<Record<Role, { heading: string; items: readonly string[] }>> = {
+  basic: {
+    heading: "Em cada imóvel você vê:",
+    items: [
+      "Histórico de preços",
+      "Análise de fachada usando IA",
+      "Mudança de modalidade",
+      "Lugares próximos",
+      "Perfil da região",
+      "Score de investimento",
+      "Tese de investimento recomendada",
+      // Deliberately not "análises comparativas de porte e preço": that reads as the
+      // marketCompare block, which is paid. This is PropertyRanks, which is free.
+      "Porte e preço comparados à base",
+    ],
   },
 };
 

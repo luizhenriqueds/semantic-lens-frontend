@@ -65,6 +65,8 @@ export async function PriceHistorySlot({ id }: { id: string }) {
 }
 
 export async function MarketSlot({ p }: { p: Property }) {
+  const ent = await getEntitlements();
+  if (!ent.can("marketCompare")) return null;
   const stats = await getMarketComparables(p.uf, p.city, p.neighborhood, p.propertyType, p.area);
   if (!stats) return null;
   return (

@@ -24,7 +24,7 @@ export default function RegionMapTabs({
           Onde estão os imóveis
         </button>
         <button type="button" className={tab === "poi" ? "on" : ""} onClick={() => setTab("poi")}>
-          Pontos de interesse
+          Lugares próximos
         </button>
       </div>
       <RegionMapClient
@@ -40,7 +40,7 @@ export default function RegionMapTabs({
                 ? `, em ${locations} ${locations === 1 ? "endereço" : "endereços"}.`
                 : " - cada marcador é um imóvel."
             }`
-          : "Imóveis e pontos de interesse reais próximos (fonte: OpenStreetMap)."}
+          : "Imóveis e lugares reais próximos (fonte: OpenStreetMap)."}
       </div>
     </>
   );

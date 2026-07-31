@@ -18,8 +18,10 @@ import { SHOWCASE_CAPTURED } from "@/app/(marketing)/_data/showcase";
 import { SIMILAR, SIMILAR_SEED } from "@/app/(marketing)/_data/similar";
 import { getLandingStats } from "@/lib/data/landingStats";
 import { PLANS, TRIAL_DAYS, type Role } from "@/lib/entitlements";
+import { PLAN_INCLUDES } from "@/lib/entitlements/copy";
 import { getEntitlements } from "@/lib/entitlements/server";
 import { countShort, fmtDay, money } from "@/lib/format";
+import { POI_LABEL, POI_ORDER } from "@/lib/pois";
 import { getUser } from "@/lib/supabase/server";
 
 function ScoreBars({ items }: { items: { k: string; v: number }[] }) {
@@ -54,7 +56,7 @@ const PLAN_CARDS: {
     role: "basic",
     trial: "Explore sem criar conta",
     features: [
-      { text: "Busca por texto, por região e por proximidade de pontos de interesse" },
+      { text: "Busca por texto, por região e por proximidade de lugares" },
       { text: "Lista, mapa, filtros básicos e a página completa de cada imóvel" },
       {
         lead: `${PLANS.basic.limits.favorites} favoritos`,
@@ -71,12 +73,16 @@ const PLAN_CARDS: {
       { lead: "Favoritos e alertas ilimitados", text: "sem teto de carteira nem de buscas salvas" },
       {
         lead: "Filtros avançados",
-        text: "deságio, notas, financiamento, FGTS e pontos de interesse",
+        text: "deságio, notas, financiamento, FGTS e lugares próximos",
       },
       { lead: "Grupos", text: "imóveis parecidos reunidos automaticamente para comparar" },
       {
         lead: "Análise de imóveis",
         text: "distribuição de preço, deságio, área e nota do resultado",
+      },
+      {
+        lead: "Comparativo de mercado",
+        text: "o lance contra anúncios reais do bairro, com o potencial de ganho",
       },
       {
         lead: `Recomendações até ${PLANS.investor.limits.recommendations} imóveis`,
@@ -199,10 +205,10 @@ export default async function LandingPage() {
           </button>
           <div className="lp-navmenu" id="navmenu">
             <nav>
-              <a href="#recursos">Recursos</a>
-              <a href="#exemplo">Exemplo real</a>
-              <a href="#planos">Planos</a>
-              <a href="#faq">Dúvidas</a>
+              <a href="#recursos">Como funciona</a>
+              <a href="#exemplo">Exemplo de análise</a>
+              <a href="#planos">Planos e preços</a>
+              <a href="#faq">Perguntas frequentes</a>
             </nav>
             {/* Browsing needs no account, so the primary CTA opens the app rather than signup. */}
             <div className="lp-navcta">
@@ -1487,6 +1493,7 @@ export default async function LandingPage() {
           <div className="lp-plans-grid lp-m-slide">
             {PLAN_CARDS.map((card, i) => {
               const plan = PLANS[card.role];
+              const includes = PLAN_INCLUDES[card.role];
               return (
                 <div
                   className={`lp-plan lp-reveal${card.popular ? " lp-pop" : ""}${i ? ` lp-d${i}` : ""}`}
@@ -1515,6 +1522,21 @@ export default async function LandingPage() {
                       </li>
                     ))}
                   </ul>
+                  {includes && (
+                    <>
+                      <div className="lp-pincludes">{includes.heading}</div>
+                      <ul>
+                        {includes.items.map((item) => (
+                          <li key={item}>
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                              <path d="m5 13 4 4L19 7" />
+                            </svg>
+                            <span>{item}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </>
+                  )}
                   <PlanCta
                     target={card.role}
                     role={ent.role}
@@ -1660,6 +1682,30 @@ export default async function LandingPage() {
                   mapas. <b>Preço de mercado</b>: anúncios reais de imóveis parecidos em portais do
                   mercado aberto - portais de leilão ficam de fora de propósito, para a comparação
                   ser sempre com o mercado normal.
+                </p>
+              </div>
+            </details>
+            <details id="faq-pois">
+              <summary>
+                Quais lugares vocês medem em volta do imóvel?
+                <span className="lp-chev">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                    <path d="m6 9 6 6 6-6" />
+                  </svg>
+                </span>
+              </summary>
+              <div className="lp-ans">
+                <p>
+                  {stats
+                    ? `São ${stats.poiCategories} categorias de lugar, medidas em ${countShort(stats.pois)} pontos mapeados: `
+                    : "São as categorias abaixo, medidas em centenas de milhares de pontos mapeados: "}
+                  {POI_ORDER.map((k) => POI_LABEL[k]).join(", ")}.
+                </p>
+                <p>
+                  Para cada imóvel a Lavra calcula a <b>distância real até o mais próximo</b> de
+                  cada categoria, e não apenas quantos existem no bairro. É isso que alimenta a nota
+                  da região e as notas de uso - uma universidade a 700 m pesa no aluguel estudantil,
+                  um parque a 200 m pesa na moradia familiar.
                 </p>
               </div>
             </details>
@@ -1866,10 +1912,10 @@ export default async function LandingPage() {
             </span>
           </a>
           <div className="lp-links">
-            <a href="#recursos">Recursos</a>
-            <a href="#exemplo">Exemplo real</a>
+            <a href="#recursos">Como funciona</a>
+            <a href="#exemplo">Exemplo de análise</a>
             <a href="#casos">Casos de uso</a>
-            <a href="#faq">Dúvidas</a>
+            <a href="#faq">Perguntas frequentes</a>
           </div>
           <span className="lp-fine">
             © 2026 Lavra · Dados da base pública de imóveis da Caixa Econômica Federal, atualizados

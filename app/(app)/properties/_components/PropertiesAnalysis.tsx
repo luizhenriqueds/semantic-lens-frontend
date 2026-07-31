@@ -103,9 +103,9 @@ function Scatter({ pts }: { pts: { x: number; y: number; d: number }[] }) {
               fill="var(--primary)"
               fillOpacity={0.28 + t * 0.6}
             >
+              {/* One template string: React cannot join multiple children of an SVG <title>. */}
               <title>
-                {Math.round(p.x)} m² · {money(p.y)}
-                {p.d > 0 ? ` · −${Math.round(p.d)}%` : ""}
+                {`${Math.round(p.x)} m² · ${money(p.y)}${p.d > 0 ? ` · −${Math.round(p.d)}%` : ""}`}
               </title>
             </circle>
           );
@@ -153,9 +153,12 @@ function Rank({
 export default function PropertiesAnalysis({
   data,
   onPickRange,
+  /** The scatter reads a point only on hover, so the printable report drops it. */
+  hideScatter,
 }: {
   data: AnalysisData;
   onPickRange: (dim: RangeDim, from: number, to: number) => void;
+  hideScatter?: boolean;
 }) {
   if (!data.count) {
     return (
@@ -256,11 +259,13 @@ export default function PropertiesAnalysis({
       </div>
 
       <div className="angrid">
-        <div className="ancard">
-          <h3>Preço × área</h3>
-          <p className="ansub">Cada ponto é um imóvel; tons mais fortes têm maior desconto.</p>
-          <Scatter pts={data.scatter} />
-        </div>
+        {!hideScatter && (
+          <div className="ancard">
+            <h3>Preço × área</h3>
+            <p className="ansub">Cada ponto é um imóvel; tons mais fortes têm maior desconto.</p>
+            <Scatter pts={data.scatter} />
+          </div>
+        )}
         <div className="ancard">
           <h3>Nota média por objetivo</h3>
           <p className="ansub">

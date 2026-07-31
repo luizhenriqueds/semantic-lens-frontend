@@ -11,6 +11,7 @@ import {
 } from "@/lib/data";
 import { getEntitlements } from "@/lib/entitlements/server";
 import { VIEW_FEATURE } from "@/lib/entitlements";
+import { gateFilters } from "@/lib/filters/gate";
 import { parsePropertySearchParams } from "@/lib/filters/propertiesUrl";
 import type { AnalysisData } from "@/lib/facets/analysis";
 import type { MapPoint, Property } from "@/lib/types";
@@ -21,12 +22,13 @@ export default async function PropertiesPage({
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const sp = await searchParams;
-  const { filters, sort, page, view: asked, day } = parsePropertySearchParams(sp);
+  const { filters: askedFilters, sort, page, view: asked, day } = parsePropertySearchParams(sp);
 
   // Falls back to the list so the queries below stay cheap; the client shows the upsell in place.
   const ent = await getEntitlements();
   const locked = VIEW_FEATURE[asked] && !ent.can(VIEW_FEATURE[asked]!) ? asked : undefined;
   const view = locked ? "list" : asked;
+  const { filters, lockedFilters } = gateFilters(askedFilters, ent);
 
   const [clusters, filterOptions, h3Label, list, analysis, calendar, map] = await Promise.all([
     getClusters(),
@@ -61,6 +63,7 @@ export default async function PropertiesPage({
         page={page}
         view={view}
         lockedView={locked}
+        lockedFilter={lockedFilters[0]}
         h3Label={h3Label ?? undefined}
         list={list}
         analysis={analysis as AnalysisData | undefined}
