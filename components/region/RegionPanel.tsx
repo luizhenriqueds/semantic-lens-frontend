@@ -72,7 +72,7 @@ export default function RegionPanel({
             className={view === "mapa" ? "on" : ""}
             onClick={() => setTab("mapa")}
           >
-            Mapa e pontos de interesse
+            Mapa e lugares próximos
           </button>
         </div>
       )}
@@ -80,9 +80,7 @@ export default function RegionPanel({
       {view === "mapa" && canMap ? (
         <>
           <PropertyPoiMap lat={lat!} lon={lon!} title={title} pois={pois} />
-          <div className="rnote">
-            Pontos de interesse reais próximos do imóvel (fonte: OpenStreetMap).
-          </div>
+          <div className="rnote">Lugares reais próximos do imóvel (fonte: OpenStreetMap).</div>
         </>
       ) : (
         <>

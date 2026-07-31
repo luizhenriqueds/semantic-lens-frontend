@@ -5388,6 +5388,25 @@ select.selectish {
   overflow-y: auto;
 }
 
+/* Deep-link filters the plan blocks. A .searchnote with room for the upgrade action. */
+.lockednote {
+  flex-wrap: wrap;
+  margin: -8px 0 20px;
+}
+.lockednote span {
+  flex: 1;
+  min-width: 200px;
+}
+.lockednote button {
+  border: 0;
+  background: none;
+  padding: 0;
+  font: inherit;
+  font-weight: 700;
+  color: var(--primary);
+  cursor: pointer;
+}
+
 /* ---------- advanced filters: applied chips ---------- */
 .appliedchips {
   display: flex;
@@ -6567,6 +6586,93 @@ select.selectish {
   color: var(--ink);
 }
 
+/* ---------- upsell dialog: feature teaser + copy ---------- */
+.modal.upsell {
+  padding: 0;
+  overflow: hidden;
+}
+.modal.upsell .upsell-body {
+  padding: 26px;
+}
+/* Below this width the art would be a thumbnail, so the dialog falls back to copy only. */
+.upsell-art {
+  display: none;
+}
+@media (min-width: 720px) {
+  .modal.upsell {
+    max-width: 760px;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    align-items: stretch;
+  }
+  .modal.upsell > * {
+    min-width: 0;
+  }
+  .modal.upsell .upsell-body {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    padding: 30px 30px 28px;
+  }
+  .upsell-art {
+    display: grid;
+    place-items: center;
+    padding: 26px;
+    background: linear-gradient(160deg, var(--primary-wash), var(--surface-2));
+    border-right: 1px solid var(--line-soft);
+  }
+}
+.fart {
+  width: 100%;
+  height: auto;
+}
+.fart-card {
+  fill: var(--surface);
+  stroke: var(--line);
+}
+.fart-card.fart-anchor {
+  stroke: var(--primary-soft);
+}
+.fart-tile,
+.fart-chip {
+  fill: var(--surface-2);
+  stroke: var(--line);
+}
+.fart-line {
+  fill: var(--ink-soft);
+  opacity: 0.55;
+}
+.fart-dim {
+  fill: var(--ink-faint);
+  opacity: 0.35;
+}
+.fart-fill {
+  fill: var(--primary);
+}
+.fart-knob {
+  fill: var(--primary);
+  stroke: var(--surface);
+  stroke-width: 2;
+}
+.fart-dot {
+  fill: var(--ink-faint);
+  opacity: 0.5;
+}
+.fart-mark {
+  fill: var(--primary);
+  stroke: var(--primary);
+}
+.fart-stroke,
+.fart-axis {
+  fill: none;
+  stroke: var(--line);
+  stroke-width: 2;
+  stroke-linecap: round;
+}
+.fart-stroke {
+  stroke: var(--primary-soft);
+}
+
 /* simulated checkout */
 .modal.paywall {
   max-width: 420px;
@@ -7324,6 +7430,9 @@ select.selectish {
     grid-auto-columns: 80%;
     margin-inline: calc(-1 * var(--gutter));
     padding-inline: var(--gutter);
+    /* Without this the snap point stays at the base 2px and the first card sits flush
+       against the screen edge, out of line with every other block. */
+    scroll-padding-inline: var(--gutter);
   }
   .rail-btns {
     display: none;

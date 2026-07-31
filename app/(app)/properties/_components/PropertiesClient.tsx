@@ -22,7 +22,8 @@ import { alertError, describeCriteria, hasAnyCriteria, useAlerts } from "@/lib/a
 import { mapPointToProperty } from "@/lib/mapPoints";
 import { rangeLabel, type RangeDim } from "@/lib/facets/range";
 import { toRpcFilters } from "@/lib/filters/contract";
-import { VIEW_FEATURE } from "@/lib/entitlements";
+import { requiredPlan, VIEW_FEATURE } from "@/lib/entitlements";
+import type { Feature } from "@/lib/entitlements";
 import type { AnalysisData } from "@/lib/facets/analysis";
 import type {
   AlertCriteriaSet,
@@ -35,7 +36,15 @@ import type {
   PropertySort,
   Scores,
 } from "@/lib/types";
-import { IconArrow, IconBell, IconBuilding, IconSearch, IconSliders, POI_ICON } from "@/lib/icons";
+import {
+  IconArrow,
+  IconBell,
+  IconBuilding,
+  IconLock,
+  IconSearch,
+  IconSliders,
+  POI_ICON,
+} from "@/lib/icons";
 import { MAX_NEAR_M, POI_LABEL, POI_ORDER } from "@/lib/pois";
 import {
   CHANGE_WINDOW_DAYS,
@@ -220,6 +229,7 @@ export default function PropertiesClient({
   page,
   view,
   lockedView,
+  lockedFilter,
   h3Label,
   list,
   analysis,
@@ -234,6 +244,8 @@ export default function PropertiesClient({
   view: PropertiesView;
   /** The view asked for in the URL when the plan does not include it. */
   lockedView?: PropertiesView;
+  /** Gate whose filters the URL asked for and the plan does not include, so they were dropped. */
+  lockedFilter?: Feature;
   h3Label?: string;
   list?: { items: Property[]; total: number };
   analysis?: AnalysisData;
@@ -291,7 +303,7 @@ export default function PropertiesClient({
   const minDesconto = filters.minDiscount ?? 0;
   const minInvest = filters.minInvestment ?? 0;
   const minVisual = filters.minVisualScore ?? 0;
-  const scoreKey = filters.scoreKey && filters.scoreMin ? filters.scoreKey : ("none" as const);
+  const scoreKey = filters.scoreKey ?? ("none" as const);
   const scoreMin = filters.scoreMin ?? 0;
   const financiamento = !!filters.financing;
   const fgts = !!filters.fgts;
@@ -475,10 +487,10 @@ export default function PropertiesClient({
         label: `Fachada ≥ ${minVisual}`,
         clear: () => patch({ min_visual_score: null }),
       });
-    if (scoreKey !== "none" && scoreMin > 0)
+    if (scoreKey !== "none")
       f.push({
         key: "goal",
-        label: `${SCORE_LABEL[scoreKey]} ≥ ${scoreMin}`,
+        label: scoreMin > 0 ? `${SCORE_LABEL[scoreKey]} ≥ ${scoreMin}` : SCORE_LABEL[scoreKey],
         clear: () => patch({ score_key: null, score_min: null }),
       });
     if (cluster !== "all") {
@@ -517,12 +529,9 @@ export default function PropertiesClient({
 
   const imovelCount = [minQuartos > 0, maxPreco > 0, minArea > 0].filter(Boolean).length;
   const poiCount = poiCats.length + (maxCenter > 0 ? 1 : 0);
-  const retornoCount = [
-    minDesconto > 0,
-    minInvest > 0,
-    minVisual > 0,
-    scoreKey !== "none" && scoreMin > 0,
-  ].filter(Boolean).length;
+  const retornoCount = [minDesconto > 0, minInvest > 0, minVisual > 0, scoreKey !== "none"].filter(
+    Boolean,
+  ).length;
   const leilaoCount = [prazoLeilao > 0, financiamento, fgts, !!changeKind].filter(Boolean).length;
 
   const ADVANCED_NULL: Record<string, string | null> = {
@@ -675,6 +684,19 @@ export default function PropertiesClient({
         )}
       </div>
 
+      {lockedFilter && (
+        <div className="searchnote lockednote">
+          <IconLock width={15} height={15} strokeWidth={1.8} />
+          <span>
+            Este link usa filtros do plano {requiredPlan(lockedFilter).label}, que não estão no seu
+            plano - a lista abaixo ignora esses filtros.
+          </span>
+          <button type="button" onClick={() => require(lockedFilter)}>
+            Ver plano
+          </button>
+        </div>
+      )}
+
       {advActive && (
         <div className="appliedchips">
           {activeFilters.map((f) => (
@@ -803,7 +825,7 @@ export default function PropertiesClient({
                   open={openSecs.has("poi")}
                   onToggle={() => toggleSec("poi")}
                 >
-                  <div className="flabel">Pontos de interesse</div>
+                  <div className="flabel">Lugares próximos</div>
                   <div className="poigrid">
                     {visiblePoiCats.map((c) => {
                       const Icon = POI_ICON[c];
@@ -935,7 +957,7 @@ export default function PropertiesClient({
                     onChange={(e) => {
                       const v = e.target.value as keyof Scores | "none";
                       if (v === "none") patch({ score_key: null, score_min: null });
-                      else patch({ score_key: v, score_min: String(scoreMin || 70) });
+                      else patch({ score_key: v });
                     }}
                   >
                     <option value="none">Escolha um objetivo…</option>
@@ -949,6 +971,9 @@ export default function PropertiesClient({
                     <>
                       <div className="flabel">Nota mínima · {SCORE_LABEL[scoreKey]}</div>
                       <div className="fchiprow">
+                        <Chip active={scoreMin === 0} onClick={() => patch({ score_min: null })}>
+                          Qualquer
+                        </Chip>
                         {GOAL_STEPS.map((v) => (
                           <Chip
                             key={v}
@@ -1095,12 +1120,9 @@ export default function PropertiesClient({
             ))}
           </select>
         )}
-        {/* CSV needs a filter or search - no dumps of the whole base - and the analysis tab
-            exports as a PDF report instead. */}
+        {/* CSV needs a filter or search, to keep it from dumping the whole base. */}
         <ExportButton
-          csv={
-            canAlert && view !== "analysis" ? () => exportPropertiesCsv(filters, sort) : undefined
-          }
+          csv={canAlert && view === "list" ? () => exportPropertiesCsv(filters, sort) : undefined}
           pdf={view === "analysis" ? `/report/properties?${reportParams}` : undefined}
         />
       </div>

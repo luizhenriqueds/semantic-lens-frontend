@@ -6,6 +6,7 @@ import { describeCriteria, hasAnyCriteria } from "@/lib/alerts";
 import { getAnalysis } from "@/lib/data";
 import { getEntitlements } from "@/lib/entitlements/server";
 import { toRpcFilters } from "@/lib/filters/contract";
+import { gateFilters } from "@/lib/filters/gate";
 import { parsePropertySearchParams } from "@/lib/filters/propertiesUrl";
 
 export const dynamic = "force-dynamic"; // getEntitlements reads cookies
@@ -20,8 +21,8 @@ export default async function PropertiesReportPage({
   const ent = await getEntitlements();
   if (!ent.can("export")) return <ReportDenied />;
 
-  // Same parse as /properties, so the button can forward the query string verbatim.
-  const { filters } = parsePropertySearchParams(await searchParams);
+  // Same parse and same plan gate as /properties, so the button can forward the query verbatim.
+  const { filters } = gateFilters(parsePropertySearchParams(await searchParams).filters, ent);
   const rpc = toRpcFilters(filters);
   const data = await getAnalysis(filters);
 

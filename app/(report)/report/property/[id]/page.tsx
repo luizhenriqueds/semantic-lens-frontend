@@ -177,7 +177,7 @@ export default async function PropertyReportPage({ params }: { params: Promise<{
 
       {nearRows.length > 0 && (
         <section className="report-section">
-          <h2>Pontos de interesse próximos</h2>
+          <h2>Lugares próximos</h2>
           <div className="report-rows">
             {nearRows.map((c) => (
               <div className="report-row" key={c}>

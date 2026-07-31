@@ -4,14 +4,20 @@ import { MIN_RAIL_ITEMS } from "@/components/discovery/RailSection";
 import type { MarketCity } from "@/lib/data";
 import { countShort, money } from "@/lib/format";
 
-export default function CityGrid({ cities }: { cities: MarketCity[] }) {
+export default function CityGrid({
+  cities,
+  moreHref,
+}: {
+  cities: MarketCity[];
+  moreHref: string | null;
+}) {
   if (cities.length < MIN_RAIL_ITEMS) return null;
   return (
     <section className="railsec">
       <SectionHead
         title="Explore por cidade"
         why="onde há mais oferta - com preço mediano, deságio e nota da região"
-        moreHref="/regions"
+        moreHref={moreHref}
         moreLabel="Ver todas as regiões"
       />
       <div className="regiongrid">

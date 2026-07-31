@@ -31,6 +31,8 @@ import {
   seededShuffle,
   type Pool,
 } from "@/lib/discovery";
+import { getEntitlements } from "@/lib/entitlements/server";
+import { unlockedHref } from "@/lib/filters/gate";
 import type { ProfileKey, Property } from "@/lib/types";
 import CityGrid from "./CityGrid";
 import InsightStrip from "./InsightStrip";
@@ -39,6 +41,11 @@ import InsightStrip from "./InsightStrip";
 // holds up the document.
 
 type SlotProps = { seed: number; now: Date };
+
+// Rails stay visible on every plan; only the link out is dropped, when its destination is a
+// filtered view the plan cannot open.
+const moreHref = async (href: string | null): Promise<string | null> =>
+  href ? unlockedHref(href, await getEntitlements()) : null;
 
 async function fetchPool(pool: Pool): Promise<Property[]> {
   const { items } = await getPropertiesPage({
@@ -60,7 +67,12 @@ export async function MarketSlot() {
 export async function CitiesSlot({ seed }: { seed: number }) {
   const d = await getMarketDashboard();
   if (!d) return null;
-  return <CityGrid cities={seededShuffle(d.cities, railSeed(seed, "cities")).slice(0, 8)} />;
+  return (
+    <CityGrid
+      cities={seededShuffle(d.cities, railSeed(seed, "cities")).slice(0, 8)}
+      moreHref={await moreHref("/regions")}
+    />
+  );
 }
 
 export async function ClosingRailSlot({ seed, now }: SlotProps) {
@@ -71,7 +83,7 @@ export async function ClosingRailSlot({ seed, now }: SlotProps) {
       why="leilões e vendas online com prazo estourando"
       pill="urgente"
       pillTone="warn"
-      moreHref={CLOSING_HREF}
+      moreHref={await moreHref(CLOSING_HREF)}
       moreLabel="Ver agenda"
       items={items}
       ctx={{ rail: "closing", now }}
@@ -85,7 +97,7 @@ export async function DiscountRailSlot({ seed, now }: SlotProps) {
     <RailSection
       title="Deságios que chamam atenção"
       why="58% ou mais abaixo da avaliação oficial"
-      moreHref={DISCOUNT.href}
+      moreHref={await moreHref(DISCOUNT.href)}
       moreLabel="Ver todos os deságios"
       items={items}
       ctx={{ rail: "discount", now }}
@@ -99,7 +111,7 @@ export async function BudgetRailSlot({ seed, now }: SlotProps) {
     <RailSection
       title="Imóveis de até R$ 100 mil"
       why="barreira de entrada baixa. Boas oportunidades para capitalizar com baixo investimento"
-      moreHref={BUDGET.href}
+      moreHref={await moreHref(BUDGET.href)}
       moreLabel="Ver por faixa de preço"
       items={items}
       ctx={{ rail: "budget", now }}
@@ -130,7 +142,7 @@ export async function FinancingRailSlot({ seed, now }: SlotProps) {
       title="Aceitam financiamento bancário"
       why="uma fatia pequena da base aceita financiamento. Boas oportunidades para preservar o seu caixa"
       pill="raro"
-      moreHref={FINANCING.href}
+      moreHref={await moreHref(FINANCING.href)}
       moreLabel="Ver com financiamento"
       items={items}
       ctx={{ rail: "financing", now }}
@@ -145,7 +157,7 @@ export async function ModalityChangeRailSlot({ seed, now }: SlotProps) {
       title="Mudaram de modalidade"
       why="avançaram de fase ou foram para venda direta nos últimos 30 dias. A maioria teve redução de preço"
       pill="novo"
-      moreHref={MODALITY_CHANGE.href}
+      moreHref={await moreHref(MODALITY_CHANGE.href)}
       moreLabel="Ver todos"
       items={items}
       ctx={{ rail: "modality-change", now }}
@@ -162,7 +174,7 @@ export async function PaymentChangeRailSlot({ seed, now }: SlotProps) {
       title="Passaram a aceitar financiamento ou FGTS"
       why="não aceitavam há 30 dias e passaram a aceitar"
       pill="novo"
-      moreHref={PAYMENT_CHANGE.href}
+      moreHref={await moreHref(PAYMENT_CHANGE.href)}
       moreLabel="Ver todos"
       items={items}
       ctx={{ rail: "payment-change", now }}

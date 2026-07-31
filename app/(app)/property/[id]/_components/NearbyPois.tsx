@@ -29,7 +29,7 @@ export default function NearbyPois({ pois }: { pois: NearbyPoi[] }) {
 
   return (
     <div className="infoblock">
-      <h3>Pontos de interesse próximos</h3>
+      <h3>Lugares próximos</h3>
       <p className="blocksub">
         Considera apenas o que está num raio de até {MAX_NEAR_M / 1000} km do imóvel, do mais
         próximo para o mais distante.

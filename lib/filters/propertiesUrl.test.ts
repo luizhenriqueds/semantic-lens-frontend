@@ -64,8 +64,13 @@ describe("criteriaToParams", () => {
     });
   });
 
-  it("leaves out a goal with no floor, which the list page ignores", () => {
-    expect(roundTrip({ type: "Casa", score_key: "flip" })).toEqual({ type: "Casa" });
+  // A goal alert saves `score_key` with no floor (lib/alerts/criteria.ts), and the RPC narrows
+  // on the key alone. Dropping it here used to land "Ajustar filtros" on the unfiltered list.
+  it("keeps a goal that carries no floor", () => {
+    expect(roundTrip({ type: "Casa", score_key: "flip" })).toEqual({
+      type: "Casa",
+      scoreKey: "flip",
+    });
   });
 
   it("names the params exactly as the contract does", () => {

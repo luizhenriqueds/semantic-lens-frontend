@@ -9,16 +9,17 @@ import {
   IconStar,
 } from "@/lib/icons";
 
+import { PATH_FEATURE } from "@/lib/entitlements";
 import type { Feature } from "@/lib/entitlements";
 
-// No `feature` means the entry is open to everyone, anon included.
+// The gate comes from PATH_FEATURE, so the sidebar and every outbound link agree.
 export const NAV: { href: string; label: string; Icon: typeof IconHome; feature?: Feature }[] = [
   { href: "/dashboard", label: "Início", Icon: IconHome },
   { href: "/search", label: "Explorar imóveis", Icon: IconSearch },
   { href: "/properties", label: "Imóveis", Icon: IconBuilding },
-  { href: "/market", label: "Mercado", Icon: IconChart, feature: "market" },
-  { href: "/groups", label: "Grupos", Icon: IconGroups, feature: "groups" },
-  { href: "/regions", label: "Regiões", Icon: IconPin, feature: "regions" },
+  { href: "/market", label: "Mercado", Icon: IconChart },
+  { href: "/groups", label: "Grupos", Icon: IconGroups },
+  { href: "/regions", label: "Regiões", Icon: IconPin },
   { href: "/alerts", label: "Alertas", Icon: IconBell },
   { href: "/portfolio", label: "Minha carteira", Icon: IconStar },
-];
+].map((item) => ({ ...item, feature: PATH_FEATURE[item.href] }));

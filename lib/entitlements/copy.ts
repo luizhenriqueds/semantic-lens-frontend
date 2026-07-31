@@ -28,7 +28,7 @@ export const FEATURE_COPY: Record<Feature, { label: string; blurb: string; quota
   },
   advancedFilters: {
     label: "Filtros avançados",
-    blurb: "Filtre por deságio, nota, pontos de interesse, financiamento e mais.",
+    blurb: "Filtre por deságio, nota, lugares próximos, financiamento e mais.",
   },
   analysisView: {
     label: "Análise de imóveis",
@@ -65,7 +65,7 @@ export const PLAN_INCLUDES: Partial<Record<Role, { heading: string; items: reado
       "Histórico de preços",
       "Análise de fachada usando IA",
       "Mudança de modalidade",
-      "Pontos de interesse próximos",
+      "Lugares próximos",
       "Perfil da região",
       "Score de investimento",
       "Tese de investimento recomendada",

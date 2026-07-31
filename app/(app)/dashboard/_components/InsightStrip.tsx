@@ -1,8 +1,18 @@
 import Link from "next/link";
+import { getEntitlements } from "@/lib/entitlements/server";
+import { unlockedHref } from "@/lib/filters/gate";
+import type { Entitlements } from "@/lib/entitlements";
 import type { MarketDashboard } from "@/lib/data";
 import { countShort } from "@/lib/format";
 
-export default function InsightStrip({ d }: { d: MarketDashboard }) {
+// The insight itself is free; only its link out is dropped, since every one lands on a
+// filtered `/properties` view.
+function MoreLink({ href, ent, children }: { href: string; ent: Entitlements; children: string }) {
+  return unlockedHref(href, ent) ? <Link href={href}>{children} →</Link> : null;
+}
+
+export default async function InsightStrip({ d }: { d: MarketDashboard }) {
+  const ent = await getEntitlements();
   const pctOfBase = d.kpi.available
     ? Math.round((d.insights.discount_50plus / d.kpi.available) * 100)
     : 0;
@@ -16,9 +26,9 @@ export default function InsightStrip({ d }: { d: MarketDashboard }) {
           A agenda está concentrada nesta janela - quase tudo com data marcada fecha em poucos dias.
           A triagem é agora.
         </p>
-        <Link href="/properties?auction_within_days=7&sort=auction">
-          Ver o que fecha primeiro →
-        </Link>
+        <MoreLink href="/properties?auction_within_days=7&sort=auction" ent={ent}>
+          Ver o que fecha primeiro
+        </MoreLink>
       </div>
       <div className="ins">
         <div className="lab">Oportunidade</div>
@@ -29,7 +39,9 @@ export default function InsightStrip({ d }: { d: MarketDashboard }) {
           São <b>{pctOfBase}%</b> da base ativa. É onde mora a margem - e onde mais vale conferir a
           matrícula.
         </p>
-        <Link href="/properties?min_discount=50&sort=discount">Ver deságios agressivos →</Link>
+        <MoreLink href="/properties?min_discount=50&sort=discount" ent={ent}>
+          Ver deságios agressivos
+        </MoreLink>
       </div>
       <div className="ins">
         <div className="lab">Atenção</div>
@@ -38,7 +50,9 @@ export default function InsightStrip({ d }: { d: MarketDashboard }) {
           Só <b>{countShort(d.occ.vacant)}</b> imóveis estão desocupados. E apenas{" "}
           <b>{d.insights.financing_pct}%</b> aceitam financiamento - planeje o caixa.
         </p>
-        <Link href="/properties?financing=1&sort=score">Ver com financiamento →</Link>
+        <MoreLink href="/properties?financing=1&sort=score" ent={ent}>
+          Ver com financiamento
+        </MoreLink>
       </div>
     </div>
   );

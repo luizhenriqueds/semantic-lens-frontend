@@ -128,6 +128,13 @@ export const VIEW_FEATURE: Partial<Record<PropertiesView, Feature>> = {
   calendar: "calendarView",
 };
 
+/** Routes that are a whole feature. Absent = open to everyone, anon included. */
+export const PATH_FEATURE: Record<string, Feature> = {
+  "/market": "market",
+  "/groups": "groups",
+  "/regions": "regions",
+};
+
 export const TRIAL_DAYS = 7;
 
 /** The one plan a user can self-serve, until payment is integrated. */

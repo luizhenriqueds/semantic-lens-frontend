@@ -161,11 +161,12 @@ export function parsePropertySearchParams(raw: SP): PropertiesQuery {
     filters.changeKind = changeKind as PropertyChangeKind;
     filters.changedWithinDays = posInt(one(sp.changed_within_days)) ?? CHANGE_WINDOW_DAYS;
   }
+  // Threshold optional, as in the RPC contract: alerts saved from a goal carry no `score_min`.
   const scoreKey = one(sp.score_key);
-  const scoreMin = posInt(one(sp.score_min));
-  if (scoreKey && SCORE_KEYS.has(scoreKey) && scoreMin) {
+  if (scoreKey && SCORE_KEYS.has(scoreKey)) {
     filters.scoreKey = scoreKey as keyof Scores;
-    filters.scoreMin = scoreMin;
+    const scoreMin = posInt(one(sp.score_min));
+    if (scoreMin) filters.scoreMin = scoreMin;
   }
   if (one(sp.financing) === "1") filters.financing = true;
   if (one(sp.fgts) === "1") filters.fgts = true;
