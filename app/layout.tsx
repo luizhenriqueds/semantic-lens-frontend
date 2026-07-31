@@ -17,7 +17,7 @@ const mono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Lavra — Leilões inteligentes",
+  title: "Lavra - Leilões inteligentes",
   description:
     "A primeira busca semântica e geográfica de leilões de imóveis do Brasil. Descreva o que procura e compare milhares de editais.",
 };

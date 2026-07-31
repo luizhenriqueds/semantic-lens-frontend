@@ -9,6 +9,7 @@ type Crumb = { label: string; href?: string };
 const SECTION: Record<string, string> = {
   search: "Explorar imóveis",
   properties: "Imóveis",
+  market: "Painel de mercado",
   groups: "Grupos",
   regions: "Regiões",
   alerts: "Meus alertas",

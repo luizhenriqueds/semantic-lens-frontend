@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import LavraLogo from "@/components/brand/LavraLogo";
+import NavLink from "@/components/layout/NavLink";
 import { NAV } from "@/components/layout/navItems";
 import { IconClose, IconMenu } from "@/lib/icons";
 
@@ -48,11 +49,13 @@ export default function MobileNav() {
           </button>
         </div>
         <nav>
-          {NAV.map(({ href, label, Icon }) => (
-            <Link key={href} href={href} className={`navbtn${isActive(href) ? " active" : ""}`}>
-              <Icon />
-              <span className="txt">{label}</span>
-            </Link>
+          {NAV.map((item) => (
+            <NavLink
+              key={item.href}
+              item={item}
+              active={isActive(item.href)}
+              onNavigate={() => setOpen(false)}
+            />
           ))}
         </nav>
       </aside>

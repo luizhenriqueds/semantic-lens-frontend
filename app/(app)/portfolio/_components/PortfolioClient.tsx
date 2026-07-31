@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
+import UsageMeter from "@/components/plan/UsageMeter";
 import EmptyState from "@/components/ui/EmptyState";
 import Pagination from "@/components/ui/Pagination";
 import PropertyRow from "@/components/property/PropertyRow";
@@ -71,6 +72,7 @@ export default function PortfolioClient({ properties }: { properties: Property[]
       </div>
       <div className="sectitle">
         <h2>Imóveis acompanhados</h2>
+        <UsageMeter used={saved.length} quota="favorites" noun="salvos" />
       </div>
       {saved.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE).map((p) => (
         <PropertyRow key={p.id} p={p} />

@@ -3,7 +3,10 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
+import { usePlan } from "@/components/plan/PlanProvider";
 import type { Account } from "@/lib/account";
+import { fmtDay } from "@/lib/format";
+import { TRIAL_DAYS } from "@/lib/entitlements";
 import { IconSliders } from "@/lib/icons";
 import { createClient } from "@/lib/supabase/client";
 
@@ -12,6 +15,7 @@ export default function UserMenu({ account }: { account: Account }) {
   const ref = useRef<HTMLDivElement>(null);
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
+  const { plan, trial, atLeast } = usePlan();
 
   const { name, email, initials } = account;
 
@@ -67,6 +71,18 @@ export default function UserMenu({ account }: { account: Account }) {
               <b>{name}</b>
               <span>{email}</span>
             </div>
+          </div>
+          <div className="usermenu-plan">
+            <span className="chip on">{plan.label}</span>
+            {trial.endsAt ? (
+              <small>teste até {fmtDay(trial.endsAt)}</small>
+            ) : (
+              !atLeast("professional") && (
+                <Link href="/#planos" onClick={() => setOpen(false)}>
+                  {trial.eligible ? `Testar ${TRIAL_DAYS} dias` : "Ver planos"}
+                </Link>
+              )
+            )}
           </div>
           <Link
             className="usermenu-item"

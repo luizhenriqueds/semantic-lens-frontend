@@ -3,7 +3,7 @@ import { getCuratedStates } from "@/lib/data/alerts";
 import { getUserSettings } from "@/lib/data/settings";
 import { requireUser } from "@/lib/supabase/server";
 
-export const metadata = { title: "Configurações — Lavra" };
+export const metadata = { title: "Configurações - Lavra" };
 
 export default async function SettingsPage() {
   const { supabase, user } = await requireUser();

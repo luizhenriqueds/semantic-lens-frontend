@@ -26,7 +26,7 @@ export default function Ring({ value, size = 44 }: { value: number | null; size?
         fontWeight="700"
         fill="var(--primary)"
       >
-        {value == null ? "—" : v}
+        {value == null ? "-" : v}
       </text>
     </svg>
   );

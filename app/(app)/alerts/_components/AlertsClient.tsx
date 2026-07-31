@@ -11,8 +11,11 @@ import ConfirmDialog from "@/components/ui/ConfirmDialog";
 import EmptyState from "@/components/ui/EmptyState";
 import SearchableSelect from "@/components/ui/SearchableSelect";
 import SkeletonText from "@/components/ui/SkeletonText";
+import UsageMeter from "@/components/plan/UsageMeter";
+import { usePlan } from "@/components/plan/PlanProvider";
 import { useToast } from "@/components/ui/Toaster";
 import {
+  alertError,
   criteriaChips,
   describeCriteria,
   hasAnyCriteria,
@@ -60,6 +63,7 @@ type DescCount = { count: number; capped: boolean };
 
 export default function AlertsClient({ options }: { options: FilterOptions }) {
   const { alerts, add, toggle, update, remove } = useAlerts();
+  const { require, showQuotaUpsell, limit } = usePlan();
   const toast = useToast();
   const [creating, setCreating] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -189,6 +193,16 @@ export default function AlertsClient({ options }: { options: FilterOptions }) {
     };
   }, [descKey]);
 
+  // Sign-in and the quota are both enforced here, before the form opens, rather than on submit.
+  function startCreating() {
+    if (!require("savedSearches")) return;
+    const cap = limit("savedSearches");
+    if (cap != null && alerts.length >= cap && !editingId) {
+      return showQuotaUpsell("savedSearches");
+    }
+    setCreating((v) => !v);
+  }
+
   function reset() {
     setNome("");
     setScoreKey("");
@@ -243,12 +257,17 @@ export default function AlertsClient({ options }: { options: FilterOptions }) {
       dropped = result.dropped;
     }
     const name = mode === "descricao" ? phrase : phrase || describeCriteria(draft);
-    const ok = editingId
-      ? await update(editingId, { name, freq, criteria })
-      : await add(name, freq, criteria);
-    if (!ok) {
-      toast("Você já tem um alerta com esse nome");
-      return;
+    if (editingId) {
+      if (!(await update(editingId, { name, freq, criteria }))) {
+        toast("Você já tem um alerta com esse nome");
+        return;
+      }
+    } else {
+      const res = await add(name, freq, criteria);
+      if (!res.ok) {
+        toast(alertError(res.reason));
+        return;
+      }
     }
     const saved = editingId ? "Alterações salvas" : "Alerta criado";
     toast(dropped.length ? `${saved}, sem ${dropped.join(" e ")}` : saved);
@@ -287,11 +306,12 @@ export default function AlertsClient({ options }: { options: FilterOptions }) {
   return (
     <>
       <div className="alertstools">
+        <UsageMeter used={alerts.length} quota="savedSearches" noun="alertas criados" />
         <Link className="alertstools-link" href="/settings">
           <IconSliders width={17} height={17} strokeWidth={1.8} />
           Alertas automáticos e canais de envio
         </Link>
-        <button className="btn solid" onClick={() => setCreating((v) => !v)}>
+        <button className="btn solid" onClick={startCreating}>
           <IconPlus /> Criar novo alerta
         </button>
       </div>
@@ -622,7 +642,7 @@ export default function AlertsClient({ options }: { options: FilterOptions }) {
           title="Você ainda não tem alertas"
           action={
             !creating && (
-              <button className="btn solid" type="button" onClick={() => setCreating(true)}>
+              <button className="btn solid" type="button" onClick={startCreating}>
                 <IconPlus /> Criar meu primeiro alerta
               </button>
             )

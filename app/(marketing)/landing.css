@@ -6,9 +6,10 @@
 }
 
 .lp-wrap {
+  --gutter: 28px;
   max-width: 1120px;
   margin: 0 auto;
-  padding: 0 28px;
+  padding: 0 var(--gutter);
 }
 .lp-seclabel {
   font-family: "JetBrains Mono", ui-monospace, monospace;
@@ -31,6 +32,14 @@
 }
 .lp-sechead .lp-seclabel {
   justify-content: center;
+}
+@media (max-width: 700px) {
+  .lp-seclabel {
+    flex-wrap: wrap;
+    font-size: 11px;
+    letter-spacing: 0.1em;
+    gap: 8px;
+  }
 }
 .lp-sc-lbl::before {
   display: none;
@@ -576,10 +585,12 @@
   border-left: 0;
 }
 .lp-stat .lp-v {
-  font-size: clamp(28px, 3.4vw, 40px);
+  /* the widest value is "330,5 mil": it has to hold one line inside a fifth of the wrap */
+  font-size: clamp(26px, 2.7vw, 34px);
   font-weight: 800;
   letter-spacing: -0.035em;
   line-height: 1;
+  white-space: nowrap;
   color: var(--ink);
 }
 .lp-stat.lp-accent .lp-v {
@@ -2203,7 +2214,7 @@ footer.lp-foot .lp-fine {
   .lp-hero .lp-wrap {
     grid-template-columns: 1fr;
     gap: 44px;
-    padding: 56px 28px 64px;
+    padding: 56px var(--gutter) 64px;
   }
   section.lp-band {
     padding: 68px 0;
@@ -2211,7 +2222,7 @@ footer.lp-foot .lp-fine {
 }
 @media (max-width: 560px) {
   .lp-wrap {
-    padding: 0 20px;
+    --gutter: 20px;
   }
   .lp-hero .lp-actions {
     flex-direction: column;
@@ -2252,6 +2263,16 @@ footer.lp-foot .lp-fine {
   }
   .lp-heromock .lp-mrow .lp-loc {
     font-size: 12px;
+  }
+  /* side by side the title wraps under the price and the two collide */
+  .lp-heromock .lp-mrow {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+  .lp-heromock .lp-price {
+    margin-left: 0;
+    text-align: left;
   }
   .lp-mockbars .lp-bar:nth-child(3) {
     display: none;
@@ -2461,9 +2482,9 @@ footer.lp-foot .lp-fine {
     overflow-x: auto;
     overscroll-behavior-x: contain;
     scroll-snap-type: x mandatory;
-    scroll-padding: 0 28px;
-    padding: 4px 28px 16px;
-    margin: 0 -28px;
+    scroll-padding: 0 var(--gutter);
+    padding: 4px var(--gutter) 16px;
+    margin-inline: calc(-1 * var(--gutter));
     max-width: none;
     scrollbar-width: none;
   }
@@ -3211,8 +3232,9 @@ footer.lp-foot .lp-fine {
   margin: 0;
 }
 .lp-layer + .lp-layer {
+  margin-top: 72px;
   padding-top: 72px;
-  border-top: 1px solid var(--line-soft);
+  border-top: 1px solid var(--line);
 }
 
 /* Keep the score hint on the same line as its label instead of wrapping

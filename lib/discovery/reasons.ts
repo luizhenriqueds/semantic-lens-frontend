@@ -138,7 +138,7 @@ export function heroReasons(p: Property, now: Date): { strong: string; lead: str
   if (nota != null) {
     out.push({
       strong: `Nota ${Math.round(nota)} de 100`,
-      lead: " — está entre os melhores da base nesta rodada.",
+      lead: " - está entre os melhores da base nesta rodada.",
     });
   }
   if (showDiscount(p) && p.appraisedValue != null) {
@@ -148,11 +148,11 @@ export function heroReasons(p: Property, now: Date): { strong: string; lead: str
     });
   }
   if (isVacant(p.occupancyStatus)) {
-    out.push({ strong: "Desocupado", lead: " — sem custo nem prazo de desocupação." });
+    out.push({ strong: "Desocupado", lead: " - sem custo nem prazo de desocupação." });
   } else if (p.occupancyStatus) {
     out.push({
       strong: "Imóvel ocupado",
-      lead: " — considere o prazo de desocupação antes de arrematar.",
+      lead: " - considere o prazo de desocupação antes de arrematar.",
     });
   }
   if (p.profile) {

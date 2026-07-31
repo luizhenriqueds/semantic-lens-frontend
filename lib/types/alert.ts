@@ -10,6 +10,11 @@ export type Alert = {
   criteria?: AlertCriteria;
 };
 
+export type AlertCreateFailure = "duplicate" | "limit";
+
+export type AlertCreateResult =
+  { ok: true; alert: Alert } | { ok: false; reason: AlertCreateFailure };
+
 // `criteria: null` clears them; `undefined` leaves them unchanged.
 export type AlertPatch = {
   name?: string;

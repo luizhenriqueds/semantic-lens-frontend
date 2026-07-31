@@ -11,7 +11,7 @@ const DEMOS: { q: string; hits: Hit[] }[] = [
     hits: [
       {
         t: "Apto 48 m² · 2 quartos",
-        l: "Universitário — 600 m da UFMS, Campo Grande",
+        l: "Universitário - 600 m da UFMS, Campo Grande",
         p: "R$ 120.278",
         d: "-40%",
         s: 95,
@@ -25,7 +25,7 @@ const DEMOS: { q: string; hits: Hit[] }[] = [
       },
       {
         t: "Apto 45 m² · 2 quartos",
-        l: "Agronômica — perto da UFSC, Florianópolis",
+        l: "Agronômica - perto da UFSC, Florianópolis",
         p: "R$ 264.000",
         d: "-31%",
         s: 82,

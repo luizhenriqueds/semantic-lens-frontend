@@ -23,7 +23,7 @@ export default function PropertyCard({
   const nota = investmentScore(p);
   const top = topGoals(p, 2);
   // When the search targets a goal, make sure that goal is shown and marked so
-  // the card explains why it matched — even if it isn't the property's top goal.
+  // the card explains why it matched - even if it isn't the property's top goal.
   let goals: { key: ProfileKey; on: boolean }[] = top.map((g) => ({ key: g.key, on: false }));
   if (highlightGoal) {
     if (goals.some((g) => g.key === highlightGoal)) {

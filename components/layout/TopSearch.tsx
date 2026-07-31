@@ -29,7 +29,7 @@ export default function TopSearch() {
       <input
         ref={inputRef}
         name="q"
-        placeholder="Buscar imóveis — descreva o que procura"
+        placeholder="Buscar imóveis - descreva o que procura"
         aria-label="Buscar imóveis"
         autoComplete="off"
         onFocus={() => router.prefetch("/search")}

@@ -12,7 +12,7 @@ const CADENCE_TO_FREQ: Record<string, string> = Object.fromEntries(
 );
 
 // A retired cadence still resolves both ways, so alerts already saved with it keep
-// their label — it is just no longer offered.
+// their label - it is just no longer offered.
 export const FREQS: string[] = CADENCES.filter((c) => !("retired" in c)).map((c) => c.freq);
 
 export const freqOptions = (current: string): string[] =>

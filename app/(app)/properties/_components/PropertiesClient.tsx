@@ -5,6 +5,9 @@ import { createPortal } from "react-dom";
 import dynamic from "next/dynamic";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import PlanBadge from "@/components/plan/PlanBadge";
+import { usePlan } from "@/components/plan/PlanProvider";
+import UpgradeWall from "@/components/plan/UpgradeWall";
 import EmptyState from "@/components/ui/EmptyState";
 import Pagination from "@/components/ui/Pagination";
 import PropertyRow from "@/components/property/PropertyRow";
@@ -13,10 +16,11 @@ import AuctionCalendar from "./AuctionCalendar";
 import PropertiesAnalysis from "./PropertiesAnalysis";
 import { useToast } from "@/components/ui/Toaster";
 import { fmtDist, moneyShort, SCORE_LABEL } from "@/lib/format";
-import { describeCriteria, hasAnyCriteria, useAlerts } from "@/lib/alerts";
+import { alertError, describeCriteria, hasAnyCriteria, useAlerts } from "@/lib/alerts";
 import { mapPointToProperty } from "@/lib/mapPoints";
 import { rangeLabel, type RangeDim } from "@/lib/facets/range";
 import { toRpcFilters } from "@/lib/filters/contract";
+import { VIEW_FEATURE } from "@/lib/entitlements";
 import type { AnalysisData } from "@/lib/facets/analysis";
 import type {
   AlertCriteriaSet,
@@ -212,6 +216,7 @@ export default function PropertiesClient({
   sort,
   page,
   view,
+  lockedView,
   h3Label,
   list,
   analysis,
@@ -224,6 +229,8 @@ export default function PropertiesClient({
   sort: PropertySort;
   page: number;
   view: PropertiesView;
+  /** The view asked for in the URL when the plan does not include it. */
+  lockedView?: PropertiesView;
   h3Label?: string;
   list?: { items: Property[]; total: number };
   analysis?: AnalysisData;
@@ -236,6 +243,8 @@ export default function PropertiesClient({
   map?: { points: MapPoint[]; total: number };
 }) {
   const router = useRouter();
+  const { can, require, role, trial } = usePlan();
+  const canAdvanced = can("advancedFilters");
   const [isPending, startTransition] = useTransition();
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [openSecs, setOpenSecs] = useState<Set<string>>(new Set(["grupo", "imovel", "poi"]));
@@ -393,9 +402,9 @@ export default function PropertiesClient({
     canAlert && alerts.some((a) => a.name.trim().toLowerCase() === alertLabel.trim().toLowerCase());
 
   const createAlert = async () => {
-    if (!canAlert) return;
-    const ok = await addAlert(alertLabel, "Aviso diário", alertCriteria);
-    toast(ok ? "Alerta criado" : "Você já tem um alerta com estes filtros");
+    if (!canAlert || !require("savedSearches")) return;
+    const res = await addAlert(alertLabel, "Aviso diário", alertCriteria);
+    toast(res.ok ? "Alerta criado" : alertError(res.reason));
   };
 
   const goTo = (p: number) => {
@@ -644,12 +653,13 @@ export default function PropertiesClient({
           onChange={(v) => patch({ modalities: v.join(",") || null })}
         />
         <button
-          className={`selectish${advActive ? " on" : ""}`}
+          className={`selectish${advActive ? " on" : ""}${canAdvanced ? "" : " locked"}`}
           type="button"
-          onClick={() => setDrawerOpen(true)}
+          onClick={() => require("advancedFilters") && setDrawerOpen(true)}
         >
           <IconSliders width={16} height={16} strokeWidth={1.8} />
           Filtros avançados{advCount > 0 && <span className="advcount">{advCount}</span>}
+          {!canAdvanced && <PlanBadge feature="advancedFilters" />}
         </button>
         {filtered && (
           <button type="button" className="clearfilters" onClick={clearAll}>
@@ -1047,7 +1057,12 @@ export default function PropertiesClient({
 
       <div className="viewbar">
         <div className="viewtoggle">
-          {VIEWS.map((v) => (
+          {/* A view the plan does not include is not offered at all; a deep link to it still
+              lands on the upsell below. */}
+          {VIEWS.filter((v) => {
+            const feature = VIEW_FEATURE[v.key];
+            return !feature || can(feature);
+          }).map((v) => (
             <button
               key={v.key}
               type="button"
@@ -1079,7 +1094,9 @@ export default function PropertiesClient({
         {isPending && <div className="viewloadbar" aria-hidden />}
         {/* the calendar dims its own day panel instead */}
         <div className={`viewinner${isPending && view !== "calendar" ? " loading" : ""}`}>
-          {view === "map" ? (
+          {lockedView && VIEW_FEATURE[lockedView] ? (
+            <UpgradeWall feature={VIEW_FEATURE[lockedView]!} role={role} trial={trial} />
+          ) : view === "map" ? (
             map && map.points.length ? (
               <>
                 {map.total > map.points.length && (

@@ -45,7 +45,7 @@ export default async function PropertyPage({ params }: { params: Promise<{ id: s
   // deriveTitle already appends the neighborhood when there is no bedroom count.
   const heading =
     p.neighborhood && !p.title.endsWith(p.neighborhood)
-      ? `${p.title} — ${p.neighborhood}`
+      ? `${p.title} - ${p.neighborhood}`
       : p.title;
 
   const data = fmtDate(p.auctionDate);
@@ -88,20 +88,20 @@ export default async function PropertyPage({ params }: { params: Promise<{ id: s
           <div className="factgrid">
             <div className="f">
               <div className="k">Área útil</div>
-              <div className="v">{p.area != null ? `${Math.round(p.area)} m²` : "—"}</div>
+              <div className="v">{p.area != null ? `${Math.round(p.area)} m²` : "-"}</div>
             </div>
             <div className="f">
               <div className="k">Quartos</div>
-              <div className="v">{p.bedrooms ?? "—"}</div>
+              <div className="v">{p.bedrooms ?? "-"}</div>
             </div>
             <div className="f">
               <div className="k">Vagas</div>
-              <div className="v">{p.parkingSpots ?? "—"}</div>
+              <div className="v">{p.parkingSpots ?? "-"}</div>
             </div>
             <div className="f">
               <div className="k">Situação</div>
               <div className="v" style={{ fontSize: "15px" }}>
-                {p.occupancyStatus ?? "—"}
+                {p.occupancyStatus ?? "-"}
               </div>
             </div>
           </div>
@@ -153,7 +153,7 @@ export default async function PropertyPage({ params }: { params: Promise<{ id: s
           <div className="infoblock pricecard">
             {p.inactive && (
               <div className="inactive-note">
-                Anúncio inativo — este imóvel não aparece mais na oferta atual da Caixa.
+                Anúncio inativo - este imóvel não aparece mais na oferta atual da Caixa.
               </div>
             )}
             <div className="now">{money(p.saleValue)}</div>

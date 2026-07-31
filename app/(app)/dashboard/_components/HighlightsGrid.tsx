@@ -13,8 +13,6 @@ export default function HighlightsGrid({ items }: { items: Property[] }) {
       <SectionHead
         title="Destaques da rodada"
         why="nota de investimento alta somada a deságio real"
-        moreHref="/market"
-        moreLabel="Ver painel de mercado"
       />
       <div className="oppgrid photo">
         {items.map((p) => (

@@ -22,7 +22,7 @@ export default function RegionScoreBars({ region }: { region: Region }) {
           <div key={field} className={`sb${dim ? " dim" : ""}`}>
             <div className="top">
               <span className="name">{label}</span>
-              <span className="num">{v == null ? "—" : Math.round(v)}</span>
+              <span className="num">{v == null ? "-" : Math.round(v)}</span>
             </div>
             <div className="track">
               <i style={{ width: `${v == null ? 0 : Math.round(v)}%` }} />

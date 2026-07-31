@@ -57,7 +57,7 @@ export default function LandingEffects() {
     );
     document.querySelectorAll(".lp-reveal").forEach((el) => reveal.observe(el));
 
-    // the capability mocks aren't .lp-reveal — animate them independently
+    // the capability mocks aren't .lp-reveal - animate them independently
     const mocks = new IntersectionObserver(
       (entries) => {
         for (const e of entries) {
@@ -70,7 +70,7 @@ export default function LandingEffects() {
     );
     document.querySelectorAll(".lp-lviz").forEach((el) => mocks.observe(el));
 
-    // hero mock is above the fold — kick it off immediately
+    // hero mock is above the fold - kick it off immediately
     document.querySelectorAll(".lp-heromock").forEach((el) => {
       el.classList.add("lp-in");
       animate(el);

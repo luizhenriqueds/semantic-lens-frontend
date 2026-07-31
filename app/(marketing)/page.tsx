@@ -2,7 +2,7 @@ import Image from "next/image";
 import Link from "next/link";
 import LandingEffects from "@/app/(marketing)/_components/LandingEffects";
 import ApiWaitlist from "@/app/(marketing)/_components/ApiWaitlist";
-import Hint from "@/components/ui/Hint";
+import PlanCta from "@/components/plan/PlanCta";
 import {
   SpotCommercial,
   SpotFamily,
@@ -11,12 +11,14 @@ import {
   SpotSeason,
   SpotStudent,
 } from "@/app/(marketing)/_components/UseSpots";
-import { IconCalendar, IconChart, IconHouse, IconSliders, POI_ICON } from "@/lib/icons";
+import { IconCalendar, IconChart, IconHouse, IconSliders } from "@/lib/icons";
 import Rail from "@/components/ui/Rail";
 import ShowcaseGallery from "@/app/(marketing)/_components/ShowcaseGallery";
 import { SHOWCASE_CAPTURED } from "@/app/(marketing)/_data/showcase";
 import { SIMILAR, SIMILAR_SEED } from "@/app/(marketing)/_data/similar";
 import { getLandingStats } from "@/lib/data/landingStats";
+import { PLANS, TRIAL_DAYS, type Role } from "@/lib/entitlements";
+import { getEntitlements } from "@/lib/entitlements/server";
 import { countShort, fmtDay, money } from "@/lib/format";
 import { getUser } from "@/lib/supabase/server";
 
@@ -40,9 +42,80 @@ function ScoreBars({ items }: { items: { k: string; v: number }[] }) {
 
 type StatTile = { v: string; suffix?: string; k: string; note: string; accent?: boolean };
 
+// Must match the entitlement matrix in lib/entitlements/plans.ts - this is what we promise.
+const PLAN_CARDS: {
+  role: Role;
+  trial: string;
+  subnote?: string;
+  popular?: boolean;
+  features: { lead?: string; text: string }[];
+}[] = [
+  {
+    role: "basic",
+    trial: "Explore sem criar conta",
+    features: [
+      { text: "Busca por texto, por região e por proximidade de pontos de interesse" },
+      { text: "Lista, mapa, filtros básicos e a página completa de cada imóvel" },
+      {
+        lead: `${PLANS.basic.limits.favorites} favoritos`,
+        text: `${PLANS.basic.limits.savedSearches} alertas salvos, com aviso diário ou semanal por e-mail`,
+      },
+    ],
+  },
+  {
+    role: "investor",
+    trial: `${TRIAL_DAYS} dias grátis para testar`,
+    popular: true,
+    subnote: `Tudo do ${PLANS.basic.label}, mais:`,
+    features: [
+      { lead: "Favoritos e alertas ilimitados", text: "sem teto de carteira nem de buscas salvas" },
+      {
+        lead: "Filtros avançados",
+        text: "deságio, notas, financiamento, FGTS e pontos de interesse",
+      },
+      { lead: "Grupos", text: "imóveis parecidos reunidos automaticamente para comparar" },
+      {
+        lead: "Análise de imóveis",
+        text: "distribuição de preço, deságio, área e nota do resultado",
+      },
+      {
+        lead: `Recomendações até ${PLANS.investor.limits.recommendations} imóveis`,
+        text: "semelhantes aos que você salvou",
+      },
+      { lead: "Alertas automáticos", text: "seleções semanais montadas pela Lavra" },
+    ],
+  },
+  {
+    role: "professional",
+    trial: "Para quem vive de leilão",
+    subnote: `Tudo do ${PLANS.investor.label}, mais:`,
+    features: [
+      { lead: "Vantagem de Largada", text: "seus alertas saem antes dos demais planos" },
+      {
+        lead: "Todos os alertas automáticos",
+        text: "deságios, mudanças de modalidade, coleções e regiões em destaque",
+      },
+      { lead: "Painel de mercado", text: "preço por m², tendências e comparáveis por cidade" },
+      { lead: "Calendário de leilões", text: "a agenda das datas, dia a dia" },
+      {
+        lead: "Regiões",
+        text: "perfil e DNA de cada bairro, o que existe no entorno, preços de mercado e regiões semelhantes",
+      },
+      {
+        lead: `Recomendações até ${PLANS.professional.limits.recommendations} imóveis`,
+        text: "e envio por WhatsApp assim que estiver no ar",
+      },
+      { lead: "Relatórios e exportação", text: "buscas, filtros e análises em CSV ou PDF" },
+    ],
+  },
+];
+
 export default async function LandingPage() {
-  const [{ user }, stats] = await Promise.all([getUser(), getLandingStats()]);
-  const updatedAt = fmtDay(stats?.computedAt);
+  const [{ user }, stats, ent] = await Promise.all([
+    getUser(),
+    getLandingStats(),
+    getEntitlements(),
+  ]);
 
   const tiles: StatTile[] = stats
     ? [
@@ -131,21 +204,16 @@ export default async function LandingPage() {
               <a href="#planos">Planos</a>
               <a href="#faq">Dúvidas</a>
             </nav>
+            {/* Browsing needs no account, so the primary CTA opens the app rather than signup. */}
             <div className="lp-navcta">
-              {user ? (
-                <Link className="lp-btn lp-solid" href="/dashboard">
-                  Dashboard
+              {!user && (
+                <Link className="lp-btn lp-ghost" href="/login">
+                  Entrar
                 </Link>
-              ) : (
-                <>
-                  <Link className="lp-btn lp-ghost" href="/login">
-                    Entrar
-                  </Link>
-                  <Link className="lp-btn lp-solid" href="/register">
-                    Criar conta grátis
-                  </Link>
-                </>
               )}
+              <Link className="lp-btn lp-solid" href="/dashboard">
+                {user ? "Ir para o painel" : "Explorar imóveis"}
+              </Link>
             </div>
           </div>
         </div>
@@ -308,7 +376,6 @@ export default async function LandingPage() {
             </div>
             <p className="lp-stats-foot">
               Sem cadastro para explorar · toda nota vem com o porquê, fator a fator
-              {updatedAt ? ` · base atualizada em ${updatedAt}` : ""}
             </p>
           </div>
         </section>
@@ -1418,159 +1485,45 @@ export default async function LandingPage() {
           </div>
 
           <div className="lp-plans-grid lp-m-slide">
-            <div className="lp-plan lp-reveal">
-              <div className="lp-phead">
-                <span className="lp-pname">Grátis</span>
-              </div>
-              <div className="lp-price lp-free">
-                <span className="lp-amt">R$ 0</span>
-                <span className="lp-per">/mês</span>
-              </div>
-              <div className="lp-trial">Para começar a explorar</div>
-              <ul>
-                <li>
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                    <path d="m5 13 4 4L19 7" />
-                  </svg>
-                  Navegue por anúncios e detalhes, filtros básicos e mapa
-                </li>
-                <li>
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                    <path d="m5 13 4 4L19 7" />
-                  </svg>
-                  <span>
-                    <b>10 favoritos</b>, 1 busca salva e resumo diário
-                  </span>
-                </li>
-                <li>
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                    <path d="m5 13 4 4L19 7" />
-                  </svg>
-                  <span>
-                    <b>3 buscas semânticas</b> por mês
-                  </span>
-                </li>
-              </ul>
-              <button className="lp-pbtn" type="button">
-                Começar grátis
-              </button>
-            </div>
-
-            <div className="lp-plan lp-pop lp-reveal lp-d1">
-              <span className="lp-poppill">Mais popular</span>
-              <div className="lp-phead">
-                <span className="lp-pname">Investidor</span>
-              </div>
-              <div className="lp-price">
-                <span className="lp-amt">R$ 39</span>
-                <span className="lp-per">/mês</span>
-              </div>
-              <div className="lp-trial">7 dias grátis</div>
-              <ul>
-                <li>
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                    <path d="m5 13 4 4L19 7" />
-                  </svg>
-                  <span>
-                    <b>Busca semântica e agrupamentos ilimitados</b>
-                  </span>
-                </li>
-                <li>
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                    <path d="m5 13 4 4L19 7" />
-                  </svg>
-                  <span>
-                    <b>Alertas inteligentes</b> - matches ranqueados por relevância e ROI, buscas
-                    salvas ilimitadas
-                  </span>
-                </li>
-                <li>
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                    <path d="m5 13 4 4L19 7" />
-                  </svg>
-                  <span>
-                    <b>Recomendações</b> - até 5 imóveis similares
-                  </span>
-                </li>
-                <li>
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                    <path d="m5 13 4 4L19 7" />
-                  </svg>
-                  <span>Filtros avançados, favoritos ilimitados e indicadores de ROI</span>
-                </li>
-              </ul>
-              <button className="lp-pbtn lp-solid" type="button">
-                Iniciar teste de 7 dias
-              </button>
-            </div>
-
-            <div className="lp-plan lp-reveal lp-d2">
-              <div className="lp-phead">
-                <span className="lp-pname">Profissional</span>
-              </div>
-              <div className="lp-price">
-                <span className="lp-amt">R$ 79</span>
-                <span className="lp-per">/mês</span>
-              </div>
-              <div className="lp-trial">Camada proativa para quem vive de leilão</div>
-              <div className="lp-subnote">Tudo do Investidor, mais:</div>
-              <ul>
-                <li>
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                    <path d="m5 13 4 4L19 7" />
-                  </svg>
-                  <span>
-                    <b>Vantagem de Largada</b> - alertas entregues primeiro aos Pros (acesso
-                    antecipado)
-                  </span>
-                </li>
-                <li>
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                    <path d="m5 13 4 4L19 7" />
-                  </svg>
-                  <span>
-                    <b>Alertas proativos</b> - leilões prestes a encerrar, novos clusters
-                    compatíveis e recomendações, automaticamente
-                  </span>
-                </li>
-                <li>
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                    <path d="m5 13 4 4L19 7" />
-                  </svg>
-                  <span>
-                    <b>Recomendações ampliadas</b> - até 10 imóveis similares (2x)
-                  </span>
-                </li>
-                <li>
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                    <path d="m5 13 4 4L19 7" />
-                  </svg>
-                  <span>
-                    <b>Agenda de Leilões</b> - calendário dos seus lotes salvos, com lembretes
-                  </span>
-                </li>
-                <li>
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                    <path d="m5 13 4 4L19 7" />
-                  </svg>
-                  <span>
-                    <b>Análise avançada de região</b> - DNA do bairro, POIs por perto, regiões
-                    parecidas, melhor uso e preços regionais
-                  </span>
-                </li>
-                <li>
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                    <path d="m5 13 4 4L19 7" />
-                  </svg>
-                  <span>
-                    <b>Relatórios e exportação</b> (CSV/PDF)
-                  </span>
-                </li>
-              </ul>
-              <button className="lp-pbtn" type="button">
-                Assinar Profissional
-              </button>
-            </div>
+            {PLAN_CARDS.map((card, i) => {
+              const plan = PLANS[card.role];
+              return (
+                <div
+                  className={`lp-plan lp-reveal${card.popular ? " lp-pop" : ""}${i ? ` lp-d${i}` : ""}`}
+                  key={card.role}
+                >
+                  {card.popular && <span className="lp-poppill">Mais popular</span>}
+                  <div className="lp-phead">
+                    <span className="lp-pname">{plan.label}</span>
+                  </div>
+                  <div className={`lp-price${plan.price === 0 ? " lp-free" : ""}`}>
+                    <span className="lp-amt">{money(plan.price)}</span>
+                    <span className="lp-per">/mês</span>
+                  </div>
+                  <div className="lp-trial">{card.trial}</div>
+                  {card.subnote && <div className="lp-subnote">{card.subnote}</div>}
+                  <ul>
+                    {card.features.map((f) => (
+                      <li key={f.text}>
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                          <path d="m5 13 4 4L19 7" />
+                        </svg>
+                        <span>
+                          {f.lead && <b>{f.lead}</b>}
+                          {f.lead ? ` - ${f.text}` : f.text}
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                  <PlanCta
+                    target={card.role}
+                    role={ent.role}
+                    trial={ent.trial}
+                    className={`lp-pbtn${card.popular ? " lp-solid" : ""}`}
+                  />
+                </div>
+              );
+            })}
           </div>
 
           <div className="lp-apiplan lp-reveal">
@@ -1583,15 +1536,17 @@ export default async function LandingPage() {
                 Integração via API
               </h3>
               <p>
-                Estamos desenvolvendo uma camada de integrações altamente personalizáveis para
-                conectar a Lavra aos seus sistemas, fluxos e planilhas. Entre na lista de espera e
-                ajude a moldar o que vem por aí.
+                O plano <b>{PLANS.platform.label}</b> dá acesso programático à mesma base - imóveis,
+                notas, regiões e recomendações - por chave, para conectar a Lavra aos seus sistemas,
+                fluxos e planilhas. Entre na lista de espera e ajude a moldar o que vem por aí.
               </p>
             </div>
             <ApiWaitlist />
           </div>
 
-          <p className="lp-plans-note">Cancele quando quiser, direto no painel. Sem fidelidade.</p>
+          <p className="lp-plans-note">
+            Sem fidelidade - cancele quando quiser. O plano {PLANS.basic.label} não expira.
+          </p>
         </div>
       </section>
 
@@ -1811,10 +1766,12 @@ export default async function LandingPage() {
               </summary>
               <div className="lp-ans">
                 <p>
-                  Explorar a base, ver todas as notas e abrir a leitura de região é gratuito e não
-                  exige cadastro. Uma conta grátis libera favoritos, uma busca salva e resumo por
-                  e-mail. Os planos pagos liberam buscas em linguagem natural sem limite, alertas
-                  configuráveis, comparação ampliada e a análise completa de região.
+                  Explorar a base, buscar por texto ou por proximidade, ver todas as notas e abrir a
+                  leitura de região é gratuito e não exige cadastro. Uma conta grátis libera{" "}
+                  {PLANS.basic.limits.favorites} favoritos e {PLANS.basic.limits.savedSearches}{" "}
+                  alertas por e-mail. Os planos pagos liberam filtros avançados, grupos,
+                  recomendações, painel de mercado, calendário de leilões, a análise completa de
+                  região e a exportação em CSV/PDF.
                 </p>
               </div>
             </details>

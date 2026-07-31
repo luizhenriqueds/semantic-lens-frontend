@@ -442,7 +442,8 @@ button {
 }
 
 .content {
-  padding: 30px;
+  --gutter: 30px;
+  padding: var(--gutter);
   max-width: 1180px;
   width: 100%;
   min-width: 0;
@@ -1748,6 +1749,10 @@ select.selectish {
   justify-content: space-between;
   gap: 16px;
   margin-bottom: 20px;
+}
+/* the meter sits left, the link and button stay right */
+.alertstools .usagemeter {
+  margin-right: auto;
 }
 .alertstools-link {
   display: inline-flex;
@@ -4259,7 +4264,8 @@ select.selectish {
     display: grid;
   }
   .content {
-    padding: 22px 18px 40px;
+    --gutter: 18px;
+    padding: 22px var(--gutter) 40px;
   }
   .topsearch {
     display: none;
@@ -4288,7 +4294,8 @@ select.selectish {
 
 @media (max-width: 640px) {
   .content {
-    padding: 18px 14px 34px;
+    --gutter: 14px;
+    padding: 18px var(--gutter) 34px;
   }
   .topbar {
     padding: 12px 14px;
@@ -4532,6 +4539,7 @@ select.selectish {
   animation: fade 0.16s ease;
 }
 .modal {
+  position: relative;
   background: var(--surface);
   border: 1px solid var(--line);
   border-radius: 18px;
@@ -6401,6 +6409,218 @@ select.selectish {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+.usermenu-plan {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--line-soft);
+}
+.usermenu-plan a {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--primary);
+}
+.usermenu-plan small {
+  font-size: 12px;
+  color: var(--ink-soft);
+}
+/* plan comparison in /settings */
+.planscmp {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+}
+.planscmp-col {
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.planscmp-col.on {
+  border-color: var(--primary);
+  background: var(--primary-wash);
+}
+.planscmp-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.planscmp-head b {
+  font-size: 15px;
+}
+.planscmp-price {
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+.planscmp-price small {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--ink-soft);
+}
+.planscmp-col ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 6px;
+  flex: 1;
+  font-size: 13px;
+  color: var(--ink-soft);
+}
+.planscmp-col .btn {
+  justify-content: center;
+  width: 100%;
+}
+@media (max-width: 780px) {
+  .planscmp {
+    grid-template-columns: 1fr;
+  }
+}
+
+.usagemeter {
+  font-size: 13px;
+  color: var(--ink-soft);
+  white-space: nowrap;
+}
+.usagemeter b {
+  color: var(--ink);
+  font-weight: 700;
+}
+.usagemeter.full b {
+  color: var(--warn);
+}
+.usagemeter a {
+  font-weight: 600;
+  color: var(--primary);
+}
+
+.modal-x {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border: 0;
+  border-radius: 50%;
+  background: none;
+  color: var(--ink-faint);
+  cursor: pointer;
+}
+.modal-x:hover {
+  background: var(--surface-2);
+  color: var(--ink);
+}
+
+.wall-price b {
+  color: var(--ink);
+}
+
+/* simulated checkout */
+.modal.paywall {
+  max-width: 420px;
+  text-align: left;
+}
+.pw-head {
+  border-bottom: 1px solid var(--line-soft);
+  padding-bottom: 14px;
+  margin-bottom: 14px;
+}
+.pw-kicker {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+}
+.modal.paywall h3 {
+  margin: 6px 0 8px;
+}
+.pw-price {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+}
+.pw-price b {
+  font-size: 30px;
+  letter-spacing: -0.02em;
+}
+.pw-price span {
+  font-size: 14px;
+  color: var(--ink-soft);
+}
+.pw-pitch {
+  list-style: none;
+  margin: 0 0 16px;
+  padding: 0;
+  display: grid;
+  gap: 8px;
+}
+.pw-pitch li {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  font-size: 13.5px;
+  color: var(--ink-soft);
+}
+.pw-pitch svg {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+  margin-top: 1px;
+  stroke-width: 2.4;
+  color: var(--primary);
+}
+.pw-form {
+  display: grid;
+  gap: 10px;
+  margin-bottom: 12px;
+  opacity: 0.55;
+}
+.pw-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+.pw-field span {
+  display: block;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--ink-soft);
+  margin-bottom: 4px;
+}
+.pw-field input {
+  width: 100%;
+}
+.pw-note {
+  font-size: 12.5px;
+  color: var(--ink-soft);
+  margin: 0 0 14px;
+}
+.pw-note.pw-sent {
+  color: var(--primary);
+  font-weight: 600;
+}
+.modal-alt {
+  display: block;
+  margin-top: 12px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink-soft);
+  text-align: center;
+}
+.setchannel b svg {
+  vertical-align: -3px;
+  margin-right: 2px;
+}
 .usermenu-item,
 .usermenu-signout {
   display: flex;
@@ -6599,6 +6819,57 @@ select.selectish {
 .chip.hot {
   background: color-mix(in srgb, var(--warn) 16%, transparent);
   color: var(--warn);
+}
+/* plan gating */
+.planbadge {
+  display: inline-flex;
+  align-items: center;
+  flex-shrink: 0;
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  border-radius: 5px;
+  padding: 2px 5px;
+  background: var(--primary-wash);
+  color: var(--primary);
+}
+.navbtn.locked,
+.viewtoggle button.locked,
+.selectish.locked {
+  color: var(--ink-faint);
+}
+/* the badge shares the row with the label, which must stay on one line */
+.navbtn .txt {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.navbtn.locked {
+  gap: 9px;
+}
+.navbtn .planbadge {
+  font-size: 9px;
+  padding: 2px 4px;
+}
+.navbtn.locked .planbadge {
+  margin-left: auto;
+}
+.viewtoggle button .planbadge,
+.selectish .planbadge {
+  margin-left: 6px;
+}
+.topbar-auth {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+@media (max-width: 640px) {
+  .topbar-auth .btn.ghost {
+    display: none;
+  }
 }
 
 /* hero */
@@ -6888,19 +7159,7 @@ select.selectish {
     font-size: 25px;
   }
 }
-/* The shared rail bleeds 28px to the marketing gutter; the app shell's is narrower,
-   so the app rails re-bleed to their own padding or they overflow the viewport. */
-@media (max-width: 700px) {
-  .home .rail-track {
-    margin-inline: -18px;
-    padding-inline: 18px;
-  }
-}
 @media (max-width: 640px) {
-  .home .rail-track {
-    margin-inline: -14px;
-    padding-inline: 14px;
-  }
   .regiongrid {
     grid-template-columns: 1fr;
   }
@@ -7020,8 +7279,8 @@ select.selectish {
 @media (max-width: 700px) {
   .rail-track {
     grid-auto-columns: 80%;
-    margin-inline: -28px;
-    padding-inline: 28px;
+    margin-inline: calc(-1 * var(--gutter));
+    padding-inline: var(--gutter);
   }
   .rail-btns {
     display: none;

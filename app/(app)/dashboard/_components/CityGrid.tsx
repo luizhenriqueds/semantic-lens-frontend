@@ -10,7 +10,7 @@ export default function CityGrid({ cities }: { cities: MarketCity[] }) {
     <section className="railsec">
       <SectionHead
         title="Explore por cidade"
-        why="onde há mais oferta — com preço mediano, deságio e nota da região"
+        why="onde há mais oferta - com preço mediano, deságio e nota da região"
         moreHref="/regions"
         moreLabel="Ver todas as regiões"
       />

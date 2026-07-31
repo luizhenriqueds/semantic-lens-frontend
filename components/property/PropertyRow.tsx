@@ -88,7 +88,7 @@ export default function PropertyRow({
       </div>
       <div>
         <div className="colk">Leilão</div>
-        <div className="colv">{p.modality ?? "—"}</div>
+        <div className="colv">{p.modality ?? "-"}</div>
         {data && <div className="sub">{data}</div>}
       </div>
       {(nota != null || p.profile) && (

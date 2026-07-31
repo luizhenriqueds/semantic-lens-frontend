@@ -7,7 +7,7 @@ import { getMatchedPage } from "@/lib/data";
 import { getAlert } from "@/lib/data/alerts";
 import { criteriaToParams, parsePropertySort } from "@/lib/filters/propertiesUrl";
 import { IconBell, IconPencil, IconSearch, IconSliders } from "@/lib/icons";
-import { requireUser } from "@/lib/supabase/server";
+import { getUser } from "@/lib/supabase/server";
 
 export default async function AlertPage({
   params,
@@ -18,8 +18,8 @@ export default async function AlertPage({
 }) {
   const { id } = await params;
   const sp = await searchParams;
-  const { supabase } = await requireUser();
-  const alert = await getAlert(supabase, id);
+  const { supabase, user } = await getUser();
+  const alert = user ? await getAlert(supabase, id) : null;
   if (!alert) notFound();
 
   const sort = parsePropertySort(sp.sort);

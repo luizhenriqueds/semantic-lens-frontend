@@ -41,7 +41,7 @@ export default function PagedCards({
             {heading}
             {total > items.length && (
               <span className="range">
-                mostrando {(page - 1) * SEARCH_PAGE_SIZE + 1}–
+                mostrando {(page - 1) * SEARCH_PAGE_SIZE + 1}-
                 {(page - 1) * SEARCH_PAGE_SIZE + items.length} de {total}
               </span>
             )}

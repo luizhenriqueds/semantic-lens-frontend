@@ -17,7 +17,7 @@ export default function PoiNearGrid({ nearest }: { nearest: Record<string, numbe
       {POIS.map(({ cat, label }) => {
         const Icon = POI_ICON[cat];
         const d = nearest[cat];
-        const dist = d == null ? "—" : d <= MAX_NEAR_M ? fmtDist(d) : `+${MAX_NEAR_M / 1000} km`;
+        const dist = d == null ? "-" : d <= MAX_NEAR_M ? fmtDist(d) : `+${MAX_NEAR_M / 1000} km`;
         return (
           <div className="poi" key={cat}>
             <div className="pic">{Icon && <Icon />}</div>

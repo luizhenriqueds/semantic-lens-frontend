@@ -59,7 +59,7 @@ export default function PriceHistory({ points }: { points: PriceHistoryPoint[] }
 
   const stroke = stable ? "var(--primary-soft)" : down ? "var(--good)" : "var(--warn)";
 
-  // Distinct modalities in order — the property may have moved between auction formats.
+  // Distinct modalities in order - the property may have moved between auction formats.
   const modalities = pts.reduce<string[]>((acc, p) => {
     if (p.modality && p.modality !== acc[acc.length - 1]) acc.push(p.modality);
     return acc;
@@ -169,7 +169,7 @@ export default function PriceHistory({ points }: { points: PriceHistoryPoint[] }
             ? "Este imóvel foi reanunciado pelo mesmo valor, mas em outra modalidade de venda."
             : "Este imóvel já foi anunciado mais de uma vez pelo mesmo valor de venda."
           : down
-            ? "O valor de venda caiu ao longo dos anúncios — imóveis reofertados costumam ter descontos maiores."
+            ? "O valor de venda caiu ao longo dos anúncios - imóveis reofertados costumam ter descontos maiores."
             : "O valor de venda subiu entre um anúncio e outro."}
       </div>
     </div>

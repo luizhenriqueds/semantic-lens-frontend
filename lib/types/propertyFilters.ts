@@ -19,7 +19,7 @@ export type PropertyFilters = {
   maxPrice?: number;
   minArea?: number;
   poiCats?: string[];
-  /** Named places, by `pois.id` — within `poiRadiusM` of any of them. */
+  /** Named places, by `pois.id` - within `poiRadiusM` of any of them. */
   poiIds?: number[];
   poiRadiusM?: number;
   maxCenterM?: number;
@@ -45,7 +45,7 @@ export type FilterOptions = {
   types: string[];
   modalities: string[];
   poiCategories: string[];
-  /** Whether the list RPC honours `min_visual_score` — probed, see getFilterOptions. */
+  /** Whether the list RPC honours `min_visual_score` - probed, see getFilterOptions. */
   visualScore: boolean;
 };
 

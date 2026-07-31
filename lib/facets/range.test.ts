@@ -46,7 +46,7 @@ describe("rangeHref", () => {
 
 describe("rangeLabel", () => {
   it("labels bounded and open-ended buckets", () => {
-    expect(rangeLabel({ dim: "area", from: 60, to: 80 })).toBe("Área: 60 m² – 80 m²");
+    expect(rangeLabel({ dim: "area", from: 60, to: 80 })).toBe("Área: 60 m² - 80 m²");
     expect(rangeLabel({ dim: "invest", from: 90, to: Infinity })).toBe(
       "Nota de investimento: 90 ou mais",
     );
