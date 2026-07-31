@@ -65,7 +65,6 @@ const PRO_FEATURES: Record<Feature, boolean> = {
   export: true,
 };
 
-// `limits` mirrors `public.plan_cap()` in supabase/migrations/0078_plan_quotas.sql, by hand.
 export const PLANS: Record<Role, Plan> = {
   anon: {
     role: "anon",
