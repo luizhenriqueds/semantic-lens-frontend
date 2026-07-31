@@ -11,7 +11,9 @@ import UpgradeWall from "@/components/plan/UpgradeWall";
 import EmptyState from "@/components/ui/EmptyState";
 import Pagination from "@/components/ui/Pagination";
 import PropertyRow from "@/components/property/PropertyRow";
+import ExportButton from "@/components/export/ExportButton";
 import SearchableSelect from "@/components/ui/SearchableSelect";
+import { exportPropertiesCsv } from "@/app/actions/export";
 import AuctionCalendar from "./AuctionCalendar";
 import PropertiesAnalysis from "./PropertiesAnalysis";
 import { useToast } from "@/components/ui/Toaster";
@@ -37,6 +39,7 @@ import { IconArrow, IconBell, IconBuilding, IconSearch, IconSliders, POI_ICON } 
 import { MAX_NEAR_M, POI_LABEL, POI_ORDER } from "@/lib/pois";
 import {
   CHANGE_WINDOW_DAYS,
+  criteriaToParams,
   DEFAULT_SORT,
   LIST_PAGE_SIZE,
   PROPERTY_SORTS,
@@ -395,6 +398,10 @@ export default function PropertiesClient({
   }, [drawerOpen]);
 
   const alertCriteria = useMemo<AlertCriteriaSet>(() => toRpcFilters(filters), [filters]);
+
+  // Round-trips through the same snake_case keys parsePropertySearchParams reads, so the report
+  // reconstructs exactly this filter set.
+  const reportParams = useMemo(() => criteriaToParams(alertCriteria), [alertCriteria]);
 
   const canAlert = hasAnyCriteria(alertCriteria);
   const alertLabel = useMemo(() => describeCriteria(alertCriteria), [alertCriteria]);
@@ -1088,6 +1095,14 @@ export default function PropertiesClient({
             ))}
           </select>
         )}
+        {/* CSV needs a filter or search - no dumps of the whole base - and the analysis tab
+            exports as a PDF report instead. */}
+        <ExportButton
+          csv={
+            canAlert && view !== "analysis" ? () => exportPropertiesCsv(filters, sort) : undefined
+          }
+          pdf={view === "analysis" ? `/report/properties?${reportParams}` : undefined}
+        />
       </div>
 
       <div className="viewcontent">

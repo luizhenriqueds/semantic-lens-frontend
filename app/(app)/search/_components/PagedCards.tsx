@@ -4,6 +4,8 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useTransition } from "react";
 import Pagination from "@/components/ui/Pagination";
 import PropertyCard from "@/components/property/PropertyCard";
+import ExportButton from "@/components/export/ExportButton";
+import { exportSearchCsv } from "@/app/actions/export";
 import { SEARCH_PAGE_SIZE, SEARCH_SORTS, type SearchSort } from "@/lib/searchSort";
 import type { ProfileKey, Property } from "@/lib/types";
 
@@ -13,6 +15,7 @@ export default function PagedCards({
   total,
   page,
   sort,
+  query,
   highlightGoal,
   heading,
 }: {
@@ -20,6 +23,7 @@ export default function PagedCards({
   total: number;
   page: number;
   sort: SearchSort;
+  query?: string;
   highlightGoal?: ProfileKey | null;
   heading?: string;
 }) {
@@ -58,6 +62,8 @@ export default function PagedCards({
             </option>
           ))}
         </select>
+        {/* Browse mode has no query to re-run, so the export only rides on a real search. */}
+        {query && <ExportButton csv={() => exportSearchCsv(query, sort)} />}
       </div>
       <div className="pgrid">
         {items.map((p) => (

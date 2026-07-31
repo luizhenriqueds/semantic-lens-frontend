@@ -12,6 +12,7 @@ export type Feature =
   | "recommendations"
   | "advancedFilters"
   | "analysisView"
+  | "marketCompare"
   | "calendarView"
   | "market"
   | "regions"
@@ -40,6 +41,7 @@ const NONE: Record<Feature, boolean> = {
   recommendations: false,
   advancedFilters: false,
   analysisView: false,
+  marketCompare: false,
   calendarView: false,
   market: false,
   regions: false,
@@ -55,6 +57,7 @@ const INVESTOR_FEATURES: Record<Feature, boolean> = {
   recommendations: true,
   advancedFilters: true,
   analysisView: true,
+  marketCompare: true,
 };
 
 const PRO_FEATURES: Record<Feature, boolean> = {

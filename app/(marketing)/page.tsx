@@ -18,6 +18,7 @@ import { SHOWCASE_CAPTURED } from "@/app/(marketing)/_data/showcase";
 import { SIMILAR, SIMILAR_SEED } from "@/app/(marketing)/_data/similar";
 import { getLandingStats } from "@/lib/data/landingStats";
 import { PLANS, TRIAL_DAYS, type Role } from "@/lib/entitlements";
+import { PLAN_INCLUDES } from "@/lib/entitlements/copy";
 import { getEntitlements } from "@/lib/entitlements/server";
 import { countShort, fmtDay, money } from "@/lib/format";
 import { getUser } from "@/lib/supabase/server";
@@ -77,6 +78,10 @@ const PLAN_CARDS: {
       {
         lead: "Análise de imóveis",
         text: "distribuição de preço, deságio, área e nota do resultado",
+      },
+      {
+        lead: "Comparativo de mercado",
+        text: "o lance contra anúncios reais do bairro, com o potencial de ganho",
       },
       {
         lead: `Recomendações até ${PLANS.investor.limits.recommendations} imóveis`,
@@ -1487,6 +1492,7 @@ export default async function LandingPage() {
           <div className="lp-plans-grid lp-m-slide">
             {PLAN_CARDS.map((card, i) => {
               const plan = PLANS[card.role];
+              const includes = PLAN_INCLUDES[card.role];
               return (
                 <div
                   className={`lp-plan lp-reveal${card.popular ? " lp-pop" : ""}${i ? ` lp-d${i}` : ""}`}
@@ -1515,6 +1521,21 @@ export default async function LandingPage() {
                       </li>
                     ))}
                   </ul>
+                  {includes && (
+                    <>
+                      <div className="lp-pincludes">{includes.heading}</div>
+                      <ul>
+                        {includes.items.map((item) => (
+                          <li key={item}>
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                              <path d="m5 13 4 4L19 7" />
+                            </svg>
+                            <span>{item}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </>
+                  )}
                   <PlanCta
                     target={card.role}
                     role={ent.role}

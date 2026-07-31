@@ -10,6 +10,7 @@ export default function ConfirmDialog({
   confirmLabel = "Confirmar",
   cancelLabel = "Cancelar",
   danger = false,
+  icon,
   onConfirm,
   onCancel,
 }: {
@@ -19,6 +20,8 @@ export default function ConfirmDialog({
   confirmLabel?: string;
   cancelLabel?: string;
   danger?: boolean;
+  /** Overrides the default pencil for a dialog that is not an edit. */
+  icon?: React.ReactNode;
   onConfirm: () => void;
   onCancel: () => void;
 }) {
@@ -50,11 +53,12 @@ export default function ConfirmDialog({
         onClick={(e) => e.stopPropagation()}
       >
         <div className={`mico${danger ? " danger" : ""}`}>
-          {danger ? (
-            <IconTrash width={22} height={22} strokeWidth={1.8} />
-          ) : (
-            <IconPencil width={22} height={22} strokeWidth={1.8} />
-          )}
+          {icon ??
+            (danger ? (
+              <IconTrash width={22} height={22} strokeWidth={1.8} />
+            ) : (
+              <IconPencil width={22} height={22} strokeWidth={1.8} />
+            ))}
         </div>
         <h3>{title}</h3>
         {message && <p>{message}</p>}

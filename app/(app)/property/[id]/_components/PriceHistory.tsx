@@ -1,4 +1,4 @@
-import { money } from "@/lib/format";
+import { money, periodLabel } from "@/lib/format";
 import type { PriceHistoryPoint } from "@/lib/types";
 
 const W = 640;
@@ -25,6 +25,9 @@ export default function PriceHistory({ points }: { points: PriceHistoryPoint[] }
   const states = pts.filter(
     (p, i) => !i || p.saleValue !== pts[i - 1].saleValue || p.modality !== pts[i - 1].modality,
   ).length;
+  // The span the chart actually plots - `getPriceHistory` returns the whole history, so a fixed
+  // window here would contradict the axis labels below.
+  const period = periodLabel(first.date, last.date);
   const delta = last.saleValue - first.saleValue;
   const deltaPct = first.saleValue > 0 ? Math.round((delta / first.saleValue) * 100) : 0;
   const down = delta < 0;
@@ -72,7 +75,8 @@ export default function PriceHistory({ points }: { points: PriceHistoryPoint[] }
         <div>
           <div className="phist-now">{money(last.saleValue)}</div>
           <div className="phist-sub">
-            {states} {states === 1 ? "anúncio" : "anúncios"} · desde {fmt(first.date)}
+            {states} {states === 1 ? "anúncio" : "anúncios"}
+            {period ? ` nos últimos ${period}` : ` · desde ${fmt(first.date)}`}
           </div>
         </div>
         <div className={`phist-delta${stable ? " flat" : down ? " down" : " up"}`}>

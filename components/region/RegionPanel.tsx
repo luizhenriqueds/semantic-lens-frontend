@@ -5,6 +5,7 @@ import Link from "next/link";
 import dynamic from "next/dynamic";
 import RegionScoreBars from "@/components/region/RegionScoreBars";
 import PoiNearGrid from "@/components/region/PoiNearGrid";
+import { usePlan } from "@/components/plan/PlanProvider";
 import type { NearbyPoi, Region } from "@/lib/types";
 
 const PropertyPoiMap = dynamic(() => import("@/components/region/PropertyPoiMap"), {
@@ -27,6 +28,7 @@ export default function RegionPanel({
   lon: number | null;
   title: string;
 }) {
+  const { can } = usePlan();
   const canMap = lat != null && lon != null;
   const [tab, setTab] = useState<Tab>("perfil");
   const view = canMap ? tab : "perfil";
@@ -48,9 +50,12 @@ export default function RegionPanel({
             leilão
           </div>
         </div>
-        <Link className="btn ghost" href={`/regions/${region.h3}`}>
-          Ver página da região ›
-        </Link>
+        {/* The region page itself is gated, so a locked plan is not offered the trip. */}
+        {can("regions") && (
+          <Link className="btn ghost" href={`/regions/${region.h3}`}>
+            Ver página da região ›
+          </Link>
+        )}
       </div>
 
       {canMap && (

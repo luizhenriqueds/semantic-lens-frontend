@@ -4,6 +4,8 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useTransition } from "react";
 import Pagination from "@/components/ui/Pagination";
 import PropertyRow from "@/components/property/PropertyRow";
+import ExportButton from "@/components/export/ExportButton";
+import { exportAlertMatchesCsv } from "@/app/actions/export";
 import { LIST_PAGE_SIZE, PROPERTY_SORTS, sortParam } from "@/lib/filters/propertiesUrl";
 import type { Property, PropertySort } from "@/lib/types";
 
@@ -57,6 +59,7 @@ export default function AlertMatches({
             </option>
           ))}
         </select>
+        <ExportButton csv={() => exportAlertMatchesCsv(id, sort)} />
       </div>
 
       <div className="wlist">

@@ -8,6 +8,7 @@ import ScoreBars from "./_components/ScoreBars";
 import VisualScore from "./_components/VisualScore";
 import PropertyRanks from "./_components/PropertyRanks";
 import Ring from "@/components/ui/Ring";
+import ExportButton from "@/components/export/ExportButton";
 import {
   BlockSkeleton,
   InlineSkeleton,
@@ -185,6 +186,7 @@ export default async function PropertyPage({ params }: { params: Promise<{ id: s
                   Ver anúncio original
                 </a>
               )}
+              <ExportButton pdf={`/report/property/${p.id}`} compact />
             </div>
           </div>
 

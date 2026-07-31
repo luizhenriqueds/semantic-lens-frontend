@@ -159,3 +159,18 @@ export const IconCollection = (p: P) => (
     <path d="M18.5 15.5h.01M18.5 18h.01" />
   </svg>
 );
+export const IconDownload = (p: P) => (
+  <svg {...base(p)} strokeLinecap="round" strokeLinejoin="round">
+    <path d="M12 3v12" />
+    <path d="m7.5 10.5 4.5 4.5 4.5-4.5" />
+    <path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2" />
+  </svg>
+);
+export const IconPrinter = (p: P) => (
+  <svg {...base(p)} strokeLinejoin="round">
+    <path d="M7 9V3h10v6" />
+    <path d="M6 9h12a2 2 0 0 1 2 2v5h-3" />
+    <path d="M7 16H4v-5a2 2 0 0 1 2-2" />
+    <path d="M7 14h10v7H7z" />
+  </svg>
+);

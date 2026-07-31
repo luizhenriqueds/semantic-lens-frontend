@@ -2058,6 +2058,20 @@ footer.lp-foot .lp-fine {
   color: var(--ink-soft);
   line-height: 1.45;
 }
+/* Heading over the non-Feature capabilities listed on a card (PLAN_INCLUDES). */
+.lp-plan .lp-pincludes {
+  margin: -8px 0 12px;
+  font-size: 11.5px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+}
+/* Only the last list stretches, so the CTA stays pinned to the bottom of every card. */
+.lp-plan ul:not(:last-of-type) {
+  flex: 0 0 auto;
+  margin-bottom: 18px;
+}
 .lp-plan li svg {
   width: 17px;
   height: 17px;
