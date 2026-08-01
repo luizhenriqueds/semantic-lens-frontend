@@ -14,8 +14,12 @@ to surface the best opportunity for each objective.
   role key; a single cached read powers the list/detail/region views.
 - **Regions & groups** — H3-cell region pages with scores, DNA and infrastructure; and
   algorithmic property clusters.
-- **Client-side alerts & portfolio** — saved searches and favourites live in
-  `localStorage` (no auth/backend).
+- **Accounts & plans** — Supabase Auth (e-mail/password, magic link, recovery) behind
+  `middleware.ts`. Four tiers (`basic` → `investor` → `professional` / `platform`) with a
+  7-day self-serve investor trial; entitlements are enforced server-side in
+  `lib/entitlements/server.ts` and backed by RLS plus quota triggers.
+- **Alerts & portfolio** — saved searches and favourites persist in Supabase, scoped by
+  RLS and capped per plan.
 
 ## Stack
 
@@ -55,9 +59,12 @@ Key tables/RPCs: `properties`, `listings`, `pois`, `property_poi`, `property_sco
 - `app/api/semcache-stats/` — semantic-cache hit-rate endpoint.
 - `components/` — shell (sidebar, topbar, theme toggle), plus feature and `ui/`
   components.
+- `app/actions/` — server actions: `auth`, `plan`, `alerts`, `favorites`, `export`,
+  `settings`, `waitlist`. Each re-checks the session and entitlements server-side.
+- `app/(report)/` — print-optimised PDF routes, gated on the `export` feature.
 - `lib/` — `supabase` client, `data` (cached query + mapping layer), `facets` (query
-  parsing), `embed`/`semanticCache` (search), plus `format`, `geo`, `pois`, `region`,
-  `icons`, and client `localStore` for alerts/portfolio.
+  parsing), `embed`/`semanticCache` (search), `entitlements` (plan matrix + server gate),
+  `auth` (message + redirect helpers), plus `format`, `geo`, `pois`, `region`, `icons`.
 
 ## Themes
 
@@ -66,34 +73,35 @@ Light (default) and dark palettes, toggled from the topbar and persisted to
 
 ## Performance
 
-- Server Components cached with `unstable_cache` (120s revalidate) — most pages are
-  prerendered and revalidated; navigations kept warm via `staleTimes`.
+- Server Components cached with `unstable_cache` (120s revalidate). Most routes are
+  dynamic — the app shell reads the auth cookie — so caching happens at the query layer
+  rather than the route; navigations are kept warm via `staleTimes`.
 - Column-selected queries with transient-failure retries; pagination past PostgREST's
   1000-row cap.
 - Minimal client JS; local placeholder images (no external image requests).
 
 ## Environment
 
-Set in `.env.local`:
+Copy `.env.example` to `.env.local` and fill it in — it documents every variable the app
+reads, which is required and why. Note that Supabase needs **two** pairs: the
+`NEXT_PUBLIC_` pair is read by `middleware.ts` and the browser client, the unprefixed pair
+by the server-side data layer. Without the `NEXT_PUBLIC_` pair, authentication fails
+silently on every route.
 
 ```bash
-SUPABASE_URL=
-SUPABASE_SERVICE_ROLE_KEY=
-DEEPINFRA_API_KEY=              # embeddings + reranker
-
-# Optional — semantic cache (falls back to no-op if unset)
-UPSTASH_VECTOR_REST_URL=
-UPSTASH_VECTOR_REST_TOKEN=
-SEMCACHE_ENABLED=true           # or SEMCACHE_SHADOW=true to calibrate
+cp .env.example .env.local
 ```
 
 ## Develop
 
 ```bash
 npm install
-npm run dev      # http://localhost:3000
+npm run dev          # http://localhost:3000
 
-npm run build    # production build
-npm run lint
-npm run format   # prettier
+npm run build        # production build
+npm run typecheck    # tsc --noEmit
+npm test             # vitest (lib/**/*.test.ts)
+npm run format       # prettier write; format:check to verify
 ```
+
+CI runs `format:check`, `typecheck`, `test` and `build` on every pull request.

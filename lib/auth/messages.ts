@@ -33,6 +33,24 @@ export const mailFailure: RegisterError = {
   hint: 'Na tela de entrar, use "Esqueci minha senha" para receber um novo link.',
 };
 
+const RECOVER_HINT =
+  'Digite seu e-mail abaixo e use "Esqueci minha senha": o link que enviarmos também confirma a conta.';
+
+/** Sign-up leaves the account unconfirmed, so "senha inválida" would send that user retrying a
+ *  password that was right all along. */
+export function signInError(raw?: { code?: string; message?: string } | null): string {
+  const text = raw?.message ?? "";
+  if (raw?.code === "email_not_confirmed" || /not confirmed/i.test(text))
+    return `Sua conta ainda não foi confirmada. Procure o e-mail da Lavra na caixa de entrada e no spam. ${RECOVER_HINT}`;
+  return "E-mail ou senha inválidos.";
+}
+
+/** Keyed on the ?error= values app/auth/confirm redirects with. */
+export const CONFIRM_ERRORS: Record<string, string> = {
+  "expired-link": `Esse link de confirmação expirou. ${RECOVER_HINT}`,
+  "invalid-link": `Esse link não é válido - alguns aplicativos de e-mail o encurtam. ${RECOVER_HINT}`,
+};
+
 export function registerError(raw?: { code?: string; message?: string } | null): RegisterError {
   const byCode = raw?.code && BY_CODE[raw.code];
   if (byCode) return byCode;

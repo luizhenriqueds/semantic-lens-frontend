@@ -13,11 +13,11 @@ export async function GET(request: NextRequest) {
   const type = params.get("type") as EmailOtpType | null;
   const next = params.get("next") || "/dashboard";
 
-  if (!tokenHash || !type) redirect("/login?erro=link-invalido");
+  if (!tokenHash || !type) redirect("/login?error=invalid-link");
 
   const supabase = await createClient();
   const { data, error } = await supabase.auth.verifyOtp({ type, token_hash: tokenHash });
-  if (error) redirect("/login?erro=link-expirado");
+  if (error) redirect("/login?error=expired-link");
 
   if (type === "signup" && data.user?.email) {
     await sendEmail({

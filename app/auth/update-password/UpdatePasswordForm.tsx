@@ -33,11 +33,16 @@ export default function UpdatePasswordForm() {
 
       {error && <AuthAlert kind="bad" message={error} />}
 
-      <label className="au-field">
-        <span>Nova senha</span>
-        <PasswordInput value={password} onChange={setPassword} autoComplete="new-password" />
+      <div className="au-field">
+        <label htmlFor="password">Nova senha</label>
+        <PasswordInput
+          id="password"
+          value={password}
+          onChange={setPassword}
+          autoComplete="new-password"
+        />
         <small className="au-hint">Mínimo de 6 caracteres.</small>
-      </label>
+      </div>
 
       <button className="btn solid au-submit" type="submit" disabled={busy}>
         {busy ? "Salvando…" : "Salvar senha"}

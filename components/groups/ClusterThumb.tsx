@@ -24,7 +24,6 @@ export default function ClusterThumb({ images, label }: { images: string[]; labe
             alt={`Imóvel da coleção ${label}`}
             fill
             sizes="(max-width: 700px) 100vw, 340px"
-            unoptimized
             style={{ objectFit: "cover" }}
           />
         </div>

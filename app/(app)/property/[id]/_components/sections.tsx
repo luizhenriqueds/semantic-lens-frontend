@@ -5,6 +5,7 @@ import NearbyPois from "./NearbyPois";
 import RegionPanel from "@/components/region/RegionPanel";
 import PropertyMarket from "@/components/market/PropertyMarket";
 import SimilarCarousel, { type RecItem } from "@/components/property/SimilarCarousel";
+import UpgradeWall from "@/components/plan/UpgradeWall";
 import {
   getMarketComparables,
   getPriceHistory,
@@ -66,7 +67,14 @@ export async function PriceHistorySlot({ id }: { id: string }) {
 
 export async function MarketSlot({ p }: { p: Property }) {
   const ent = await getEntitlements();
-  if (!ent.can("marketCompare")) return null;
+  // Locked shows the wall; absent data below still returns null.
+  if (!ent.can("marketCompare")) {
+    return (
+      <div className="infoblock">
+        <UpgradeWall feature="marketCompare" role={ent.role} trial={ent.trial} />
+      </div>
+    );
+  }
   const stats = await getMarketComparables(p.uf, p.city, p.neighborhood, p.propertyType, p.area);
   if (!stats) return null;
   return (
@@ -76,7 +84,13 @@ export async function MarketSlot({ p }: { p: Property }) {
 
 export async function RecommendationsSlot({ id }: { id: string }) {
   const ent = await getEntitlements();
-  if (!ent.can("recommendations")) return null;
+  if (!ent.can("recommendations")) {
+    return (
+      <div className="infoblock recsec">
+        <UpgradeWall feature="recommendations" role={ent.role} trial={ent.trial} />
+      </div>
+    );
+  }
   const limit = ent.limit("recommendations") ?? undefined;
   const recs = await getRecommendations(id);
   // Only surface recommendations that are a strong match (≥ 75%).

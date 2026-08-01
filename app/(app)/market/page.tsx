@@ -15,6 +15,9 @@ export default async function MarketPage() {
   if (!ent.can("market")) {
     return (
       <section className="view market">
+        <div className="pagehead">
+          <h1>Panorama do mercado de leilões</h1>
+        </div>
         <UpgradeWall feature="market" role={ent.role} trial={ent.trial}>
           Preço por m², tendências de deságio e comparáveis de cada cidade, atualizados a cada
           rodada.
