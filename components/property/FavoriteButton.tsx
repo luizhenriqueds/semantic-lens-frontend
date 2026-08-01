@@ -14,7 +14,7 @@ export default function FavoriteButton({ id, title }: { id: string; title?: stri
   const onClick = async (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    if (!require("favorites")) return;
+    if (!require("favorites", { propertyLabel: title })) return;
     if (!(await toggle(id))) return showQuotaUpsell("favorites");
     toast(saved ? "Imóvel removido da carteira" : "Imóvel salvo na carteira");
   };

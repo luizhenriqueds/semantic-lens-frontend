@@ -1,31 +1,31 @@
 "use client";
 
+import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { useState } from "react";
 import { registerAccount } from "@/app/actions/auth";
+import AuthAlert from "@/components/auth/AuthAlert";
 import PasswordInput from "@/components/auth/PasswordInput";
+import type { RegisterError } from "@/lib/auth/messages";
 
 export default function RegisterForm() {
+  const plan = useSearchParams().get("plan") ?? undefined;
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [error, setError] = useState("");
-  const [notice, setNotice] = useState("");
+  const [error, setError] = useState<RegisterError | null>(null);
+  const [sentTo, setSentTo] = useState("");
   const [busy, setBusy] = useState(false);
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     setBusy(true);
-    setError("");
-    setNotice("");
-    const result = await registerAccount({ name, email, password });
+    setError(null);
+    setSentTo("");
+    const result = await registerAccount({ name, email, password, plan });
     setBusy(false);
-    if (result.error) {
-      setError(result.error);
-    } else {
-      setNotice(
-        `Enviamos um link de confirmação para ${email}. Clique nele para concluir seu cadastro.`,
-      );
-    }
+    if (result.error) setError(result.error);
+    else setSentTo(email);
   }
 
   return (
@@ -33,8 +33,31 @@ export default function RegisterForm() {
       <h1>Criar conta</h1>
       <p className="sub">Comece a acompanhar leilões em todo o Brasil.</p>
 
-      {error && <p className="au-err">{error}</p>}
-      {notice && <p className="au-notice">{notice}</p>}
+      {error && (
+        <AuthAlert
+          kind="bad"
+          message={error.message}
+          hint={error.hint}
+          action={
+            error.existing && (
+              <Link href={`/login?email=${encodeURIComponent(email)}`}>
+                Entrar com este e-mail →
+              </Link>
+            )
+          }
+        />
+      )}
+      {sentTo && (
+        <AuthAlert
+          kind="good"
+          message={
+            <>
+              Enviamos um link de confirmação para <b>{sentTo}</b>.
+            </>
+          }
+          hint="Clique nele para concluir seu cadastro. Confira também a caixa de spam."
+        />
+      )}
 
       <label className="au-field">
         <span>Nome</span>

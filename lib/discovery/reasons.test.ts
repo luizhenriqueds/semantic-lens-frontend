@@ -1,9 +1,13 @@
 import { describe, expect, it } from "vitest";
+import { BRT_OFFSET_MS } from "@/lib/auctionTime";
 import { makeProperty } from "@/lib/__fixtures__/property";
 import { auctionCountdown, heroReasons, reasonsFor } from "./reasons";
 
 const NOW = new Date("2026-07-27T12:00:00Z");
-const inHours = (h: number) => new Date(NOW.getTime() + h * 3_600_000).toISOString();
+
+// Stored auction_date is BRT labelled +00:00, so it reads three hours behind the real instant.
+const inHours = (h: number) =>
+  new Date(NOW.getTime() + h * 3_600_000 - BRT_OFFSET_MS).toISOString();
 
 describe("auctionCountdown", () => {
   it("bands by urgency", () => {

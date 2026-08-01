@@ -8,7 +8,6 @@ import ScoreBars from "./_components/ScoreBars";
 import VisualScore from "./_components/VisualScore";
 import PropertyRanks from "./_components/PropertyRanks";
 import Ring from "@/components/ui/Ring";
-import ExportButton from "@/components/export/ExportButton";
 import {
   BlockSkeleton,
   InlineSkeleton,
@@ -174,7 +173,7 @@ export default async function PropertyPage({ params }: { params: Promise<{ id: s
               {data ? ` · leilão em ${data}` : ""}
             </div>
             <div className="cta">
-              <SaveButton id={p.id} />
+              <SaveButton id={p.id} propertyLabel={heading} />
               {p.link && (
                 <a
                   className="btn ghost"
@@ -186,7 +185,6 @@ export default async function PropertyPage({ params }: { params: Promise<{ id: s
                   Ver anúncio original
                 </a>
               )}
-              <ExportButton pdf={`/report/property/${p.id}`} compact />
             </div>
           </div>
 
@@ -206,7 +204,7 @@ export default async function PropertyPage({ params }: { params: Promise<{ id: s
               {p.clusterLabel && p.clusterId != null && (
                 <>
                   {" "}
-                  Faz parte do grupo{" "}
+                  Faz parte da coleção{" "}
                   <Link className="inlinelink" href={`/properties?cluster_id=${p.clusterId}`}>
                     “{p.clusterLabel}”
                   </Link>

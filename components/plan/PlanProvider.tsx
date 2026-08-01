@@ -6,11 +6,15 @@ import { entitlementsFor } from "@/lib/entitlements";
 import type { Entitlements, Feature, Role, Trial } from "@/lib/entitlements";
 
 type PlanContextValue = Entitlements & {
-  /** False (and opens the upsell) when the plan does not include the feature. */
-  require: (f: Feature) => boolean;
+  /** False (and opens the upsell) when the plan does not include the feature. `art` teases the
+   *  surface that was asked for rather than the whole gate; `propertyLabel` personalises the anon
+   *  wall when the gate was one specific property. */
+  require: (f: Feature, opts?: Upsell) => boolean;
   /** Opens the upsell for a feature the plan *has* but has run out of - a quota, not a gate. */
   showQuotaUpsell: (f: Feature) => void;
 };
+
+type Upsell = { art?: Feature; propertyLabel?: string };
 
 const anonEntitlements = entitlementsFor("anon", false);
 
@@ -32,13 +36,15 @@ export default function PlanProvider({
   trial: Trial;
   children: React.ReactNode;
 }) {
-  const [upsell, setUpsell] = useState<{ feature: Feature; quota?: boolean } | null>(null);
+  const [upsell, setUpsell] = useState<(Upsell & { feature: Feature; quota?: boolean }) | null>(
+    null,
+  );
   const ent = useMemo(() => entitlementsFor(role, isAdmin, trial), [role, isAdmin, trial]);
 
   const require = useCallback(
-    (f: Feature) => {
+    (f: Feature, opts?: Upsell) => {
       if (ent.can(f)) return true;
-      setUpsell({ feature: f });
+      setUpsell({ feature: f, ...opts });
       return false;
     },
     [ent],
@@ -56,7 +62,9 @@ export default function PlanProvider({
       {children}
       <UpgradeDialog
         feature={upsell?.feature ?? null}
+        art={upsell?.art}
         quota={upsell?.quota}
+        propertyLabel={upsell?.propertyLabel}
         role={role}
         trial={ent.trial}
         onClose={() => setUpsell(null)}

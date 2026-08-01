@@ -36,7 +36,7 @@ export default function UserMenu({ account }: { account: Account }) {
   async function signOut() {
     setBusy(true);
     await createClient().auth.signOut();
-    router.push("/login");
+    router.push("/");
     router.refresh();
   }
 

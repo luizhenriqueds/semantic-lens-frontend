@@ -10,7 +10,7 @@ const SECTION: Record<string, string> = {
   search: "Explorar imóveis",
   properties: "Imóveis",
   market: "Painel de mercado",
-  groups: "Grupos",
+  groups: "Coleções",
   regions: "Regiões",
   alerts: "Meus alertas",
   portfolio: "Minha carteira",

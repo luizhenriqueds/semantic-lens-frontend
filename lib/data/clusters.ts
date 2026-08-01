@@ -13,7 +13,7 @@ async function loadClusters(): Promise<Cluster[]> {
   );
   return rows<any>("clusters", res).map((c) => ({
     clusterId: c.cluster_id,
-    label: c.label ?? "Grupo",
+    label: c.label ?? "Coleção",
     description: c.description ?? null,
     profile: (c.profile as ProfileKey) || null,
     size: c.size ?? 0,

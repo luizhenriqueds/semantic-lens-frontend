@@ -3,14 +3,17 @@
 import { useRouter, useSearchParams } from "next/navigation";
 import { useState } from "react";
 import { requestPasswordReset } from "@/app/actions/auth";
+import AuthAlert from "@/components/auth/AuthAlert";
 import PasswordInput from "@/components/auth/PasswordInput";
 import { createClient } from "@/lib/supabase/client";
 
 export default function LoginForm() {
   const router = useRouter();
-  const redirect = useSearchParams().get("redirect") || "/dashboard";
+  const params = useSearchParams();
+  const redirect = params.get("redirect") || "/dashboard";
 
-  const [email, setEmail] = useState("");
+  // Prefilled when the sign-up form bounces an address that already has an account.
+  const [email, setEmail] = useState(params.get("email") ?? "");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
@@ -46,8 +49,8 @@ export default function LoginForm() {
       <h1>Entrar</h1>
       <p className="sub">Acompanhe leilões, salve imóveis e receba alertas.</p>
 
-      {error && <p className="au-err">{error}</p>}
-      {notice && <p className="au-notice">{notice}</p>}
+      {error && <AuthAlert kind="bad" message={error} />}
+      {notice && <AuthAlert kind="good" message={notice} />}
 
       <label className="au-field">
         <span>E-mail</span>

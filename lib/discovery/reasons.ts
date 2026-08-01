@@ -1,4 +1,5 @@
 import { investmentScore, money, PROFILE_SHORT, scoreForProfile, showDiscount } from "@/lib/format";
+import { auctionInstant } from "@/lib/auctionTime";
 import { moneyM2 } from "@/lib/market";
 import type { ProfileKey, Property } from "@/lib/types";
 import { isVacant } from "./occupancy";
@@ -32,9 +33,9 @@ export type ReasonContext = {
 const HOUR = 3_600_000;
 
 export function auctionCountdown(iso: string | null, now: Date): string | null {
-  if (!iso) return null;
-  const t = new Date(iso).getTime();
-  if (isNaN(t)) return null;
+  // Read straight, the stored value is three hours early - see lib/auctionTime.
+  const t = auctionInstant(iso);
+  if (t == null) return null;
   const hours = (t - now.getTime()) / HOUR;
   if (hours < 0) return null;
   if (hours < 1) return "encerra em menos de 1h";

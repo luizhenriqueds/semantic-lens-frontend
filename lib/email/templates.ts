@@ -45,7 +45,7 @@ export function welcome({ name, url }: { name?: string; url: string }): Email {
             body: "Salve uma busca e avisamos assim que um imóvel novo bater com os seus critérios, antes da praça abrir.",
           },
           {
-            title: "Grupos de oportunidades parecidas",
+            title: "Coleções de oportunidades parecidas",
             body: "Navegue por “famílias” de imóveis equivalentes e compare lado a lado sem abrir dezenas de editais.",
           },
           {

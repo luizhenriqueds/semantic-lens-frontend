@@ -16,6 +16,7 @@
   --line-soft: #e8ece9;
   --good: #2f5d3a;
   --warn: #9a7b3b;
+  --bad: #c0392b;
   --heat: 47, 93, 58;
   --shadow: 43, 46, 34;
 }
@@ -34,6 +35,7 @@
   --line-soft: #2e3833;
   --good: #8fb07e;
   --warn: #c9a557;
+  --bad: #e08a7d;
   --heat: 143, 176, 126;
   --shadow: 0, 0, 0;
 }
@@ -3317,6 +3319,24 @@ select.selectish {
 .viewbar > .exportgroup:not(.selectish + .exportgroup) {
   margin-left: auto;
 }
+/* Once the bar wraps, the export is reordered onto a row of its own above the tabs and the sort,
+   which then keep a single line to themselves and stay aligned with each other. The result count,
+   where there is one, still leads. */
+@media (max-width: 920px) {
+  .viewbar > .resultcount {
+    order: -2;
+    flex: 1 1 100%;
+  }
+  .viewbar > .exportgroup,
+  .viewbar > .selectish + .exportgroup {
+    order: -1;
+    flex: 1 1 100%;
+    margin-left: 0;
+  }
+  .viewbar > .selectish {
+    margin-left: auto;
+  }
+}
 .viewbar > .resultcount {
   font-size: 20px;
   font-weight: 700;
@@ -5549,6 +5569,13 @@ select.selectish {
 .dsec.open .dsec-car {
   transform: rotate(180deg);
 }
+/* A locked section never expands, so the badge takes the caret's place on the right. */
+.dsec.locked .dsec-head {
+  color: var(--ink-soft);
+}
+.dsec.locked .planbadge {
+  margin-left: auto;
+}
 .dsec-badge {
   min-width: 19px;
   height: 19px;
@@ -6317,11 +6344,41 @@ select.selectish {
 .au-err {
   margin: 0 0 14px;
   font-size: 13.5px;
-  color: #c0392b;
+  color: var(--bad);
 }
-.au-notice {
-  margin: 0 0 14px;
+/* Auth feedback reads as a block, not a stray red line under the title. */
+.au-alert {
+  margin: 0 0 16px;
+  padding: 12px 14px;
+  border-radius: 11px;
+  border: 1px solid;
   font-size: 13.5px;
+  line-height: 1.45;
+}
+.au-alert p {
+  margin: 0;
+  font-weight: 600;
+}
+.au-alert span {
+  display: block;
+  margin-top: 4px;
+  color: var(--ink-soft);
+  font-weight: 400;
+}
+.au-alert a {
+  display: inline-block;
+  margin-top: 8px;
+  font-weight: 700;
+  text-decoration: underline;
+}
+.au-alert.bad {
+  border-color: color-mix(in srgb, var(--bad) 34%, transparent);
+  background: color-mix(in srgb, var(--bad) 9%, var(--surface));
+  color: var(--bad);
+}
+.au-alert.good {
+  border-color: var(--primary-soft);
+  background: var(--primary-wash);
   color: var(--primary);
 }
 @media (max-width: 940px) {
@@ -6584,6 +6641,27 @@ select.selectish {
 
 .wall-price b {
   color: var(--ink);
+}
+
+/* ---------- trial started: what the plan just unlocked ---------- */
+.modal.trialstart {
+  max-width: 520px;
+  /* six unlocked features plus the intro outgrow a short viewport */
+  max-height: 88vh;
+  overflow-y: auto;
+}
+/* Rides on .pw-pitch (the paywall's tick list); only the deltas live here. */
+.trialstart-list {
+  margin-bottom: 22px;
+  gap: 11px;
+}
+.trialstart-list li {
+  font-size: 14px;
+  line-height: 1.5;
+}
+.trialstart-list b {
+  color: var(--ink);
+  font-weight: 700;
 }
 
 /* ---------- upsell dialog: feature teaser + copy ---------- */
@@ -7427,7 +7505,9 @@ select.selectish {
 }
 @media (max-width: 700px) {
   .rail-track {
-    grid-auto-columns: 80%;
+    /* 80% gives a phone the peek of the next card; the cap stops a tablet from turning
+       one card into a poster. */
+    grid-auto-columns: min(80%, 320px);
     margin-inline: calc(-1 * var(--gutter));
     padding-inline: var(--gutter);
     /* Without this the snap point stays at the base 2px and the first card sits flush

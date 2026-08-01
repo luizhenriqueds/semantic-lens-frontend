@@ -19,8 +19,8 @@ export const FEATURE_COPY: Record<Feature, { label: string; blurb: string; quota
     blurb: "Resumos automáticos com as melhores oportunidades de cada rodada.",
   },
   groups: {
-    label: "Grupos de imóveis parecidos",
-    blurb: "Grupos de imóveis parecidos entre si, para comparar de uma vez só.",
+    label: "Coleções de imóveis parecidos",
+    blurb: "Imóveis parecidos entre si, reunidos automaticamente para comparar de uma vez só.",
   },
   recommendations: {
     label: "Recomendações de imóveis",
@@ -28,7 +28,7 @@ export const FEATURE_COPY: Record<Feature, { label: string; blurb: string; quota
   },
   advancedFilters: {
     label: "Filtros avançados",
-    blurb: "Filtre por deságio, nota, lugares próximos, financiamento e mais.",
+    blurb: "Filtre por deságio, notas de investimento, avaliação da fachada e lugares próximos.",
   },
   analysisView: {
     label: "Análise de imóveis",
@@ -65,7 +65,7 @@ export const PLAN_INCLUDES: Partial<Record<Role, { heading: string; items: reado
       "Histórico de preços",
       "Análise de fachada usando IA",
       "Mudança de modalidade",
-      "Lugares próximos",
+      "Lugares próximos e distância do centro",
       "Perfil da região",
       "Score de investimento",
       "Tese de investimento recomendada",
@@ -79,9 +79,18 @@ export const PLAN_INCLUDES: Partial<Record<Role, { heading: string; items: reado
 export const canTrial = (plan: { role: Role }, trial: Trial): boolean =>
   plan.role === TRIAL_ROLE && trial.eligible;
 
-export function upsellTitle(feature: Feature, role: Role, trial: Trial): string {
+export function upsellTitle(
+  feature: Feature,
+  role: Role,
+  trial: Trial,
+  propertyLabel?: string,
+): string {
   const plan = requiredPlan(feature);
-  if (role === "anon") return "Crie sua conta grátis";
+  if (role === "anon") {
+    if (feature === "favorites" && propertyLabel)
+      return `Salve ${propertyLabel} antes que o leilão termine`;
+    return "Crie sua conta grátis";
+  }
   if (trial.expired) return "Seu teste grátis terminou";
   if (canTrial(plan, trial)) return `Teste o plano ${plan.label} por ${TRIAL_DAYS} dias`;
   return `Disponível no plano ${plan.label}`;

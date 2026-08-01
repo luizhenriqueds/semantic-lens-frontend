@@ -16,14 +16,20 @@ const FeatureArt = dynamic(() => import("@/components/plan/FeatureArt"));
 
 export default function UpgradeDialog({
   feature,
+  art,
   quota,
+  propertyLabel,
   role,
   trial,
   onClose,
 }: {
   feature: Feature | null;
+  /** Teaser art for the surface that was asked for, when the gate covers more than one. */
+  art?: Feature;
   /** The plan includes the feature but the user ran out of it, so the trial plan is the way up. */
   quota?: boolean;
+  /** Personalizes the anon signup wall when the gate was a specific property. */
+  propertyLabel?: string;
   role: Role;
   trial: Trial;
   onClose: () => void;
@@ -40,11 +46,14 @@ export default function UpgradeDialog({
 
   const copy = quota
     ? quotaUpsell(feature, role)
-    : { title: upsellTitle(feature, role, trial), body: upsellBody(feature, role, trial) };
+    : {
+        title: upsellTitle(feature, role, trial, propertyLabel),
+        body: upsellBody(feature, role, trial),
+      };
 
   return (
     <Modal className="upsell" label={copy.title} onClose={onClose}>
-      <FeatureArt feature={feature} />
+      <FeatureArt feature={art ?? feature} />
       <div className="upsell-body">
         <div className="mico">
           <IconLock width={22} height={22} strokeWidth={1.8} />
