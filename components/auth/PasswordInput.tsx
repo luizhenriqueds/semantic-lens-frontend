@@ -4,12 +4,15 @@ import { useState } from "react";
 import { IconEye, IconEyeOff } from "@/lib/icons";
 
 export default function PasswordInput({
+  id,
   value,
   onChange,
   autoComplete = "current-password",
   minLength = 6,
   className,
 }: {
+  /** Needs a sibling <label htmlFor>: wrapping would pull the show/hide button into the name. */
+  id: string;
   value: string;
   onChange: (v: string) => void;
   autoComplete?: "current-password" | "new-password";
@@ -20,6 +23,7 @@ export default function PasswordInput({
   return (
     <div className="au-pwd">
       <input
+        id={id}
         className={className}
         type={shown ? "text" : "password"}
         autoComplete={autoComplete}

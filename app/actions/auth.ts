@@ -14,6 +14,15 @@ function confirmUrl(tokenHash: string, type: string, next: string) {
   return `${SITE}/auth/confirm?${params}`;
 }
 
+/** Only registered addresses reach a send, so a surfaced failure would leak which ones exist. */
+async function sendQuietly(kind: string, message: Parameters<typeof sendEmail>[0]) {
+  try {
+    await sendEmail(message);
+  } catch (e) {
+    console.error(`[auth] ${kind} e-mail failed`, e);
+  }
+}
+
 export async function registerAccount(input: {
   name: string;
   email: string;
@@ -49,7 +58,7 @@ export async function requestPasswordReset(email: string) {
   const { data } = await admin.auth.admin.generateLink({ type: "recovery", email });
   if (data?.properties) {
     const url = confirmUrl(data.properties.hashed_token, "recovery", "/auth/update-password");
-    await sendEmail({
+    await sendQuietly("recovery", {
       to: email,
       ...passwordReset({ name: data.user?.user_metadata?.full_name, url }),
     });
@@ -61,7 +70,10 @@ export async function requestSigninLink(email: string) {
   const { data } = await admin.auth.admin.generateLink({ type: "magiclink", email });
   if (data?.properties) {
     const url = confirmUrl(data.properties.hashed_token, "magiclink", "/dashboard");
-    await sendEmail({ to: email, ...signin({ name: data.user?.user_metadata?.full_name, url }) });
+    await sendQuietly("magiclink", {
+      to: email,
+      ...signin({ name: data.user?.user_metadata?.full_name, url }),
+    });
   }
   return { ok: true };
 }

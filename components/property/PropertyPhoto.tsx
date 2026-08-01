@@ -28,7 +28,6 @@ export default function PropertyPhoto({
       fill
       sizes={sizes}
       priority={priority}
-      unoptimized
       onError={() => setFailedSrc(src)}
       style={{ objectFit: "cover" }}
     />

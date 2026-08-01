@@ -5,7 +5,7 @@ import { usePlan } from "@/components/plan/PlanProvider";
 import { FEATURE_COPY, PLAN_INCLUDES } from "@/lib/entitlements/copy";
 import { PLANS, SELLABLE_PLANS, TRIAL_DAYS, TRIAL_ROLE } from "@/lib/entitlements";
 import { fmtDay, money } from "@/lib/format";
-import type { Feature, Role } from "@/lib/entitlements";
+import type { Feature } from "@/lib/entitlements";
 
 const ORDER = Object.keys(FEATURE_COPY) as Feature[];
 

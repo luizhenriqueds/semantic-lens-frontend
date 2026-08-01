@@ -315,16 +315,17 @@ export default function SettingsClient({
             <h2>Senha</h2>
             <p>Escolha uma nova senha de acesso.</p>
           </div>
-          <label className="afield setpwd">
-            <span>Nova senha</span>
+          <div className="afield setpwd">
+            <label htmlFor="new-password">Nova senha</label>
             <PasswordInput
+              id="new-password"
               value={password}
               onChange={setPassword}
               autoComplete="new-password"
               className="selectish"
             />
             <small className="au-hint">Mínimo de 6 caracteres.</small>
-          </label>
+          </div>
           <div className="setactions">
             <button
               className="btn solid"

@@ -5,17 +5,20 @@ import { useState } from "react";
 import { requestPasswordReset } from "@/app/actions/auth";
 import AuthAlert from "@/components/auth/AuthAlert";
 import PasswordInput from "@/components/auth/PasswordInput";
+import { CONFIRM_ERRORS, signInError } from "@/lib/auth/messages";
+import { safeRedirect } from "@/lib/auth/redirect";
 import { createClient } from "@/lib/supabase/client";
 
 export default function LoginForm() {
   const router = useRouter();
   const params = useSearchParams();
-  const redirect = params.get("redirect") || "/dashboard";
+  const redirect = safeRedirect(params.get("redirect"));
 
   // Prefilled when the sign-up form bounces an address that already has an account.
   const [email, setEmail] = useState(params.get("email") ?? "");
   const [password, setPassword] = useState("");
-  const [error, setError] = useState("");
+  // /auth/confirm has already redirected away, so this is the only account of what went wrong.
+  const [error, setError] = useState(CONFIRM_ERRORS[params.get("error") ?? ""] ?? "");
   const [notice, setNotice] = useState("");
   const [busy, setBusy] = useState(false);
 
@@ -26,7 +29,7 @@ export default function LoginForm() {
     setNotice("");
     const { error } = await createClient().auth.signInWithPassword({ email, password });
     if (error) {
-      setError("E-mail ou senha inválidos.");
+      setError(signInError(error));
       setBusy(false);
     } else {
       router.push(redirect);
@@ -63,15 +66,15 @@ export default function LoginForm() {
           onChange={(e) => setEmail(e.target.value)}
         />
       </label>
-      <label className="au-field">
+      <div className="au-field">
         <div className="au-fieldrow">
-          <span>Senha</span>
+          <label htmlFor="password">Senha</label>
           <button type="button" className="au-minilink" onClick={resetPassword}>
             Esqueci minha senha
           </button>
         </div>
-        <PasswordInput value={password} onChange={setPassword} />
-      </label>
+        <PasswordInput id="password" value={password} onChange={setPassword} />
+      </div>
 
       <button className="btn solid au-submit" type="submit" disabled={busy}>
         {busy ? "Entrando…" : "Entrar"}

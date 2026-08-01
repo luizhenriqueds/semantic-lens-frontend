@@ -32,3 +32,14 @@ jobs:
 
       - name: Test
         run: npm test
+
+      # Catches route-level type and prerender errors the other steps miss. Nothing reaches
+      # Supabase at build time, but the client is constructed at module load, so the vars
+      # have to be set to something.
+      - name: Build
+        run: npm run build
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: http://127.0.0.1:54321
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: build-placeholder
+          SUPABASE_URL: http://127.0.0.1:54321
+          SUPABASE_SERVICE_ROLE_KEY: build-placeholder

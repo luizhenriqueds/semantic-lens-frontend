@@ -47,6 +47,10 @@ export default async function RegionPage({ params }: { params: Promise<{ h3: str
   if (!ent.can("regions")) {
     return (
       <section className="view">
+        {/* The region name is behind the paid fetch, so the generic title is all there is. */}
+        <div className="pagehead">
+          <h1>Regiões</h1>
+        </div>
         <UpgradeWall feature="regions" role={ent.role} trial={ent.trial}>
           A leitura completa de cada região: perfil, DNA do bairro, o que existe por perto, preços
           de mercado e regiões semelhantes.

@@ -18,11 +18,13 @@ export const getEntitlements = cache(async (): Promise<Entitlements> => {
   // Mirrors public.user_role_of() (migration 0079): an expired paid role reads as basic.
   const expiresAt = (data?.role_expires_at as string) ?? null;
   const expired = !!expiresAt && new Date(expiresAt).getTime() < Date.now();
-  const role = expired ? "basic" : toRole(data?.role);
+  const storedRole = toRole(data?.role);
+  const role = expired ? "basic" : storedRole;
 
   const started = data?.trial_started_at != null;
   return entitlementsFor(role, Boolean(data?.is_admin), {
-    eligible: !!data && !started && role === "basic",
+    // start_investor_trial() tests the stored role; offering it on the downgraded one always fails.
+    eligible: !!data && !started && storedRole === "basic",
     endsAt: expired ? null : expiresAt,
     expired: started && role === "basic",
   });

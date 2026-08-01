@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { IconClose } from "@/lib/icons";
 
 /** Backdrop, Escape, scroll lock and the close button, in one place. */
@@ -17,19 +17,27 @@ export default function Modal({
   onClose: () => void;
   children: React.ReactNode;
 }) {
+  const dialogRef = useRef<HTMLDivElement>(null);
+
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
     document.addEventListener("keydown", onKey);
     document.body.style.overflow = "hidden";
+    // Without this the keyboard and screen reader stay on the trigger behind the backdrop.
+    const opener = document.activeElement as HTMLElement | null;
+    dialogRef.current?.focus();
     return () => {
       document.removeEventListener("keydown", onKey);
       document.body.style.overflow = "";
+      opener?.focus();
     };
   }, [onClose]);
 
   return (
     <div className="modal-backdrop" onClick={onClose}>
       <div
+        ref={dialogRef}
+        tabIndex={-1}
         className={`modal ${className}`.trim()}
         role={role}
         aria-modal="true"

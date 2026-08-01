@@ -33,7 +33,8 @@ export default function MobileNav() {
         onClick={() => setOpen(false)}
         aria-hidden
       />
-      <aside className={`drawer${open ? " open" : ""}`} aria-hidden={!open}>
+      {/* Closed only slides off-screen, so `inert` is what keeps its links out of the tab order. */}
+      <aside className={`drawer${open ? " open" : ""}`} inert={!open}>
         <div className="drawer-head">
           <Link href="/dashboard" className="brand" onClick={() => setOpen(false)}>
             <div className="mark">
