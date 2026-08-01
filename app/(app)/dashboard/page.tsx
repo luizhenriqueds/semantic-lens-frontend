@@ -2,6 +2,7 @@ import { Suspense } from "react";
 import { accountFrom, shortName } from "@/lib/account";
 import { getPropertiesPage } from "@/lib/data";
 import { getFavoriteIds } from "@/lib/data/favorites";
+import { stillOpen } from "@/lib/auctionTime";
 import {
   HIGHLIGHTS,
   byInvestment,
@@ -55,9 +56,10 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
 
   // The hero is the LCP element: a priority image inside a Suspense boundary cannot be
   // preloaded from the initial HTML, so this one pool is awaited rather than streamed.
-  const hero = pickHero(pool.items, seed);
+  const open = stillOpen(pool.items, now);
+  const hero = pickHero(open, seed);
   const featured = byInvestment(
-    seededPick(pool.items, 6, "highlights", seed, {
+    seededPick(open, 6, "highlights", seed, {
       exclude: hero ? new Set([hero.id]) : undefined,
     }),
   );
@@ -68,7 +70,6 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
   return (
     <section className="view home">
       <HomeHead greeting={greeting} hasFavorites={favIds.length > 0} />
-
       {hero && <HeroPick p={hero} now={now} />}
 
       <Suspense fallback={<InsightsSkeleton />}>

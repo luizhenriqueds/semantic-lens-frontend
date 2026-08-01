@@ -1,3 +1,4 @@
+import { BRT_OFFSET_MS } from "@/lib/auctionTime";
 import { supabase } from "@/lib/supabase";
 import { escapeLike } from "@/lib/facets";
 import { deriveTitle, titleCase } from "@/lib/format";
@@ -270,7 +271,9 @@ const cachedUpcoming = cached(loadUpcomingAuctions, "upcoming-auctions");
 export function getUpcomingAuctions(now: Date): Promise<Property[]> {
   const hour = new Date(now);
   hour.setMinutes(0, 0, 0);
-  return cachedUpcoming(hour.toISOString());
+  // Shift into the BRT-labelled space the column stores, or the query drops everything closing
+  // in the next three hours - exactly what "termina em breve" is for. See lib/auctionTime.
+  return cachedUpcoming(new Date(hour.getTime() - BRT_OFFSET_MS).toISOString());
 }
 
 // The list RPC accepts `auction_on` but its predicate never matches, so the calendar's

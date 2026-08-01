@@ -114,27 +114,42 @@ function Chip({
   );
 }
 
+/** A section the plan does not include shows the badge and opens the upsell instead of expanding,
+ *  so a lower plan still sees what the drawer offers. Owning the lock here keeps a new gated
+ *  section from rendering a locked head that expands anyway. `art` teases that section's surface
+ *  rather than the whole gate. */
 function Section({
   title,
   count,
   open,
   onToggle,
+  feature,
+  art,
   children,
 }: {
   title: string;
   count: number;
   open: boolean;
   onToggle: () => void;
+  feature?: Feature;
+  art?: Feature;
   children: React.ReactNode;
 }) {
+  const { can, require } = usePlan();
+  const locked = !!feature && !can(feature);
   return (
-    <div className={`dsec${open ? " open" : ""}`}>
-      <button type="button" className="dsec-head" onClick={onToggle} aria-expanded={open}>
+    <div className={`dsec${open && !locked ? " open" : ""}${locked ? " locked" : ""}`}>
+      <button
+        type="button"
+        className="dsec-head"
+        onClick={locked ? () => require(feature!, { art }) : onToggle}
+        aria-expanded={locked ? undefined : open}
+      >
         {title}
-        {count > 0 && <span className="dsec-badge">{count}</span>}
-        <span className="dsec-car">▾</span>
+        {count > 0 && !locked && <span className="dsec-badge">{count}</span>}
+        {locked ? <PlanBadge feature={feature} /> : <span className="dsec-car">▾</span>}
       </button>
-      {open && <div className="dsec-body">{children}</div>}
+      {open && !locked && <div className="dsec-body">{children}</div>}
     </div>
   );
 }
@@ -259,10 +274,9 @@ export default function PropertiesClient({
 }) {
   const router = useRouter();
   const { can, require, role, trial } = usePlan();
-  const canAdvanced = can("advancedFilters");
   const [isPending, startTransition] = useTransition();
   const [drawerOpen, setDrawerOpen] = useState(false);
-  const [openSecs, setOpenSecs] = useState<Set<string>>(new Set(["grupo", "imovel", "poi"]));
+  const [openSecs, setOpenSecs] = useState<Set<string>>(new Set(["imovel", "leilao"]));
   const [poiExpanded, setPoiExpanded] = useState(false);
   const [mounted, setMounted] = useState(false);
   useEffect(() => setMounted(true), []);
@@ -289,7 +303,17 @@ export default function PropertiesClient({
     [setParams],
   );
 
-  const uf = filters.uf ?? "all";
+  // Display only, and only when the name is unambiguous: a city in several states really does
+  // mean "todos" here.
+  const impliedUf = useMemo(() => {
+    if (filters.uf || !filters.city) return null;
+    const ufs = new Set(
+      filterOptions.cities.filter((c) => c.city === filters.city).map((c) => c.uf),
+    );
+    return ufs.size === 1 ? [...ufs][0] : null;
+  }, [filters.uf, filters.city, filterOptions.cities]);
+
+  const uf = filters.uf ?? impliedUf ?? "all";
   const cidade = filters.city ?? "all";
   const tipo = filters.type ?? "all";
   const cluster = filters.clusterId ?? ("all" as const);
@@ -497,7 +521,7 @@ export default function PropertiesClient({
       const cl = clusters.find((c) => c.clusterId === cluster);
       f.push({
         key: "cluster",
-        label: cl?.label ?? "Grupo",
+        label: cl?.label ?? "Coleção",
         clear: () => patch({ cluster_id: null }),
       });
     }
@@ -669,13 +693,12 @@ export default function PropertiesClient({
           onChange={(v) => patch({ modalities: v.join(",") || null })}
         />
         <button
-          className={`selectish${advActive ? " on" : ""}${canAdvanced ? "" : " locked"}`}
+          className={`selectish${advActive ? " on" : ""}`}
           type="button"
-          onClick={() => require("advancedFilters") && setDrawerOpen(true)}
+          onClick={() => setDrawerOpen(true)}
         >
           <IconSliders width={16} height={16} strokeWidth={1.8} />
           Filtros avançados{advCount > 0 && <span className="advcount">{advCount}</span>}
-          {!canAdvanced && <PlanBadge feature="advancedFilters" />}
         </button>
         {filtered && (
           <button type="button" className="clearfilters" onClick={clearAll}>
@@ -736,26 +759,6 @@ export default function PropertiesClient({
               </div>
 
               <div className="dbody">
-                <Section
-                  title="Grupo"
-                  count={cluster !== "all" ? 1 : 0}
-                  open={openSecs.has("grupo")}
-                  onToggle={() => toggleSec("grupo")}
-                >
-                  <div className="flabel">Grupo de imóveis</div>
-                  <SearchableSelect
-                    label="Grupo"
-                    allLabel="Todos os grupos"
-                    showLabel={false}
-                    className="fwide"
-                    value={cluster === "all" ? "all" : String(cluster)}
-                    options={clusters.map((c) => ({
-                      value: String(c.clusterId),
-                      label: c.label,
-                    }))}
-                    onChange={(v) => patch({ cluster_id: v === "all" ? null : v })}
-                  />
-                </Section>
                 <Section
                   title="Imóvel"
                   count={imovelCount}
@@ -820,8 +823,81 @@ export default function PropertiesClient({
                 </Section>
 
                 <Section
+                  title="Leilão e pagamento"
+                  count={leilaoCount}
+                  open={openSecs.has("leilao")}
+                  onToggle={() => toggleSec("leilao")}
+                >
+                  <div className="flabel">Data do leilão</div>
+                  <div className="fchiprow">
+                    <Chip
+                      active={!prazoLeilao}
+                      onClick={() => patch({ auction_within_days: null })}
+                    >
+                      Qualquer data
+                    </Chip>
+                    {PRAZOS.map((pr) => (
+                      <Chip
+                        key={pr.days}
+                        active={prazoLeilao === pr.days}
+                        onClick={() => patch({ auction_within_days: String(pr.days) })}
+                      >
+                        {pr.days} dias
+                      </Chip>
+                    ))}
+                  </div>
+
+                  <div className="flabel">Pagamento</div>
+                  <label className={`checkitem${financiamento ? " on" : ""}`}>
+                    <input
+                      type="checkbox"
+                      checked={financiamento}
+                      onChange={(e) => patch({ financing: e.target.checked ? "1" : null })}
+                    />
+                    Aceita financiamento
+                  </label>
+                  <label className={`checkitem${fgts ? " on" : ""}`}>
+                    <input
+                      type="checkbox"
+                      checked={fgts}
+                      onChange={(e) => patch({ fgts: e.target.checked ? "1" : null })}
+                    />
+                    Aceita FGTS
+                  </label>
+
+                  <div className="flabel">Mudou recentemente</div>
+                  <div className="fchiprow">
+                    <Chip
+                      active={!changeKind}
+                      onClick={() => patch({ change_kind: null, changed_within_days: null })}
+                    >
+                      Qualquer
+                    </Chip>
+                    {Object.entries(CHANGE_LABEL).map(([key, label]) => (
+                      <Chip
+                        key={key}
+                        active={changeKind === key}
+                        onClick={() =>
+                          patch({
+                            change_kind: key,
+                            changed_within_days: String(CHANGE_WINDOW_DAYS),
+                          })
+                        }
+                      >
+                        {label}
+                      </Chip>
+                    ))}
+                  </div>
+                  <p className="fhint">
+                    Comparado ao que o imóvel era há {CHANGE_WINDOW_DAYS} dias.
+                  </p>
+                </Section>
+
+                <Section
                   title="Perto de"
                   count={poiCount}
+                  feature="advancedFilters"
+                  art="regions"
                   open={openSecs.has("poi")}
                   onToggle={() => toggleSec("poi")}
                 >
@@ -891,6 +967,7 @@ export default function PropertiesClient({
                 <Section
                   title="Retorno e notas"
                   count={retornoCount}
+                  feature="advancedFilters"
                   open={openSecs.has("retorno")}
                   onToggle={() => toggleSec("retorno")}
                 >
@@ -989,74 +1066,25 @@ export default function PropertiesClient({
                 </Section>
 
                 <Section
-                  title="Leilão e pagamento"
-                  count={leilaoCount}
-                  open={openSecs.has("leilao")}
-                  onToggle={() => toggleSec("leilao")}
+                  title="Coleção"
+                  count={cluster !== "all" ? 1 : 0}
+                  feature="groups"
+                  open={openSecs.has("grupo")}
+                  onToggle={() => toggleSec("grupo")}
                 >
-                  <div className="flabel">Data do leilão</div>
-                  <div className="fchiprow">
-                    <Chip
-                      active={!prazoLeilao}
-                      onClick={() => patch({ auction_within_days: null })}
-                    >
-                      Qualquer data
-                    </Chip>
-                    {PRAZOS.map((pr) => (
-                      <Chip
-                        key={pr.days}
-                        active={prazoLeilao === pr.days}
-                        onClick={() => patch({ auction_within_days: String(pr.days) })}
-                      >
-                        {pr.days} dias
-                      </Chip>
-                    ))}
-                  </div>
-
-                  <div className="flabel">Pagamento</div>
-                  <label className={`checkitem${financiamento ? " on" : ""}`}>
-                    <input
-                      type="checkbox"
-                      checked={financiamento}
-                      onChange={(e) => patch({ financing: e.target.checked ? "1" : null })}
-                    />
-                    Aceita financiamento
-                  </label>
-                  <label className={`checkitem${fgts ? " on" : ""}`}>
-                    <input
-                      type="checkbox"
-                      checked={fgts}
-                      onChange={(e) => patch({ fgts: e.target.checked ? "1" : null })}
-                    />
-                    Aceita FGTS
-                  </label>
-
-                  <div className="flabel">Mudou recentemente</div>
-                  <div className="fchiprow">
-                    <Chip
-                      active={!changeKind}
-                      onClick={() => patch({ change_kind: null, changed_within_days: null })}
-                    >
-                      Qualquer
-                    </Chip>
-                    {Object.entries(CHANGE_LABEL).map(([key, label]) => (
-                      <Chip
-                        key={key}
-                        active={changeKind === key}
-                        onClick={() =>
-                          patch({
-                            change_kind: key,
-                            changed_within_days: String(CHANGE_WINDOW_DAYS),
-                          })
-                        }
-                      >
-                        {label}
-                      </Chip>
-                    ))}
-                  </div>
-                  <p className="fhint">
-                    Comparado ao que o imóvel era há {CHANGE_WINDOW_DAYS} dias.
-                  </p>
+                  <div className="flabel">Coleção de imóveis</div>
+                  <SearchableSelect
+                    label="Coleção"
+                    allLabel="Todas as coleções"
+                    showLabel={false}
+                    className="fwide"
+                    value={cluster === "all" ? "all" : String(cluster)}
+                    options={clusters.map((c) => ({
+                      value: String(c.clusterId),
+                      label: c.label,
+                    }))}
+                    onChange={(v) => patch({ cluster_id: v === "all" ? null : v })}
+                  />
                 </Section>
               </div>
 

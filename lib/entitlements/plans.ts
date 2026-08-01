@@ -92,7 +92,7 @@ export const PLANS: Record<Role, Plan> = {
     price: 39,
     pitch: [
       "Favoritos e alertas ilimitados",
-      "Filtros avançados, grupos e aba Análise",
+      "Filtros avançados, coleções e aba Análise",
       "Recomendações e alertas automáticos semanais",
     ],
     features: INVESTOR_FEATURES,

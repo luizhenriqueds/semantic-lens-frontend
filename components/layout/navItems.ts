@@ -18,7 +18,7 @@ export const NAV: { href: string; label: string; Icon: typeof IconHome; feature?
   { href: "/search", label: "Explorar imóveis", Icon: IconSearch },
   { href: "/properties", label: "Imóveis", Icon: IconBuilding },
   { href: "/market", label: "Mercado", Icon: IconChart },
-  { href: "/groups", label: "Grupos", Icon: IconGroups },
+  { href: "/groups", label: "Coleções", Icon: IconGroups },
   { href: "/regions", label: "Regiões", Icon: IconPin },
   { href: "/alerts", label: "Alertas", Icon: IconBell },
   { href: "/portfolio", label: "Minha carteira", Icon: IconStar },

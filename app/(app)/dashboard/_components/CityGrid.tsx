@@ -27,7 +27,7 @@ export default function CityGrid({
             <Link
               className="region"
               key={`${c.city}-${c.uf}`}
-              href={`/properties?city=${encodeURIComponent(c.city)}`}
+              href={`/properties?uf=${c.uf}&city=${encodeURIComponent(c.city)}`}
             >
               <div className="c">{c.city}</div>
               <div className="u">{c.uf}</div>

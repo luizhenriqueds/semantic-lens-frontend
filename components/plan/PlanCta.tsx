@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { startInvestorTrial } from "@/app/actions/plan";
 import PaywallDialog from "@/components/plan/PaywallDialog";
+import { withTrialParam } from "@/lib/entitlements/trialFlag";
 import { PLANS, TRIAL_DAYS, TRIAL_ROLE } from "@/lib/entitlements";
 import type { Role, Trial } from "@/lib/entitlements";
 
@@ -15,12 +16,16 @@ export default function PlanCta({
   role,
   trial,
   className = "btn solid",
+  celebrateAt,
   onDone,
 }: {
   target: Role;
   role: Role;
   trial: Trial;
   className?: string;
+  /** Where to land so the layout's celebration dialog can open. Defaults to the current URL;
+   *  pass a route under (app) when this button renders outside the app shell. */
+  celebrateAt?: string;
   onDone?: () => void;
 }) {
   const router = useRouter();
@@ -55,8 +60,14 @@ export default function PlanCta({
         onClick={() =>
           start(async () => {
             if (!(await startInvestorTrial())) return setFailed(true);
-            router.refresh();
+            // Close the upsell first: the refresh below re-reads the plan, which would otherwise
+            // flip the open dialog into a paywall for a feature the trial just unlocked.
             onDone?.();
+            const { pathname, search } = window.location;
+            router.push(withTrialParam(celebrateAt ?? pathname, celebrateAt ? "" : search), {
+              scroll: false,
+            });
+            router.refresh();
           })
         }
       >

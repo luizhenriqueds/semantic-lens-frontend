@@ -21,7 +21,7 @@ export default function ClusterThumb({ images, label }: { images: string[]; labe
         <div className="clcell" key={`${src}-${i}`}>
           <Image
             src={src}
-            alt={`Imóvel do grupo ${label}`}
+            alt={`Imóvel da coleção ${label}`}
             fill
             sizes="(max-width: 700px) 100vw, 340px"
             unoptimized

@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
+import AuthAlert from "@/components/auth/AuthAlert";
 import PasswordInput from "@/components/auth/PasswordInput";
 
 export default function UpdatePasswordForm() {
@@ -30,7 +31,7 @@ export default function UpdatePasswordForm() {
       <h1>Criar nova senha</h1>
       <p className="sub">Escolha uma senha para voltar a acessar sua conta.</p>
 
-      {error && <p className="au-err">{error}</p>}
+      {error && <AuthAlert kind="bad" message={error} />}
 
       <label className="au-field">
         <span>Nova senha</span>

@@ -1,4 +1,5 @@
 import CollectionCard from "@/components/groups/CollectionCard";
+import { stillOpen } from "@/lib/auctionTime";
 import PropertyPhoto from "@/components/property/PropertyPhoto";
 import RailSection from "@/components/discovery/RailSection";
 import SectionHead from "@/components/discovery/SectionHead";
@@ -56,8 +57,9 @@ async function fetchPool(pool: Pool): Promise<Property[]> {
   return items;
 }
 
-const railItems = (pool: readonly Property[], rail: string, seed: number): Property[] =>
-  byInvestment(seededPick(pool, RAIL_SIZE, rail, seed));
+// Filtered before the pick, so the rail still draws a full RAIL_SIZE from what is left.
+const railItems = (pool: readonly Property[], rail: string, seed: number, now: Date): Property[] =>
+  byInvestment(seededPick(stillOpen(pool, now), RAIL_SIZE, rail, seed));
 
 export async function MarketSlot() {
   const d = await getMarketDashboard();
@@ -76,7 +78,7 @@ export async function CitiesSlot({ seed }: { seed: number }) {
 }
 
 export async function ClosingRailSlot({ seed, now }: SlotProps) {
-  const items = railItems(await getUpcomingAuctions(now), "closing", seed);
+  const items = railItems(await getUpcomingAuctions(now), "closing", seed, now);
   return (
     <RailSection
       title="Termina em breve"
@@ -92,7 +94,7 @@ export async function ClosingRailSlot({ seed, now }: SlotProps) {
 }
 
 export async function DiscountRailSlot({ seed, now }: SlotProps) {
-  const items = railItems(await fetchPool(DISCOUNT), "discount", seed);
+  const items = railItems(await fetchPool(DISCOUNT), "discount", seed, now);
   return (
     <RailSection
       title="Deságios que chamam atenção"
@@ -106,7 +108,7 @@ export async function DiscountRailSlot({ seed, now }: SlotProps) {
 }
 
 export async function BudgetRailSlot({ seed, now }: SlotProps) {
-  const items = railItems(await fetchPool(BUDGET), "budget", seed);
+  const items = railItems(await fetchPool(BUDGET), "budget", seed, now);
   return (
     <RailSection
       title="Imóveis de até R$ 100 mil"
@@ -123,7 +125,7 @@ export async function VacantRailSlot({ seed, now }: SlotProps) {
   const pool = (await fetchPool(VACANT)).filter(
     (p) => isVacant(p.occupancyStatus) && isDwelling(p.propertyType),
   );
-  const items = railItems(pool, "vacant", seed);
+  const items = railItems(pool, "vacant", seed, now);
   return (
     <RailSection
       title="Sem dor de cabeça: desocupados"
@@ -136,7 +138,7 @@ export async function VacantRailSlot({ seed, now }: SlotProps) {
 }
 
 export async function FinancingRailSlot({ seed, now }: SlotProps) {
-  const items = railItems(await fetchPool(FINANCING), "financing", seed);
+  const items = railItems(await fetchPool(FINANCING), "financing", seed, now);
   return (
     <RailSection
       title="Aceitam financiamento bancário"
@@ -151,7 +153,7 @@ export async function FinancingRailSlot({ seed, now }: SlotProps) {
 }
 
 export async function ModalityChangeRailSlot({ seed, now }: SlotProps) {
-  const items = railItems(await fetchPool(MODALITY_CHANGE), "modality-change", seed);
+  const items = railItems(await fetchPool(MODALITY_CHANGE), "modality-change", seed, now);
   return (
     <RailSection
       title="Mudaram de modalidade"
@@ -168,7 +170,7 @@ export async function ModalityChangeRailSlot({ seed, now }: SlotProps) {
 export async function PaymentChangeRailSlot({ seed, now }: SlotProps) {
   // The log records the start, not a later stop: ~4% dropped it again inside the window.
   const pool = (await fetchPool(PAYMENT_CHANGE)).filter((p) => p.acceptsFinancing || p.acceptsFgts);
-  const items = railItems(pool, "payment-change", seed);
+  const items = railItems(pool, "payment-change", seed, now);
   return (
     <RailSection
       title="Passaram a aceitar financiamento ou FGTS"
@@ -183,7 +185,7 @@ export async function PaymentChangeRailSlot({ seed, now }: SlotProps) {
 }
 
 export async function GoalRailSlot({ goal, seed, now }: SlotProps & { goal: ProfileKey }) {
-  const items = railItems(await fetchPool(goalPool(goal)), `goal-${goal}`, seed);
+  const items = railItems(await fetchPool(goalPool(goal)), `goal-${goal}`, seed, now);
   return (
     <RailSection
       hideHead
@@ -228,7 +230,7 @@ export async function SavedRailSlot({
 
   const byId = new Map(pool.filter(isListable).map((p) => [p.id, p]));
   byId.delete(anchor.id);
-  const items = railItems([...byId.values()], "saved", seed);
+  const items = railItems([...byId.values()], "saved", seed, now);
 
   return (
     <RailSection
@@ -265,7 +267,7 @@ export async function CollectionsSlot() {
     <section className="railsec">
       <SectionHead
         title="Coleções de imóveis que você pode gostar"
-        why="grupos de imóveis semelhantes, reunidos por perfil e refinados exclusivamente para o investidor"
+        why="coleções de imóveis semelhantes, reunidas por perfil e refinadas exclusivamente para o investidor"
         moreHref="/groups"
         moreLabel="Ver todas"
       />

@@ -3,10 +3,29 @@ import type { Entitlements, Feature } from "@/lib/entitlements";
 import { parsePropertySearchParams } from "./propertiesUrl";
 import type { AlertCriteria, AlertCriteriaSet, PropertyFilters } from "@/lib/types";
 
-// Filters travel as PropertyFilters (parsed URL) and as AlertCriteriaSet (persisted criteria);
-// the free ones are spelled the same in both. An allowlist, so a filter added later is gated
-// until it is deliberately opened rather than leaking to every plan.
-const FREE = new Set(["q", "uf", "city", "type", "modalities", "h3"]);
+// Filters travel as PropertyFilters (parsed URL) and as AlertCriteriaSet (persisted criteria),
+// which spell the same filter camelCase and snake_case - so the allowlist names each one once and
+// derives the twin. An allowlist, so a filter added later is gated until deliberately opened.
+// Mirrors the drawer: "Imóvel" and "Leilão e pagamento" are open to every plan, the rest need
+// Investidor.
+const FREE = new Set(
+  [
+    "q",
+    "uf",
+    "city",
+    "type",
+    "modalities",
+    "h3",
+    "minBedrooms",
+    "maxPrice",
+    "minArea",
+    "auctionWithinDays",
+    "financing",
+    "fgts",
+    "changeKind",
+    "changedWithinDays",
+  ].flatMap((k) => [k, k.replace(/[A-Z]/g, (c) => `_${c.toLowerCase()}`)]),
+);
 
 const featureFor = (key: string): Feature =>
   key === "clusterId" || key === "cluster_id" ? "groups" : "advancedFilters";

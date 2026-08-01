@@ -1,5 +1,8 @@
 "use server";
 
+import { mailFailure, registerError } from "@/lib/auth/messages";
+import { TRIAL_ROLE } from "@/lib/entitlements";
+import { withTrialParam } from "@/lib/entitlements/trialFlag";
 import { sendEmail } from "@/lib/email/send";
 import { passwordReset, signin, signupVerification } from "@/lib/email/templates";
 import { supabase as admin } from "@/lib/supabase";
@@ -11,7 +14,12 @@ function confirmUrl(tokenHash: string, type: string, next: string) {
   return `${SITE}/auth/confirm?${params}`;
 }
 
-export async function registerAccount(input: { name: string; email: string; password: string }) {
+export async function registerAccount(input: {
+  name: string;
+  email: string;
+  password: string;
+  plan?: string;
+}) {
   const { data, error } = await admin.auth.admin.generateLink({
     type: "signup",
     email: input.email,
@@ -20,11 +28,20 @@ export async function registerAccount(input: { name: string; email: string; pass
   });
 
   if (error || !data.properties) {
-    return { error: error?.message ?? "Não foi possível criar a conta." };
+    return { error: registerError(error) };
   }
 
-  const url = confirmUrl(data.properties.hashed_token, "signup", "/dashboard");
-  await sendEmail({ to: input.email, ...signupVerification({ name: input.name, url }) });
+  // Only the trial plan is self-serve, so it is the only one worth carrying through confirmation.
+  const next = input.plan === TRIAL_ROLE ? withTrialParam("/dashboard", "") : "/dashboard";
+  const url = confirmUrl(data.properties.hashed_token, "signup", next);
+  try {
+    await sendEmail({ to: input.email, ...signupVerification({ name: input.name, url }) });
+  } catch (e) {
+    // generateLink already created the user, so throwing here would crash the form and leave an
+    // address that cannot be signed up again. The account is real; only the link is missing.
+    console.error("[auth] signup e-mail failed", e);
+    return { error: mailFailure };
+  }
   return { ok: true };
 }
 

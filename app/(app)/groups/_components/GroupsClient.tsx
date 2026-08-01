@@ -86,7 +86,7 @@ export default function GroupsClient({
           <input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Buscar grupo por nome ou descrição"
+            placeholder="Buscar coleção por nome ou descrição"
           />
         </div>
         <select
@@ -105,7 +105,7 @@ export default function GroupsClient({
           className="selectish"
           value={sort}
           onChange={(e) => setSort(e.target.value as SortKey)}
-          aria-label="Ordenar grupos"
+          aria-label="Ordenar coleções"
         >
           {SORTS.map((s) => (
             <option key={s.key} value={s.key}>
@@ -116,8 +116,8 @@ export default function GroupsClient({
       </div>
 
       {filtered.length === 0 ? (
-        <EmptyState icon={<IconGroups />} title="Nenhum grupo encontrado">
-          Ajuste a busca ou o objetivo para ver outros grupos.
+        <EmptyState icon={<IconGroups />} title="Nenhuma coleção encontrada">
+          Ajuste a busca ou o objetivo para ver outras coleções.
         </EmptyState>
       ) : (
         <>

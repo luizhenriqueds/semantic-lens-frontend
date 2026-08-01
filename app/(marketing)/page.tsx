@@ -66,7 +66,7 @@ const PLAN_CARDS: {
   },
   {
     role: "investor",
-    trial: `${TRIAL_DAYS} dias grátis para testar`,
+    trial: `${TRIAL_DAYS} dias grátis, sem cartão`,
     popular: true,
     subnote: `Tudo do ${PLANS.basic.label}, mais:`,
     features: [
@@ -75,7 +75,7 @@ const PLAN_CARDS: {
         lead: "Filtros avançados",
         text: "deságio, notas, financiamento, FGTS e lugares próximos",
       },
-      { lead: "Grupos", text: "imóveis parecidos reunidos automaticamente para comparar" },
+      { lead: "Coleções", text: "imóveis parecidos reunidos automaticamente para comparar" },
       {
         lead: "Análise de imóveis",
         text: "distribuição de preço, deságio, área e nota do resultado",
@@ -143,7 +143,7 @@ export default async function LandingPage() {
         {
           v: countShort(stats.clusters),
           k: "famílias de imóveis",
-          note: "grupos de imóveis parecidos",
+          note: "coleções de imóveis parecidos",
         },
         ...(stats.discountMedian != null
           ? [
@@ -1232,19 +1232,6 @@ export default async function LandingPage() {
               </div>
             </div>
           </div>
-
-          <div className="lp-split-note lp-reveal">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
-              <circle cx="12" cy="12" r="9" />
-              <path d="M12 8v5m0 3h.01" />
-            </svg>
-            <p>
-              <b>E quando há poucos anúncios?</b> A estimativa se apoia numa área maior (bairro →
-              cidade → estado) e o sistema reduz a confiança daquele dado - poucos anúncios contam
-              menos. Já o <b>desconto sobre a avaliação</b> não depende do mercado: é a comparação
-              direta entre o preço de venda e o valor que a própria Caixa avaliou.
-            </p>
-          </div>
         </div>
       </section>
 
@@ -1255,7 +1242,7 @@ export default async function LandingPage() {
             <h2>Famílias de imóveis, montadas automaticamente</h2>
             <p>
               A Lavra agrupa imóveis parecidos entre si - tipo, tamanho, faixa de preço e perfil de
-              região - e dá um nome a cada grupo. Em vez de filtrar campo por campo, você entra
+              região - e dá um nome a cada coleção. Em vez de filtrar campo por campo, você entra
               direto na família que combina com o seu plano.
             </p>
           </div>
@@ -1541,6 +1528,7 @@ export default async function LandingPage() {
                     target={card.role}
                     role={ent.role}
                     trial={ent.trial}
+                    celebrateAt="/dashboard"
                     className={`lp-pbtn${card.popular ? " lp-solid" : ""}`}
                   />
                 </div>
@@ -1815,7 +1803,7 @@ export default async function LandingPage() {
                   Explorar a base, buscar por texto ou por proximidade, ver todas as notas e abrir a
                   leitura de região é gratuito e não exige cadastro. Uma conta grátis libera{" "}
                   {PLANS.basic.limits.favorites} favoritos e {PLANS.basic.limits.savedSearches}{" "}
-                  alertas por e-mail. Os planos pagos liberam filtros avançados, grupos,
+                  alertas por e-mail. Os planos pagos liberam filtros avançados, coleções,
                   recomendações, painel de mercado, calendário de leilões, a análise completa de
                   região e a exportação em CSV/PDF.
                 </p>

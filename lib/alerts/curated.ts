@@ -47,7 +47,7 @@ const CATALOGUE = [
     slug: "group",
     minRole: "professional",
     title: "Coleções em alta",
-    why: "grupos de imóveis semelhantes, ordenados pela melhor nota média da rodada",
+    why: "coleções de imóveis semelhantes, ordenadas pela melhor nota média da rodada",
     href: "/groups",
   },
   {

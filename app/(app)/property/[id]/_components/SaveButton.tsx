@@ -6,7 +6,7 @@ import ConfirmDialog from "@/components/ui/ConfirmDialog";
 import { useToast } from "@/components/ui/Toaster";
 import { useSaved } from "@/lib/saved";
 
-export default function SaveButton({ id }: { id: string }) {
+export default function SaveButton({ id, propertyLabel }: { id: string; propertyLabel?: string }) {
   const { isSaved, toggle } = useSaved();
   const { require, showQuotaUpsell } = usePlan();
   const toast = useToast();
@@ -14,7 +14,7 @@ export default function SaveButton({ id }: { id: string }) {
   const saved = isSaved(id);
 
   const save = async () => {
-    if (!require("favorites")) return;
+    if (!require("favorites", { propertyLabel })) return;
     if (!(await toggle(id))) return showQuotaUpsell("favorites");
     toast("Imóvel salvo na carteira");
   };

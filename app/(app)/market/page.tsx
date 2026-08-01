@@ -164,7 +164,7 @@ export default async function MarketPage() {
               <Link
                 className="rtrow"
                 key={`${c.city}-${c.uf}`}
-                href={`/properties?city=${encodeURIComponent(c.city)}`}
+                href={`/properties?uf=${c.uf}&city=${encodeURIComponent(c.city)}`}
               >
                 <div className="rg">
                   <b>{c.city}</b>
