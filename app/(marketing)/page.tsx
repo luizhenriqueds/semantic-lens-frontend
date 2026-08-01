@@ -72,6 +72,10 @@ const PLAN_CARDS: {
     features: [
       { lead: "Favoritos e alertas ilimitados", text: "sem teto de carteira nem de buscas salvas" },
       {
+        lead: "Lugares próximos",
+        text: "escolas, mercados, transporte e serviços num raio de 5 km do imóvel",
+      },
+      {
         lead: "Filtros avançados",
         text: "deságio, notas, financiamento, FGTS e lugares próximos",
       },

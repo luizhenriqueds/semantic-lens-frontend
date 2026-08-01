@@ -47,7 +47,8 @@ export async function ScoreBreakdownSlot({ p }: { p: Property }) {
 }
 
 export async function RegionSlot({ p, heading }: { p: Property; heading: string }) {
-  const [region, pois] = await Promise.all([
+  const [ent, region, pois] = await Promise.all([
+    getEntitlements(),
     p.h3 ? getRegion(p.h3) : Promise.resolve(null),
     getPropertyPois(p.id),
   ]);
@@ -56,7 +57,13 @@ export async function RegionSlot({ p, heading }: { p: Property; heading: string 
       {region && (
         <RegionPanel region={region} pois={pois} lat={p.lat} lon={p.lon} title={heading} />
       )}
-      <NearbyPois pois={pois} />
+      {ent.can("nearbyPois") ? (
+        <NearbyPois pois={pois} />
+      ) : (
+        <div className="infoblock">
+          <UpgradeWall feature="nearbyPois" role={ent.role} trial={ent.trial} />
+        </div>
+      )}
     </>
   );
 }
@@ -84,13 +91,8 @@ export async function MarketSlot({ p }: { p: Property }) {
 
 export async function RecommendationsSlot({ id }: { id: string }) {
   const ent = await getEntitlements();
-  if (!ent.can("recommendations")) {
-    return (
-      <div className="infoblock recsec">
-        <UpgradeWall feature="recommendations" role={ent.role} trial={ent.trial} />
-      </div>
-    );
-  }
+  // No wall here: the rails sit at the end of the page, where a lock reads as a dead end.
+  if (!ent.can("recommendations")) return null;
   const limit = ent.limit("recommendations") ?? undefined;
   const recs = await getRecommendations(id);
   // Only surface recommendations that are a strong match (≥ 75%).
