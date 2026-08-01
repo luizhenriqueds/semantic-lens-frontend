@@ -5,6 +5,7 @@ import Link from "next/link";
 import dynamic from "next/dynamic";
 import RegionScoreBars from "@/components/region/RegionScoreBars";
 import PoiNearGrid from "@/components/region/PoiNearGrid";
+import PlanBadge from "@/components/plan/PlanBadge";
 import { usePlan } from "@/components/plan/PlanProvider";
 import type { NearbyPoi, Region } from "@/lib/types";
 
@@ -28,10 +29,11 @@ export default function RegionPanel({
   lon: number | null;
   title: string;
 }) {
-  const { can } = usePlan();
+  const { can, require } = usePlan();
   const canMap = lat != null && lon != null;
+  const canPois = can("nearbyPois");
   const [tab, setTab] = useState<Tab>("perfil");
-  const view = canMap ? tab : "perfil";
+  const view = canMap && canPois ? tab : "perfil";
 
   const nearest: Record<string, number> = {};
   for (const poi of pois) {
@@ -70,9 +72,10 @@ export default function RegionPanel({
           <button
             type="button"
             className={view === "mapa" ? "on" : ""}
-            onClick={() => setTab("mapa")}
+            onClick={canPois ? () => setTab("mapa") : () => require("nearbyPois")}
           >
             Mapa e lugares próximos
+            {!canPois && <PlanBadge feature="nearbyPois" />}
           </button>
         </div>
       )}

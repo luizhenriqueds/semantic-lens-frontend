@@ -28,6 +28,9 @@ export default function PropertyPhoto({
       fill
       sizes={sizes}
       priority={priority}
+      // Hotlinked on purpose: the optimizer has to fetch from Caixa server-side, which fails in
+      // production and leaves every card on the placeholder.
+      unoptimized
       onError={() => setFailedSrc(src)}
       style={{ objectFit: "cover" }}
     />

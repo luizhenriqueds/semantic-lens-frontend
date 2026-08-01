@@ -203,17 +203,56 @@ const ART: Record<Feature, React.ReactNode> = {
       <Hex x={82} y={62} o={0.2} />
       <Hex x={114} y={44} o={0.35} />
       <Hex x={146} y={62} o={0.6} />
-      <Hex x={114} y={80} o={0.9} />
+      {/* Lighter than its neighbours on purpose: the pin sits on it and both use --primary. */}
+      <Hex x={114} y={80} o={0.4} />
       <Hex x={82} y={98} o={0.45} />
       <Hex x={146} y={98} o={0.3} />
       <Hex x={114} y={116} o={0.15} />
       <path
         className="fart-mark"
-        d="M114 62a12 12 0 0 0-12 12c0 8 12 20 12 20s12-12 12-20a12 12 0 0 0-12-12z"
+        transform="translate(114 80)"
+        d="M0-16a12 12 0 0 0-12 12c0 8 12 20 12 20s12-12 12-20a12 12 0 0 0-12-12z"
       />
       <rect className="fart-dim" x="184" y="60" width="52" height="6" rx="3" />
       <rect className="fart-line" x="184" y="76" width="40" height="6" rx="3" />
       <rect className="fart-dim" x="184" y="92" width="46" height="6" rx="3" />
+    </Frame>
+  ),
+  nearbyPois: (
+    <Frame>
+      <rect className="fart-card" x="16" y="20" width="150" height="140" rx="12" />
+      {[26, 46, 66].map((r) => (
+        <circle
+          key={r}
+          className="fart-axis"
+          cx="91"
+          cy="90"
+          r={r}
+          fill="none"
+          strokeDasharray="4 5"
+        />
+      ))}
+      {[
+        [64, 62],
+        [122, 74],
+        [58, 118],
+        [126, 122],
+        [91, 38],
+      ].map(([x, y], i) => (
+        <circle key={i} className="fart-dot" cx={x} cy={y} r="5" />
+      ))}
+      {/* Drawn around its own centre, then moved onto the rings' centre, so the two cannot drift. */}
+      <path
+        className="fart-mark"
+        transform="translate(91 90)"
+        d="M0-16a12 12 0 0 0-12 12c0 8 12 20 12 20s12-12 12-20a12 12 0 0 0-12-12z"
+      />
+      {[52, 78, 104].map((y, i) => (
+        <g key={y}>
+          <rect className="fart-line" x="182" y={y} width={54 - i * 8} height="6" rx="3" />
+          <rect className="fart-dim" x="182" y={y + 12} width={30 - i * 6} height="5" rx="2.5" />
+        </g>
+      ))}
     </Frame>
   ),
   export: (

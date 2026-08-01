@@ -18,6 +18,7 @@ describe("plan matrix", () => {
       "regions",
       "export",
       "curatedAlerts",
+      "nearbyPois",
     ];
     for (const f of paid) {
       expect(ent("anon").can(f), `anon ${f}`).toBe(false);
@@ -40,6 +41,7 @@ describe("plan matrix", () => {
       "analysisView",
       "recommendations",
       "marketCompare",
+      "nearbyPois",
     ] as Feature[]) {
       expect(e.can(f), f).toBe(true);
     }

@@ -50,6 +50,11 @@ export const FEATURE_COPY: Record<Feature, { label: string; blurb: string; quota
     label: "Regiões",
     blurb: "Perfil e DNA de cada bairro, preços de mercado e regiões semelhantes.",
   },
+  nearbyPois: {
+    label: "Lugares próximos",
+    blurb:
+      "Escolas, mercados, transporte e serviços num raio de 5 km, do mais próximo ao mais distante.",
+  },
   export: {
     label: "Exportação CSV/PDF",
     blurb: "Exporte buscas, filtros e análises em CSV ou PDF.",
@@ -65,8 +70,7 @@ export const PLAN_INCLUDES: Partial<Record<Role, { heading: string; items: reado
       "Histórico de preços",
       "Análise de fachada usando IA",
       "Mudança de modalidade",
-      "Lugares próximos e distância do centro",
-      "Perfil da região",
+      "Perfil da região e distância do centro",
       "Score de investimento",
       "Tese de investimento recomendada",
       // Deliberately not "análises comparativas de porte e preço": that reads as the

@@ -16,6 +16,7 @@ export type Feature =
   | "calendarView"
   | "market"
   | "regions"
+  | "nearbyPois"
   | "export";
 
 export type Plan = {
@@ -45,6 +46,7 @@ const NONE: Record<Feature, boolean> = {
   calendarView: false,
   market: false,
   regions: false,
+  nearbyPois: false,
   export: false,
 };
 
@@ -58,6 +60,7 @@ const INVESTOR_FEATURES: Record<Feature, boolean> = {
   advancedFilters: true,
   analysisView: true,
   marketCompare: true,
+  nearbyPois: true,
 };
 
 const PRO_FEATURES: Record<Feature, boolean> = {
