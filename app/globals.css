@@ -500,6 +500,11 @@ button {
   justify-content: space-between;
   gap: 16px;
 }
+.headactions {
+  display: flex;
+  gap: 10px;
+  flex-shrink: 0;
+}
 .pagehead h1 {
   font-size: 30px;
   font-weight: 700;
@@ -2287,6 +2292,12 @@ select.selectish {
   border-radius: 9px;
   padding: 8px 12px;
   margin-bottom: 12px;
+}
+.pricecard .availnote {
+  margin-top: 10px;
+  color: var(--ink-faint);
+  font-size: 12.5px;
+  line-height: 1.5;
 }
 .debtrules {
   display: flex;
@@ -4307,7 +4318,8 @@ select.selectish {
   }
   .brand > div,
   .navlabel,
-  .navbtn .txt {
+  .navbtn .txt,
+  .navbtn .planbadge {
     display: none;
   }
   .navbtn {
@@ -4374,6 +4386,14 @@ select.selectish {
   .searchhead .btn {
     width: 100%;
     justify-content: center;
+  }
+  .searchhead .headactions {
+    width: 100%;
+    flex-wrap: wrap;
+  }
+  .viewbar > .resultcount .range {
+    display: block;
+    margin: 2px 0 0;
   }
   .pagehead h1 {
     font-size: 23px;
@@ -4690,6 +4710,13 @@ select.selectish {
   width: 25px;
   height: 25px;
   stroke-width: 1.6;
+}
+.emptystate .eart {
+  width: min(232px, 76%);
+  margin: 0 auto 16px;
+}
+.emptystate .eart .fart {
+  display: block;
 }
 /* Direct child only: the title. A <b> inside the body copy must stay inline. */
 .emptystate > b {
@@ -5382,7 +5409,8 @@ select.selectish {
   position: absolute;
   top: 10px;
   right: 10px;
-  z-index: 500;
+  /* over the map, under the drawers and modals */
+  z-index: 2;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -5904,6 +5932,23 @@ select.selectish {
   flex: 1;
   height: auto;
   border-radius: 12px;
+}
+.pm-photo {
+  display: none;
+}
+.pm-photo.on {
+  display: block;
+  height: 104px;
+  margin: 0 0 8px;
+  border-radius: 8px;
+  overflow: hidden;
+  background: var(--surface-2);
+}
+.pm-photo img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
 }
 .pm-meta {
   color: var(--ink-faint);
@@ -6759,6 +6804,18 @@ select.selectish {
 .fart-mark {
   fill: var(--primary);
   stroke: var(--primary);
+}
+.fart-trend {
+  fill: none;
+  stroke: var(--primary);
+  stroke-width: 3;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.fart-area {
+  fill: var(--primary);
+  stroke: none;
+  opacity: 0.12;
 }
 .fart-stroke,
 .fart-axis {

@@ -22,6 +22,7 @@ import { getPropertyById, getPropertyDetailText } from "@/lib/data";
 import Hint from "@/components/ui/Hint";
 import {
   fmtDate,
+  fmtDay,
   fmtDist,
   money,
   PROFILE_LABEL,
@@ -50,6 +51,8 @@ export default async function PropertyPage({ params }: { params: Promise<{ id: s
 
   const data = fmtDate(p.auctionDate);
   const discPct = showDiscount(p) ? p.discountPercentile : null;
+  // Undated offers can be sold or withdrawn between batches, so they carry the last day seen.
+  const checkedOn = data ? null : fmtDay(text.lastSeen);
 
   return (
     <section className="view">
@@ -69,6 +72,7 @@ export default async function PropertyPage({ params }: { params: Promise<{ id: s
           MATRÍCULA CAIXA {p.id}
           {p.modality ? ` · ${p.modality.toUpperCase()}` : ""}
           {data ? ` · LEILÃO EM ${data.toUpperCase()}` : ""}
+          {checkedOn ? ` · DISPONÍVEL EM ${checkedOn}` : ""}
         </div>
       </div>
 
@@ -171,7 +175,14 @@ export default async function PropertyPage({ params }: { params: Promise<{ id: s
             <div className="when">
               {p.modality && <b>{p.modality}</b>}
               {data ? ` · leilão em ${data}` : ""}
+              {checkedOn ? ` · disponível em ${checkedOn}` : ""}
             </div>
+            {checkedOn && (
+              <div className="availnote">
+                A oferta estava disponível na Caixa em {checkedOn}. Confirme no anúncio original
+                antes de negociar.
+              </div>
+            )}
             <div className="cta">
               <SaveButton id={p.id} propertyLabel={heading} />
               {p.link && (

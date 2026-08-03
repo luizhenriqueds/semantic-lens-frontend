@@ -44,13 +44,14 @@ async function loadScoreExplain(id: string): Promise<ScoreExplain | null> {
 export const getScoreExplain = cached(loadScoreExplain, "property-score-explain");
 
 // Heavy text kept out of property_list_mv, fetched per-id on the detail page.
+// `last_seen` rides along: it is the day the batch last found the listing on Caixa.
 async function loadPropertyDetailText(
   id: string,
-): Promise<{ description: string | null; visualNote: string | null }> {
+): Promise<{ description: string | null; visualNote: string | null; lastSeen: string | null }> {
   const res = await withRetry(() =>
     supabase
       .from("properties")
-      .select("canonical_description,visual_note")
+      .select("canonical_description,visual_note,last_seen")
       .eq("property_id", id)
       .limit(1),
   );
@@ -58,6 +59,7 @@ async function loadPropertyDetailText(
   return {
     description: row?.canonical_description || null,
     visualNote: row?.visual_note || null,
+    lastSeen: row?.last_seen || null,
   };
 }
 

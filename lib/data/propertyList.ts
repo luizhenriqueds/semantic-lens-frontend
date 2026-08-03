@@ -363,6 +363,16 @@ async function loadPropertyById(id: string): Promise<PropertyDetail | null> {
 
 export const getPropertyById = cached(loadPropertyById, "property-by-id");
 
+// Map points carry no photo (4000 of them per view), so popups fetch theirs on open.
+async function loadPropertyImage(id: string): Promise<string | null> {
+  const res = await withRetry(() =>
+    supabase.from("property_list_mv").select("image_url").eq("property_id", id).limit(1),
+  );
+  return rows<any>("property-image", res)[0]?.image_url || null;
+}
+
+export const getPropertyImage = cached(loadPropertyImage, "property-image");
+
 async function loadMapPoints(filtersJson: string): Promise<{ points: MapPoint[]; total: number }> {
   const data = await rpcJson("property_map_points", {
     p_filters: JSON.parse(filtersJson),

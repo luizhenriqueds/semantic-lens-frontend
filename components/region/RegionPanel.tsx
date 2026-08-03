@@ -89,7 +89,6 @@ export default function RegionPanel({
         <>
           <RegionScoreBars region={region} />
           <PoiNearGrid nearest={nearest} />
-          <div className="rnote">Calculado a partir de dados de mapa (OpenStreetMap).</div>
         </>
       )}
     </div>

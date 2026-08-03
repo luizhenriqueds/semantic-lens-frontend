@@ -61,7 +61,7 @@ export async function RegionSlot({ p, heading }: { p: Property; heading: string 
         <NearbyPois pois={pois} />
       ) : (
         <div className="infoblock">
-          <UpgradeWall feature="nearbyPois" role={ent.role} trial={ent.trial} />
+          <UpgradeWall feature="nearbyPois" role={ent.role} trial={ent.trial} art />
         </div>
       )}
     </>
@@ -78,7 +78,7 @@ export async function MarketSlot({ p }: { p: Property }) {
   if (!ent.can("marketCompare")) {
     return (
       <div className="infoblock">
-        <UpgradeWall feature="marketCompare" role={ent.role} trial={ent.trial} />
+        <UpgradeWall feature="marketCompare" role={ent.role} trial={ent.trial} art />
       </div>
     );
   }

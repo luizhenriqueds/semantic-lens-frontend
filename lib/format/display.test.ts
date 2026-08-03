@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   deriveTitle,
   fmtDate,
+  fmtDay,
   fmtDist,
   fmtPhone,
   money,
@@ -69,6 +70,17 @@ describe("fmtDate", () => {
 
   it("returns a formatted string for a valid ISO date", () => {
     expect(typeof fmtDate("2026-03-05")).toBe("string");
+  });
+});
+
+describe("fmtDay", () => {
+  it("keeps a date-only value on its own day, whatever the timezone", () => {
+    expect(fmtDay("2026-07-24")).toBe("24/07/2026");
+  });
+
+  it("returns null for missing or invalid dates", () => {
+    expect(fmtDay(null)).toBeNull();
+    expect(fmtDay("not-a-date")).toBeNull();
   });
 });
 

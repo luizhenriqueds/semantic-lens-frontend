@@ -612,6 +612,9 @@ export default function PropertiesClient({
     { key: "map", label: "Mapa" },
   ];
 
+  // A locked view falls back to the list server-side; its own tab stays selected.
+  const activeView = lockedView ?? view;
+
   const calDayOpen = !!calendar?.day && (calendar?.dayItems.length ?? 0) > 0;
   const mapProperties = useMemo(() => (map ? map.points.map(mapPointToProperty) : []), [map]);
 
@@ -1117,23 +1120,23 @@ export default function PropertiesClient({
 
       <div className="viewbar">
         <div className="viewtoggle">
-          {/* A view the plan does not include is not offered at all; a deep link to it still
-              lands on the upsell below. */}
-          {VIEWS.filter((v) => {
+          {VIEWS.map((v) => {
             const feature = VIEW_FEATURE[v.key];
-            return !feature || can(feature);
-          }).map((v) => (
-            <button
-              key={v.key}
-              type="button"
-              className={view === v.key ? "on" : ""}
-              onClick={() => setView(v.key)}
-            >
-              {v.label}
-            </button>
-          ))}
+            const locked = !!feature && !can(feature);
+            return (
+              <button
+                key={v.key}
+                type="button"
+                className={`${activeView === v.key ? "on" : ""}${locked ? " locked" : ""}`.trim()}
+                onClick={() => setView(v.key)}
+              >
+                {v.label}
+                {locked && <PlanBadge feature={feature} />}
+              </button>
+            );
+          })}
         </div>
-        {(view === "list" || (view === "calendar" && calDayOpen)) && (
+        {(activeView === "list" || (activeView === "calendar" && calDayOpen)) && (
           <select
             className="selectish"
             value={sortParam(sort)}
@@ -1150,7 +1153,9 @@ export default function PropertiesClient({
         )}
         {/* CSV needs a filter or search, to keep it from dumping the whole base. */}
         <ExportButton
-          csv={canAlert && view === "list" ? () => exportPropertiesCsv(filters, sort) : undefined}
+          csv={
+            canAlert && activeView === "list" ? () => exportPropertiesCsv(filters, sort) : undefined
+          }
           pdf={view === "analysis" ? `/report/properties?${reportParams}` : undefined}
         />
       </div>

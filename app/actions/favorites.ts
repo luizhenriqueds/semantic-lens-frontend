@@ -1,5 +1,6 @@
 "use server";
 
+import { revalidatePath } from "next/cache";
 import * as data from "@/lib/data/favorites";
 import { getUser, requireUser } from "@/lib/supabase/server";
 
@@ -12,5 +13,8 @@ export async function getFavoriteIds(): Promise<string[]> {
 /** False means the plan's cap was hit; the 0078 trigger is what enforces it. */
 export async function setFavorite(propertyId: string, saved: boolean): Promise<boolean> {
   const { supabase, user } = await requireUser();
-  return data.setFavorite(supabase, user.id, propertyId, saved);
+  const ok = await data.setFavorite(supabase, user.id, propertyId, saved);
+  // Else the router cache (staleTimes.dynamic) can serve a portfolio rendered before this.
+  if (ok) revalidatePath("/portfolio");
+  return ok;
 }

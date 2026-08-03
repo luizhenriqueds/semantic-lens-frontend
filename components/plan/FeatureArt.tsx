@@ -28,6 +28,9 @@ const Hex = ({ x, y, o }: { x: number; y: number; o: number }) => (
   />
 );
 
+// Closes on control point (212,55) → (220,50), so the head is turned by atan2(-5, 8) ≈ -32°.
+const TREND = "M40 122C70 115 90 104 114 99S162 80 188 66C200 60 212 55 220 50";
+
 const ART: Record<Feature, React.ReactNode> = {
   favorites: (
     <Frame>
@@ -147,20 +150,18 @@ const ART: Record<Feature, React.ReactNode> = {
   marketCompare: (
     <Frame>
       <rect className="fart-card" x="16" y="24" width="228" height="132" rx="12" />
-      <path className="fart-axis" d="M130 40v100" strokeDasharray="5 5" />
-      {[
-        [52, 62],
-        [78, 104],
-        [96, 52],
-        [148, 86],
-        [170, 60],
-        [196, 112],
-        [214, 78],
-      ].map(([x, y], i) => (
-        <circle key={i} className="fart-dot" cx={x} cy={y} r="5" />
-      ))}
-      <circle className="fart-knob" cx="62" cy="126" r="8" />
       <rect className="fart-dim" x="34" y="40" width="70" height="6" rx="3" />
+      <path className="fart-axis" d="M36 134h192" />
+      <path
+        className="fart-axis"
+        strokeDasharray="5 5"
+        d="M40 92C80 95 120 101 160 105s46 6 60 7"
+      />
+      <path className="fart-area" d={`${TREND}V134H40Z`} />
+      <path className="fart-trend" d={TREND} />
+      {/* Solid head: stroked barbs read as a flag on a shaft this shallow. */}
+      <path className="fart-fill" transform="translate(220 50) rotate(-32)" d="M2 0-13-7-13 7Z" />
+      <circle className="fart-knob" cx="40" cy="122" r="7" />
     </Frame>
   ),
   calendarView: (
@@ -276,6 +277,7 @@ const ART: Record<Feature, React.ReactNode> = {
   ),
 };
 
+/** Bare art: each surface supplies its own wrapper. */
 export default function FeatureArt({ feature }: { feature: Feature }) {
-  return <div className="upsell-art">{ART[feature]}</div>;
+  return ART[feature];
 }

@@ -16,7 +16,7 @@ export default async function PortfolioPage() {
           detalhes.
         </p>
       </div>
-      <PortfolioClient properties={properties} />
+      <PortfolioClient properties={properties} savedIds={ids} />
     </section>
   );
 }

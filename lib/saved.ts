@@ -1,10 +1,19 @@
 "use client";
 
-import { useCallback } from "react";
+import { useCallback, useEffect } from "react";
 import { getFavoriteIds, setFavorite } from "@/app/actions/favorites";
 import { createClientStore } from "@/lib/clientStore";
 
 const store = createClientStore<string[]>([], () => getFavoriteIds());
+
+/** Adopts the server's ids, so a stale in-memory copy cannot hide rows it just sent. */
+export function useSavedSync(serverIds: string[]) {
+  const key = serverIds.join(",");
+  useEffect(() => {
+    if (store.get().join(",") !== key) store.set(serverIds);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- `key` stands in for `serverIds`
+  }, [key]);
+}
 
 export function useSaved() {
   const ids = store.useValue();

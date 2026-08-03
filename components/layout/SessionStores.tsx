@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
-import { resetClientStores } from "@/lib/clientStore";
+import { refreshClientStores, resetClientStores } from "@/lib/clientStore";
 import { createClient } from "@/lib/supabase/client";
 
 // Driving this off auth state rather than the sign-out handler also covers token expiry
@@ -12,9 +12,22 @@ export default function SessionStores() {
     const { data } = createClient().auth.onAuthStateChange((event, session) => {
       const next = session?.user.id ?? null;
       if (event === "SIGNED_OUT" || (userId != null && next !== userId)) resetClientStores();
+      else if (event === "SIGNED_IN") refreshClientStores();
       userId = next;
     });
     return () => data.subscription.unsubscribe();
+  }, []);
+
+  useEffect(() => {
+    const onVisible = () => {
+      if (document.visibilityState === "visible") refreshClientStores();
+    };
+    document.addEventListener("visibilitychange", onVisible);
+    window.addEventListener("focus", onVisible);
+    return () => {
+      document.removeEventListener("visibilitychange", onVisible);
+      window.removeEventListener("focus", onVisible);
+    };
   }, []);
 
   return null;
