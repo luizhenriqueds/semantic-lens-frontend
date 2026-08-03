@@ -95,7 +95,7 @@ export default async function AlertPage({
               {alert.on ? "" : " · pausado"}
             </p>
           </div>
-          <div style={{ display: "flex", gap: 10, flexShrink: 0 }}>
+          <div className="headactions">
             {adjustHref && (
               <Link className="btn ghost" href={adjustHref}>
                 <IconSliders width={16} height={16} strokeWidth={1.8} /> Ajustar filtros

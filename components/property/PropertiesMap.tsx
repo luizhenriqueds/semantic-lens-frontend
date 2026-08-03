@@ -6,6 +6,7 @@ import "leaflet/dist/leaflet.css";
 import "leaflet.markercluster";
 import "leaflet.markercluster/dist/MarkerCluster.css";
 import "leaflet.markercluster/dist/MarkerCluster.Default.css";
+import { fetchPropertyImage } from "@/app/actions/properties";
 import { fmtDate, money, showDiscount } from "@/lib/format";
 import { groupByAddress } from "@/lib/geo";
 import { homeIcon, homeIconCount } from "@/lib/mapMarkers";
@@ -39,8 +40,39 @@ function priceLine(p: Property): string {
   return `<span class="pm-price">${money(p.saleValue)}</span>${disc}`;
 }
 
+// Resolved on first open and kept for the session; `null` means "no usable photo".
+const photoCache = new Map<string, string | null>();
+
+const loads = (src: string) =>
+  new Promise<boolean>((resolve) => {
+    const img = new Image();
+    img.onload = () => resolve(true);
+    img.onerror = () => resolve(false);
+    img.src = src;
+  });
+
+function photoSlot(p: Property): string {
+  const src = photoCache.get(p.id) ?? p.image;
+  if (src) return `<div class="pm-photo on"><img src="${esc(src)}" alt="" /></div>`;
+  return `<div class="pm-photo" data-photo-id="${esc(p.id)}"></div>`;
+}
+
+// The popup content is a string Leaflet re-renders on update(), so the photo is cached
+// first and painted by re-running the template rather than by patching the DOM.
+async function resolvePhoto(popup: L.Popup) {
+  const id = popup.getElement()?.querySelector<HTMLElement>(".pm-photo")?.dataset.photoId;
+  if (!id || photoCache.has(id)) return;
+  photoCache.set(id, null); // claims the id, so a reopen mid-flight does not fetch again
+  const url = await fetchPropertyImage(id).catch(() => null);
+  const ok = !!url && (await loads(url));
+  if (!ok) return;
+  photoCache.set(id, url);
+  popup.update();
+}
+
 function singlePopup(p: Property): string {
   return [
+    photoSlot(p),
     `<b>${esc(p.title)}</b>`,
     `<div class="pm-sub">${esc([p.neighborhood, `${p.city}/${p.uf}`].filter(Boolean).join(" · "))}</div>`,
     `<div class="pm-meta">${metaLine(p)}</div>`,
@@ -84,6 +116,7 @@ export default function PropertiesMap({ properties }: { properties: Property[] }
       maxClusterRadius: 55,
       chunkedLoading: true,
     }).addTo(map);
+    map.on("popupopen", (e) => void resolvePhoto(e.popup));
 
     return () => {
       map.remove();
@@ -107,7 +140,9 @@ export default function PropertiesMap({ properties }: { properties: Property[] }
         icon: group.length > 1 ? homeIconCount(group.length) : homeIcon(),
       })
         .addTo(layer)
-        .bindPopup(group.length > 1 ? groupPopup(group) : singlePopup(group[0]), { maxWidth: 300 });
+        .bindPopup(() => (group.length > 1 ? groupPopup(group) : singlePopup(group[0])), {
+          maxWidth: 300,
+        });
       pts.push([lat, lon]);
     }
 

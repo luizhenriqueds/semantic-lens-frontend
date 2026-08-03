@@ -1,4 +1,5 @@
 import PlanCta from "@/components/plan/PlanCta";
+import FeatureArt from "@/components/plan/FeatureArt";
 import { FEATURE_COPY, canTrial, upsellTitle } from "@/lib/entitlements/copy";
 import EmptyState from "@/components/ui/EmptyState";
 import { IconLock } from "@/lib/icons";
@@ -11,11 +12,15 @@ export default function UpgradeWall({
   feature,
   role,
   trial,
+  art,
   children,
 }: {
   feature: Feature;
   role: Role;
   trial: Trial;
+  /** Teases the surface itself instead of a padlock. For walls that sit inside a page,
+   *  where the lock alone says only that something is missing. */
+  art?: boolean;
   children?: React.ReactNode;
 }) {
   const plan = requiredPlan(feature);
@@ -24,6 +29,7 @@ export default function UpgradeWall({
   return (
     <EmptyState
       icon={<IconLock />}
+      art={art ? <FeatureArt feature={feature} /> : undefined}
       title={upsellTitle(feature, role, trial)}
       action={<PlanCta target={plan.role} role={role} trial={trial} />}
     >

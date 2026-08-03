@@ -2,18 +2,21 @@ import type { ReactNode } from "react";
 
 export default function EmptyState({
   icon,
+  art,
   title,
   children,
   action,
 }: {
   icon?: ReactNode;
+  /** Illustration shown in place of the icon. */
+  art?: ReactNode;
   title: string;
   children?: ReactNode;
   action?: ReactNode;
 }) {
   return (
     <div className="emptystate">
-      {icon && <div className="eico">{icon}</div>}
+      {art ? <div className="eart">{art}</div> : icon && <div className="eico">{icon}</div>}
       <b>{title}</b>
       {children && <p>{children}</p>}
       {action && <div className="eaction">{action}</div>}

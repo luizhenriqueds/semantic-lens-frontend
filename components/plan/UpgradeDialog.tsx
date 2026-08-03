@@ -53,7 +53,9 @@ export default function UpgradeDialog({
 
   return (
     <Modal className="upsell" label={copy.title} onClose={onClose}>
-      <FeatureArt feature={art ?? feature} />
+      <div className="upsell-art">
+        <FeatureArt feature={art ?? feature} />
+      </div>
       <div className="upsell-body">
         <div className="mico">
           <IconLock width={22} height={22} strokeWidth={1.8} />
