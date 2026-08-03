@@ -47,8 +47,7 @@ export function fmtDate(iso: string | null | undefined): string | null {
 
 export function fmtDay(iso: string | null | undefined): string | null {
   if (!iso) return null;
-  // A bare `YYYY-MM-DD` parses as UTC midnight, which is the day before anywhere west of
-  // Greenwich, so a date with no time is formatted straight from its parts.
+  // A bare `YYYY-MM-DD` parses as UTC midnight, a day early west of Greenwich.
   const ymd = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso);
   if (ymd) return `${ymd[3]}/${ymd[2]}/${ymd[1]}`;
   const d = new Date(iso);

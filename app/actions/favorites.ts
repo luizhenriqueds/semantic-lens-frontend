@@ -14,8 +14,7 @@ export async function getFavoriteIds(): Promise<string[]> {
 export async function setFavorite(propertyId: string, saved: boolean): Promise<boolean> {
   const { supabase, user } = await requireUser();
   const ok = await data.setFavorite(supabase, user.id, propertyId, saved);
-  // Without this the router cache (staleTimes.dynamic) can serve a portfolio rendered
-  // before the change, so the imóvel only turns up after a manual reload.
+  // Else the router cache (staleTimes.dynamic) can serve a portfolio rendered before this.
   if (ok) revalidatePath("/portfolio");
   return ok;
 }

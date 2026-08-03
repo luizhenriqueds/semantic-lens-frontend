@@ -40,7 +40,6 @@ function priceLine(p: Property): string {
   return `<span class="pm-price">${money(p.saleValue)}</span>${disc}`;
 }
 
-// Resolved on first open and kept for the session; `null` means "no usable photo".
 const photoCache = new Map<string, string | null>();
 
 const loads = (src: string) =>
@@ -57,8 +56,7 @@ function photoSlot(p: Property): string {
   return `<div class="pm-photo" data-photo-id="${esc(p.id)}"></div>`;
 }
 
-// The popup content is a string Leaflet re-renders on update(), so the photo is cached
-// first and painted by re-running the template rather than by patching the DOM.
+// Leaflet re-renders the popup string on update(), so cache first and let it repaint.
 async function resolvePhoto(popup: L.Popup) {
   const id = popup.getElement()?.querySelector<HTMLElement>(".pm-photo")?.dataset.photoId;
   if (!id || photoCache.has(id)) return;

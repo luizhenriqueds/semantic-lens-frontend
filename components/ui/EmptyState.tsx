@@ -8,7 +8,6 @@ export default function EmptyState({
   action,
 }: {
   icon?: ReactNode;
-  /** Illustration shown in place of the icon. */
   art?: ReactNode;
   title: string;
   children?: ReactNode;

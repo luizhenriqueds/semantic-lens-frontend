@@ -10,14 +10,12 @@ export function resetClientStores() {
   stores.forEach((r) => r());
 }
 
-// The stores hydrate once per page load, so a change made on another device would stay
-// invisible until a reload. Re-reading them whenever the tab comes back closes that gap.
+// Stores hydrate once per page load, so a change made on another device needs a re-read.
 export function refreshClientStores() {
   refreshers.forEach((r) => r());
 }
 
-// Supabase re-emits SIGNED_IN on load and on every tab return, on top of the visibility
-// listeners, so the refresh triggers stack. A value this young is not worth re-reading.
+// Supabase re-emits SIGNED_IN on load and on every tab return, so refresh triggers stack.
 const FRESH_MS = 30_000;
 
 // In-memory store shared across hook instances, hydrated once from the server.
@@ -76,7 +74,7 @@ export function createClientStore<T>(fallback: T, load: () => Promise<T>) {
     readAt = 0; // the next account must not inherit this one's freshness
     set(fallback);
   });
-  // A store nobody is subscribed to just drops its hydration, so the next mount reloads it.
+  // Unsubscribed stores just drop their hydration; the next mount reloads.
   refreshers.add(() => {
     if (listeners.size) read();
     else started = false;

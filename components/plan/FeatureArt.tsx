@@ -147,8 +147,6 @@ const ART: Record<Feature, React.ReactNode> = {
       <rect className="fart-dim" x="30" y="26" width="90" height="6" rx="3" />
     </Frame>
   ),
-  // The lance enters below the neighbourhood's own drifting line and climbs past it: the
-  // gap between the two is the "potencial de ganho" the copy promises.
   marketCompare: (
     <Frame>
       <rect className="fart-card" x="16" y="24" width="228" height="132" rx="12" />
@@ -161,8 +159,7 @@ const ART: Record<Feature, React.ReactNode> = {
       />
       <path className="fart-area" d={`${TREND}V134H40Z`} />
       <path className="fart-trend" d={TREND} />
-      {/* Solid head, turned onto the curve's closing tangent (8,-5). Stroked barbs read as a
-          flag at this size: on a shaft this shallow, one of them comes out near-horizontal. */}
+      {/* Solid head: stroked barbs read as a flag on a shaft this shallow. */}
       <path className="fart-fill" transform="translate(220 50) rotate(-32)" d="M2 0-13-7-13 7Z" />
       <circle className="fart-knob" cx="40" cy="122" r="7" />
     </Frame>
@@ -280,7 +277,7 @@ const ART: Record<Feature, React.ReactNode> = {
   ),
 };
 
-/** Bare art: each surface sizes it with its own wrapper. */
+/** Bare art: each surface supplies its own wrapper. */
 export default function FeatureArt({ feature }: { feature: Feature }) {
   return ART[feature];
 }

@@ -51,8 +51,7 @@ export default async function PropertyPage({ params }: { params: Promise<{ id: s
 
   const data = fmtDate(p.auctionDate);
   const discPct = showDiscount(p) ? p.discountPercentile : null;
-  // Venda direta and other undated offers can be sold or withdrawn between batches, so
-  // they are dated by the last day we saw them on Caixa instead of by a praça date.
+  // Undated offers can be sold or withdrawn between batches, so they carry the last day seen.
   const checkedOn = data ? null : fmtDay(text.lastSeen);
 
   return (

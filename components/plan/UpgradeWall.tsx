@@ -18,8 +18,7 @@ export default function UpgradeWall({
   feature: Feature;
   role: Role;
   trial: Trial;
-  /** Teases the surface itself instead of a padlock. For walls that sit inside a page,
-   *  where the lock alone says only that something is missing. */
+  /** Teases the surface instead of a padlock; for walls that sit inside a page. */
   art?: boolean;
   children?: React.ReactNode;
 }) {

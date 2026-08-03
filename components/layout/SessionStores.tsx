@@ -18,7 +18,6 @@ export default function SessionStores() {
     return () => data.subscription.unsubscribe();
   }, []);
 
-  // Coming back to the tab is the moment a change made elsewhere should show up.
   useEffect(() => {
     const onVisible = () => {
       if (document.visibilityState === "visible") refreshClientStores();

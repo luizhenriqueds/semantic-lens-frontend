@@ -4,11 +4,9 @@ import { PROPERTY_SORTS, type SortParam } from "@/lib/filters/propertiesUrl";
 import { investmentScore } from "@/lib/format";
 import type { Property } from "@/lib/types";
 
-/** The list's own orderings plus "recent", which only a carteira can offer. */
 export type PortfolioSort = "recent" | Exclude<SortParam, "score">;
 
-// Labels come from the properties list so a relabel there carries; the goal score is dropped
-// because the carteira has no goal selected to score against.
+// Labels follow the properties list; the goal score has no goal to score against here.
 export const PORTFOLIO_SORTS: { key: PortfolioSort; label: string }[] = [
   { key: "recent", label: "Salvos por último" },
   ...PROPERTY_SORTS.filter((s) => s.param !== "score").map((s) => ({
@@ -32,10 +30,10 @@ export function filterPortfolio(items: Property[], f: PortfolioFilters): Propert
   });
 }
 
-/** Undated listings sort last: a carteira is read for what closes next. */
+// Undated listings sort last.
 const auctionKey = (p: Property) => auctionInstant(p.auctionDate) ?? Infinity;
 
-// "recent" is the incoming order, which the carteira builds from the favourites (newest first).
+// "recent" is the incoming order: the carteira is built newest-favourite first.
 export function sortPortfolio(items: Property[], sort: PortfolioSort): Property[] {
   if (sort === "recent") return items;
   return [...items].sort((a, b) => {
@@ -54,7 +52,7 @@ export function sortPortfolio(items: Property[], sort: PortfolioSort): Property[
   });
 }
 
-/** Only the values present in the carteira, so no filter can empty the list on its own. */
+/** Only values the carteira holds, so no filter can empty the list on its own. */
 export function portfolioOptions(items: Property[]): { ufs: string[]; types: string[] } {
   const ufs = new Set<string>();
   const types = new Set<string>();

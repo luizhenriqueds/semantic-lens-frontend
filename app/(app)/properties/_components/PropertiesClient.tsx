@@ -612,8 +612,7 @@ export default function PropertiesClient({
     { key: "map", label: "Mapa" },
   ];
 
-  // A locked view falls back to the list server-side, so the tab the upsell belongs to is
-  // the one that stays selected.
+  // A locked view falls back to the list server-side; its own tab stays selected.
   const activeView = lockedView ?? view;
 
   const calDayOpen = !!calendar?.day && (calendar?.dayItems.length ?? 0) > 0;
@@ -1121,8 +1120,6 @@ export default function PropertiesClient({
 
       <div className="viewbar">
         <div className="viewtoggle">
-          {/* A view the plan does not include still gets a tab, badged with the plan that
-              unlocks it: opening it lands on the upsell below, same as a deep link. */}
           {VIEWS.map((v) => {
             const feature = VIEW_FEATURE[v.key];
             const locked = !!feature && !can(feature);

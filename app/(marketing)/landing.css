@@ -33,9 +33,7 @@
 .lp-sechead .lp-seclabel {
   justify-content: center;
 }
-/* Tablets fall back to whatever mono they have, and its metrics can be far wider than
-   JetBrains Mono's. Tighten the eyebrow early and, if it still wraps, keep the rule beside
-   the first line with even lines instead of orphaning it on one of its own. */
+/* Tightened early: the mono fallback tablets pick can be far wider. */
 @media (max-width: 1024px) {
   .lp-seclabel {
     font-size: 11px;
