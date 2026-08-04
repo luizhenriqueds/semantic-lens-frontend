@@ -24,6 +24,7 @@
     "@upstash/ratelimit": "^2.0.8",
     "@upstash/redis": "^1.38.1",
     "@upstash/vector": "^1.2.3",
+    "@vercel/analytics": "^2.0.1",
     "ai": "^7.0.15",
     "leaflet": "^1.9.4",
     "leaflet.markercluster": "^1.5.3",
