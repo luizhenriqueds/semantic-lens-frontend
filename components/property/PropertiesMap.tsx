@@ -41,6 +41,7 @@ function priceLine(p: Property): string {
 }
 
 const photoCache = new Map<string, string | null>();
+const photoPending = new Set<string>();
 
 const loads = (src: string) =>
   new Promise<boolean>((resolve) => {
@@ -52,20 +53,22 @@ const loads = (src: string) =>
 
 function photoSlot(p: Property): string {
   const src = photoCache.get(p.id) ?? p.image;
-  if (src) return `<div class="pm-photo on"><img src="${esc(src)}" alt="" /></div>`;
-  return `<div class="pm-photo" data-photo-id="${esc(p.id)}"></div>`;
+  if (src) return `<div class="pm-photo"><img src="${esc(src)}" alt="" /></div>`;
+  // Resolved to nothing: drop the slot rather than hold the frame for a photo that never lands.
+  if (photoCache.has(p.id)) return "";
+  return `<div class="pm-photo loading" data-photo-id="${esc(p.id)}"></div>`;
 }
 
 // Leaflet re-renders the popup string on update(), so cache first and let it repaint.
 async function resolvePhoto(popup: L.Popup) {
   const id = popup.getElement()?.querySelector<HTMLElement>(".pm-photo")?.dataset.photoId;
-  if (!id || photoCache.has(id)) return;
-  photoCache.set(id, null); // claims the id, so a reopen mid-flight does not fetch again
+  if (!id || photoCache.has(id) || photoPending.has(id)) return;
+  photoPending.add(id); // so a reopen mid-flight does not fetch again
   const url = await fetchPropertyImage(id).catch(() => null);
-  const ok = !!url && (await loads(url));
-  if (!ok) return;
-  photoCache.set(id, url);
-  popup.update();
+  // Preloaded before it is cached, so the repaint swaps the placeholder for a drawable image.
+  photoCache.set(id, url && (await loads(url)) ? url : null);
+  photoPending.delete(id);
+  popup.update(); // either way: into the photo, or out of the placeholder
 }
 
 function singlePopup(p: Property): string {

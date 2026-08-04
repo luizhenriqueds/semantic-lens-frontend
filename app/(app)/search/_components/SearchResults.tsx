@@ -6,6 +6,8 @@ import { spreadByLocality } from "@/lib/diversify";
 import { goalFromQuery } from "@/lib/facets";
 import { GOAL_PROFILE } from "@/lib/format";
 import { IconSearch } from "@/lib/icons";
+import { isRateLimitError } from "@/lib/ratelimit/guards";
+import { RATE_LIMIT_SEARCH, RATE_LIMIT_TITLE } from "@/lib/ratelimit/messages";
 import { SEARCH_PAGE_SIZE, sortProperties, type SearchSort } from "@/lib/searchSort";
 import type { Property } from "@/lib/types";
 
@@ -25,6 +27,7 @@ export default async function SearchResults({
 
   let items: Property[] = [];
   let failed = false;
+  let limited = false;
   let fallbackNote: string | null = null;
 
   if (query) {
@@ -36,7 +39,8 @@ export default async function SearchResults({
       items = result.hits.map((h) => byId.get(h.id)).filter((p): p is Property => p != null);
       items = spreadByLocality(items);
       if (result.fallback && items.length) fallbackNote = result.fallbackNote;
-    } catch {
+    } catch (err) {
+      limited = isRateLimitError(err);
       failed = true;
     }
   } else {
@@ -64,8 +68,13 @@ export default async function SearchResults({
       )}
 
       {failed ? (
-        <EmptyState icon={<IconSearch />} title="Busca indisponível no momento">
-          Não foi possível processar a busca agora. Tente novamente em instantes.
+        <EmptyState
+          icon={<IconSearch />}
+          title={limited ? RATE_LIMIT_TITLE : "Busca indisponível no momento"}
+        >
+          {limited
+            ? RATE_LIMIT_SEARCH
+            : "Não foi possível processar a busca agora. Tente novamente em instantes."}
         </EmptyState>
       ) : items.length ? (
         <PagedCards

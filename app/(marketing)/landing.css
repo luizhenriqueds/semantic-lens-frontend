@@ -3104,10 +3104,6 @@ footer.lp-foot .lp-fine {
   gap: 14px;
   margin-top: 26px;
 }
-.lp-sc-cta span {
-  font-size: 13px;
-  color: var(--ink-faint);
-}
 
 @media (max-width: 900px) {
   .lp-showcase,

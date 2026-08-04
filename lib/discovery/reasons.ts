@@ -20,7 +20,8 @@ export type RailKind =
   | "vacant"
   | "financing"
   | "modality-change"
-  | "payment-change";
+  | "payment-change"
+  | "price-drop";
 
 export type ReasonContext = {
   rail: RailKind;
@@ -102,6 +103,14 @@ export function reasonsFor(p: Property, ctx: ReasonContext): Reason[] {
     case "modality-change":
       if (p.modality) out.push({ key: "modality", text: `Agora: ${p.modality}`, tone: "on" });
       out.push(scoreReason(p), discountReason(p));
+      break;
+    // The log records that a drop happened, not by how much, so the chip cannot name a value.
+    case "price-drop":
+      out.push(
+        { key: "price-drop", text: "Preço reduzido", tone: "hot" },
+        discountReason(p),
+        scoreReason(p),
+      );
       break;
     case "saved":
       if (ctx.anchorCity && p.city === ctx.anchorCity) {

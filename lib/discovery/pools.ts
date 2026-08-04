@@ -73,6 +73,7 @@ const changePool = (kind: PropertyChangeKind): Pool => ({
 
 export const MODALITY_CHANGE = changePool("modality");
 export const PAYMENT_CHANGE = changePool("payment");
+export const PRICE_DROP = changePool("price_drop");
 
 const GOAL_SCORE_MIN = 82;
 

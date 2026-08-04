@@ -14,6 +14,7 @@ import { spreadByLocality } from "@/lib/diversify";
 import { toRpcFilters } from "@/lib/filters/contract";
 import { sortProperties, type SearchSort } from "@/lib/searchSort";
 import { getEntitlements } from "@/lib/entitlements/server";
+import { isRateLimitError, withinQuota } from "@/lib/ratelimit/guards";
 import { requireUser } from "@/lib/supabase/server";
 import { EXPORT_ROW_CAP, exportFilename, propertiesToCsv, type ExportFailure } from "@/lib/export";
 import type { AlertCriteria, Property, PropertyFilters, PropertySort } from "@/lib/types";
@@ -33,6 +34,8 @@ async function guard(): Promise<
   }
   const ent = await getEntitlements();
   if (!ent.can("export")) return { ok: false, reason: "plan" };
+  // After the plan check, so a rejected free user never burns a paying account's budget.
+  if (!(await withinQuota("export"))) return { ok: false, reason: "rate" };
   return { ok: true, origin: (await headers()).get("origin") ?? undefined };
 }
 
@@ -84,8 +87,8 @@ export async function exportSearchCsv(query: string, sort: SearchSort): Promise<
     items = spreadByLocality(
       result.hits.map((h) => byId.get(h.id)).filter((p): p is Property => p != null),
     );
-  } catch {
-    return { ok: false, reason: "error" };
+  } catch (err) {
+    return { ok: false, reason: isRateLimitError(err) ? "rate" : "error" };
   }
 
   const ordered = sortProperties(items, sort);

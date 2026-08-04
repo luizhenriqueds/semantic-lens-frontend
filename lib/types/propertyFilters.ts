@@ -3,7 +3,9 @@ import type { Scores } from "./property";
 
 export type PropertySort = "leilao" | "investimento" | "desconto" | "score" | "menor" | "maior";
 
-export type PropertyChangeKind = "modality" | "payment";
+export const CHANGE_KINDS = ["modality", "payment", "price_drop"] as const;
+
+export type PropertyChangeKind = (typeof CHANGE_KINDS)[number];
 
 // Mirrors the jsonb filter contract of the backend's property_list_matched() function.
 export type PropertyFilters = {

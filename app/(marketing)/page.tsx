@@ -14,13 +14,12 @@ import {
 import { IconCalendar, IconChart, IconHouse, IconSliders } from "@/lib/icons";
 import Rail from "@/components/ui/Rail";
 import ShowcaseGallery from "@/app/(marketing)/_components/ShowcaseGallery";
-import { SHOWCASE_CAPTURED } from "@/app/(marketing)/_data/showcase";
 import { SIMILAR, SIMILAR_SEED } from "@/app/(marketing)/_data/similar";
 import { getLandingStats } from "@/lib/data/landingStats";
 import { PLANS, TRIAL_DAYS, type Role } from "@/lib/entitlements";
 import { PLAN_INCLUDES } from "@/lib/entitlements/copy";
 import { getEntitlements } from "@/lib/entitlements/server";
-import { countShort, fmtDay, money } from "@/lib/format";
+import { countShort, money } from "@/lib/format";
 import { POI_LABEL, POI_ORDER } from "@/lib/pois";
 import { getUser } from "@/lib/supabase/server";
 
@@ -103,7 +102,7 @@ const PLAN_CARDS: {
       { lead: "Vantagem de Largada", text: "seus alertas saem antes dos demais planos" },
       {
         lead: "Todos os alertas automáticos",
-        text: "deságios, mudanças de modalidade, coleções e regiões em destaque",
+        text: "deságios, reduções de preço, mudanças de modalidade, coleções e regiões em destaque",
       },
       { lead: "Painel de mercado", text: "preço por m², tendências e comparáveis por cidade" },
       { lead: "Calendário de leilões", text: "a agenda das datas, dia a dia" },
@@ -408,10 +407,6 @@ export default async function LandingPage() {
             <Link className="lp-btn lp-solid lp-big" href="/dashboard">
               Ver imóveis como este
             </Link>
-            <span>
-              Imóveis reais da base pública da Caixa, com dados de {fmtDay(SHOWCASE_CAPTURED)}. A
-              oferta muda todo dia - um imóvel pode ser arrematado ou sair do ar a qualquer momento.
-            </span>
           </div>
         </div>
       </section>

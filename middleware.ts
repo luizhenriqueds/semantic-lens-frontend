@@ -1,5 +1,13 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
+import { identify, isCountable } from "@/lib/ratelimit/identify";
+import {
+  checkLimit,
+  rateLimitHeaders,
+  retryAfterSeconds,
+  type LimitDecision,
+} from "@/lib/ratelimit/limiter";
+import { tooManyRequestsHtml } from "@/lib/ratelimit/messages";
 
 // Reachable without a session. The free tier browses; saving anything still prompts a sign-up at
 // the point of the action. Everything else (/settings, /groups, /market, /regions) needs one.
@@ -21,13 +29,34 @@ export const PUBLIC = [
 const isPublic = (path: string) =>
   PUBLIC.some((p) => path === p || (p !== "/" && path.startsWith(`${p}/`)));
 
+function tooManyRequests(request: NextRequest, decision: LimitDecision): NextResponse {
+  const headers = rateLimitHeaders(decision);
+  if (request.nextUrl.pathname.startsWith("/api/")) {
+    return NextResponse.json({ error: "rate_limited" }, { status: 429, headers });
+  }
+  return new NextResponse(tooManyRequestsHtml(retryAfterSeconds(decision)), {
+    status: 429,
+    headers: { ...headers, "Content-Type": "text/html; charset=utf-8" },
+  });
+}
+
 export async function middleware(request: NextRequest) {
   let response = NextResponse.next({ request });
+  const { pathname } = request.nextUrl;
+  const counted = isCountable(pathname, request.headers);
 
   // Anonymous browsing is now the common case, and a visitor with no Supabase cookie has no
   // session to refresh and cannot be redirected off a public path - so skip the auth round trip.
   const hasSession = request.cookies.getAll().some((c) => c.name.startsWith("sb-"));
-  if (!hasSession && isPublic(request.nextUrl.pathname)) return response;
+
+  if (!hasSession) {
+    // Charged before Supabase and Postgres are touched at all, which is the whole point.
+    if (counted) {
+      const decision = await checkLimit("page", identify(request.headers), "anon");
+      if (!decision.success) return tooManyRequests(request, decision);
+    }
+    if (isPublic(pathname)) return response;
+  }
 
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -52,7 +81,13 @@ export async function middleware(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser();
 
-  const { pathname } = request.nextUrl;
+  if (hasSession && counted) {
+    // A forged sb- cookie skips the anonymous branch above, so a request that resolved to no user
+    // is still charged to its IP - one round trip later, but never for free.
+    const identity = identify(request.headers, user?.id);
+    const decision = await checkLimit("page", identity, user ? "authed" : "anon");
+    if (!decision.success) return tooManyRequests(request, decision);
+  }
 
   if (!user && !isPublic(pathname)) {
     if (pathname.startsWith("/api/")) {

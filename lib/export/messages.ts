@@ -7,13 +7,14 @@ export const EXPORT_ROW_CAP = 1000;
 /** Marks a report tab as opened solely to carry the print dialog, so it closes itself after. */
 export const AUTOPRINT_PARAM = "autoprint";
 
-export type ExportFailure = "auth" | "plan" | "filter" | "empty" | "error";
+export type ExportFailure = "auth" | "plan" | "filter" | "empty" | "rate" | "error";
 
 export const EXPORT_ERROR: Record<ExportFailure, string> = {
   auth: "Entre na sua conta para exportar",
   plan: "A exportação está disponível no plano Profissional",
   filter: "Aplique um filtro ou uma busca antes de exportar",
   empty: "Não há imóveis para exportar com estes filtros",
+  rate: "Muitas exportações seguidas. Aguarde um instante antes de gerar outro arquivo",
   error: "Não foi possível gerar o arquivo",
 };
 

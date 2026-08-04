@@ -13,6 +13,7 @@ import {
   type PoiQuery,
 } from "@/lib/facets";
 import { semanticCached } from "@/lib/semanticCache";
+import { requireQuota } from "@/lib/ratelimit/guards";
 import { poiPlaceLabel } from "@/lib/pois";
 import type { Poi, Property } from "@/lib/types";
 import { cached, rows, SEARCH_REVALIDATE, withRetry } from "./client";
@@ -689,7 +690,9 @@ async function runHybridSearch(query: string): Promise<SearchResult> {
 
 const cachedSearch = cached(runHybridSearch, "hybrid-search", SEARCH_REVALIDATE);
 
-// Canonicalise outside `cached`, which keys on the raw arguments.
-export function hybridSearch(query: string): Promise<SearchResult> {
+// Canonicalise outside `cached`, which keys on the raw arguments. The quota is charged here rather
+// than inside, so replaying popular queries off the cache still counts against the caller.
+export async function hybridSearch(query: string): Promise<SearchResult> {
+  await requireQuota("search");
   return cachedSearch(canonicalQuery(query));
 }
