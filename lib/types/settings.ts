@@ -8,6 +8,7 @@ export const CURATED_SLUGS = [
   "highlights",
   "discount",
   "modality-change",
+  "price-drop",
   "group",
   "region",
   "goal",

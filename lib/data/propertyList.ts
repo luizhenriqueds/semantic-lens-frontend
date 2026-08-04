@@ -28,7 +28,24 @@ import {
 
 const MAP_POINT_LIMIT = 4000;
 
+// Scoring is the last step of a batch run, so a row with no investment score is still being
+// processed and the rest of its data may be incomplete. Applied to raw RPC rows; the MV reads
+// below get the same gate from `scoredMv`.
+const isScored = (r: any): boolean => r.investment != null;
+
 export const isListable = (p: Property): boolean => !p.inactive && p.scores.investment != null;
+
+// `cols as "*"` only shapes the type: PostgREST cannot parse a non-literal column list, and
+// every caller reads the rows through `rows<any>`. Making it generic instead stalls tsc.
+const scoredMv = (cols = "*") =>
+  supabase
+    .from("property_list_mv")
+    .select(cols as "*")
+    .not("investment", "is", null);
+
+// The portfolio and the detail page still show inactive listings, so only the reads that build
+// lists gate on `is_listable` as well.
+export const listableMv = (cols = "*") => scoredMv(cols).eq("is_listable", true);
 
 function mapListRow(r: any): Property {
   return {
@@ -110,7 +127,10 @@ async function loadPropertiesPage(
     p_offset: (page - 1) * pageSize,
     p_limit: pageSize,
   });
-  return { total: data?.total ?? 0, items: ((data?.items ?? []) as any[]).map(mapListRow) };
+  return {
+    total: data?.total ?? 0,
+    items: ((data?.items ?? []) as any[]).filter(isScored).map(mapListRow),
+  };
 }
 
 const cachedPage = cached(loadPropertiesPage, "property-page");
@@ -172,17 +192,13 @@ export function getMatchedForExport(
   return loadPropertiesPage(JSON.stringify(criteria), sort, 1, limit);
 }
 
-const MV_COLS = "*";
-
 // Chunks are independent reads - issued together, not in series.
 async function loadPropertiesByIds(idsJson: string): Promise<Property[]> {
   const ids: string[] = JSON.parse(idsJson);
   const chunks: string[][] = [];
   for (let i = 0; i < ids.length; i += 200) chunks.push(ids.slice(i, i + 200));
   const res = await Promise.all(
-    chunks.map((chunk) =>
-      withRetry(() => supabase.from("property_list_mv").select(MV_COLS).in("property_id", chunk)),
-    ),
+    chunks.map((chunk) => withRetry(() => scoredMv().in("property_id", chunk))),
   );
   return res.flatMap((r) => rows<any>("property_list_mv", r).map(mapListRow));
 }
@@ -196,7 +212,7 @@ async function loadGoalTop(goal: string, filtersJson: string, limit: number): Pr
     p_filters: JSON.parse(filtersJson),
     p_limit: limit,
   });
-  return ((data ?? []) as any[]).map(mapListRow);
+  return ((data ?? []) as any[]).filter(isScored).map(mapListRow);
 }
 
 const cachedGoalTop = cached(loadGoalTop, "goal-top", SEARCH_REVALIDATE);
@@ -229,11 +245,7 @@ export type StructuralFilters = {
 // Each predicate mirrors what property_list_matched does with the same key. Not wrapped in
 // `cached`: the only caller already runs inside the hybrid-search cache, which nesting skips.
 export async function getStructuralList(f: StructuralFilters, limit: number): Promise<Property[]> {
-  let q = supabase
-    .from("property_list_mv")
-    .select(MV_COLS)
-    .eq("is_listable", true)
-    .not("investment", "is", null);
+  let q = listableMv();
   if (f.type) q = q.ilike("property_type", escapeLike(f.type));
   if (f.city) q = q.ilike("city", escapeLike(f.city));
   if (f.minBedrooms) q = q.gte("bedrooms", f.minBedrooms);
@@ -255,10 +267,7 @@ const UPCOMING_LIMIT = 60;
 
 async function loadUpcomingAuctions(sinceIso: string): Promise<Property[]> {
   const res = await withRetry(() =>
-    supabase
-      .from("property_list_mv")
-      .select(MV_COLS)
-      .eq("is_listable", true)
+    listableMv()
       .gt("auction_date", sinceIso)
       .order("auction_date", { ascending: true })
       .limit(UPCOMING_LIMIT),
@@ -284,10 +293,7 @@ const CALENDAR_ID_CAP = 6000;
 
 async function loadAuctionDayIds(day: string): Promise<string[]> {
   const ids = await fetchAllRows<{ property_id: string }>("auction-day-ids", (from, to) =>
-    supabase
-      .from("property_list_mv")
-      .select("property_id")
-      .eq("is_listable", true)
+    listableMv("property_id")
       .gte("auction_date", `${day}T00:00:00Z`)
       .lt("auction_date", `${day}T23:59:59.999Z`)
       .order("auction_date", { ascending: true })
@@ -353,9 +359,7 @@ export function getAuctionDayPage(
 type PropertyDetail = Property & { discountPercentile: number | null };
 
 async function loadPropertyById(id: string): Promise<PropertyDetail | null> {
-  const res = await withRetry(() =>
-    supabase.from("property_list_mv").select(MV_COLS).eq("property_id", id).limit(1),
-  );
+  const res = await withRetry(() => scoredMv().eq("property_id", id).limit(1));
   const row = rows<any>("property_list_mv", res)[0];
   if (!row) return null;
   return { ...mapListRow(row), discountPercentile: num(row.discount_percentile) };
@@ -378,7 +382,7 @@ async function loadMapPoints(filtersJson: string): Promise<{ points: MapPoint[];
     p_filters: JSON.parse(filtersJson),
     p_limit: MAP_POINT_LIMIT,
   });
-  const points = ((data?.points ?? []) as any[]).map((r): MapPoint => ({
+  const points = ((data?.points ?? []) as any[]).filter(isScored).map((r): MapPoint => ({
     id: r.property_id,
     lat: Number(r.lat),
     lon: Number(r.lon),

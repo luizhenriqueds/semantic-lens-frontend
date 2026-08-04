@@ -3,6 +3,7 @@ import { supabase } from "@/lib/supabase";
 import { titleCase } from "@/lib/format";
 import type { ProfileKey, Scores } from "@/lib/types";
 import { cached, num, rows, withRetry } from "./client";
+import { listableMv } from "./propertyList";
 
 export type MarketBucket = { label: string; n: number; sub?: string };
 
@@ -75,10 +76,7 @@ const OPP_COLS =
 
 async function loadTopOpps(): Promise<MarketOpp[]> {
   const res = await withRetry(() =>
-    supabase
-      .from("property_list_mv")
-      .select(OPP_COLS)
-      .eq("is_listable", true)
+    listableMv(OPP_COLS)
       .gte("discount", OPP_MIN_DISCOUNT)
       .gte("visual_score", OPP_MIN_VISUAL_SCORE)
       .order("investment", { ascending: false })
