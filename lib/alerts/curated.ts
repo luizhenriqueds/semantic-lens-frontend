@@ -17,7 +17,7 @@ const CATALOGUE = [
   {
     slug: "closing",
     minRole: "investor",
-    title: "Seus favoritos terminam em breve",
+    title: "Seus imóveis favoritos que encerram em breve",
     why: "imóveis que você salvou e cujo prazo está estourando",
     href: "/portfolio",
     perUser: true,
@@ -39,9 +39,17 @@ const CATALOGUE = [
   {
     slug: "modality-change",
     minRole: "professional",
-    title: "Mudaram de modalidade",
+    title: "Imóveis que mudaram de modalidade ofertada",
     why: "mudaram de modalidade nos últimos 30 dias - a maioria com redução de preço",
     href: "/properties?change_kind=modality&changed_within_days=30&min_investment=60&sort=investment",
+  },
+  {
+    slug: "price-drop",
+    minRole: "professional",
+    title: "Imóveis que tiveram redução de preço",
+    why: "imóveis que você salvou e cujo valor de venda caiu nos últimos 30 dias",
+    href: "/portfolio",
+    perUser: true,
   },
   {
     slug: "group",
@@ -68,7 +76,7 @@ const CATALOGUE = [
   {
     slug: "saved",
     minRole: "investor",
-    title: "Parecidos com a sua carteira",
+    title: "Imóveis recomendados para o seu perfil de investimento",
     why: "semelhantes aos imóveis que você salvou",
     href: "/portfolio",
     perUser: true,
