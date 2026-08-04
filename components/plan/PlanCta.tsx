@@ -9,8 +9,7 @@ import { withTrialParam } from "@/lib/entitlements/trialFlag";
 import { PLANS, TRIAL_DAYS, TRIAL_ROLE } from "@/lib/entitlements";
 import type { Role, Trial } from "@/lib/entitlements";
 
-/** Every path to a paid plan goes through here: start the trial, or fall back to the checkout
- *  placeholder while payment is not integrated. */
+/** Every path to a paid plan goes through here: start the trial, or open the checkout wall. */
 export default function PlanCta({
   target,
   role,
@@ -43,7 +42,11 @@ export default function PlanCta({
     );
   }
 
-  if (PLANS[role].rank >= plan.rank) {
+  // A trialling user already holds the target role, so the rank check alone would hide the only
+  // button that can turn them into a paying customer.
+  const trialingTarget = !!trial.endsAt && role === target;
+
+  if (!trialingTarget && PLANS[role].rank >= plan.rank) {
     return (
       <button className={className} type="button" disabled>
         {role === target ? "Seu plano atual" : "Incluído no seu plano"}

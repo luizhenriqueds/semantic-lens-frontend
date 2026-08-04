@@ -1883,6 +1883,28 @@ select.selectish {
   justify-content: flex-end;
   margin-top: 20px;
 }
+/* The billing summary reads as a row, so the price sits left of the cancel button. */
+.setbilling {
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  flex-wrap: wrap;
+  border-top: 1px solid var(--line-soft);
+  padding-top: 16px;
+}
+.setbilling p {
+  margin: 0;
+  font-size: 13.5px;
+  color: var(--ink-soft);
+}
+.setbilling b {
+  color: var(--ink);
+  font-size: 16px;
+}
+.setbilling small {
+  font-weight: 500;
+  color: var(--ink-soft);
+}
 .setblock .alertrow:last-of-type {
   margin-bottom: 0;
 }
@@ -6835,7 +6857,7 @@ select.selectish {
   stroke: var(--primary-soft);
 }
 
-/* simulated checkout */
+/* checkout wall: price, pitch and the jump to the provider's hosted page */
 .modal.paywall {
   max-width: 420px;
   text-align: left;
@@ -6890,34 +6912,13 @@ select.selectish {
   stroke-width: 2.4;
   color: var(--primary);
 }
-.pw-form {
-  display: grid;
-  gap: 10px;
-  margin-bottom: 12px;
-  opacity: 0.55;
-}
-.pw-row {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 10px;
-}
-.pw-field span {
-  display: block;
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--ink-soft);
-  margin-bottom: 4px;
-}
-.pw-field input {
-  width: 100%;
-}
 .pw-note {
   font-size: 12.5px;
   color: var(--ink-soft);
   margin: 0 0 14px;
 }
-.pw-note.pw-sent {
-  color: var(--primary);
+.pw-note.pw-err {
+  color: var(--bad);
   font-weight: 600;
 }
 .modal-alt {

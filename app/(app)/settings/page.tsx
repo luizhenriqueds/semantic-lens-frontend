@@ -1,5 +1,7 @@
+import { Suspense } from "react";
 import SettingsClient from "./_components/SettingsClient";
 import { getCuratedStates } from "@/lib/data/alerts";
+import { getUserSubscription } from "@/lib/data/billing";
 import { getUserSettings } from "@/lib/data/settings";
 import { requireUser } from "@/lib/supabase/server";
 
@@ -7,9 +9,10 @@ export const metadata = { title: "Configurações - Lavra" };
 
 export default async function SettingsPage() {
   const { supabase, user } = await requireUser();
-  const [settings, curated] = await Promise.all([
+  const [settings, curated, subscription] = await Promise.all([
     getUserSettings(supabase, user),
     getCuratedStates(supabase),
+    getUserSubscription(supabase),
   ]);
 
   return (
@@ -21,7 +24,10 @@ export default async function SettingsPage() {
           Lavra envia para você.
         </p>
       </div>
-      <SettingsClient settings={settings} curated={curated} />
+      {/* SettingsClient reads ?tab, which the checkout return URL sets. */}
+      <Suspense fallback={null}>
+        <SettingsClient settings={settings} curated={curated} subscription={subscription} />
+      </Suspense>
     </section>
   );
 }

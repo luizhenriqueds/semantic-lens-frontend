@@ -80,6 +80,13 @@ export const PLAN_INCLUDES: Partial<Record<Role, { heading: string; items: reado
   },
 };
 
+/** What a plan adds over Básico. Derived rather than listed, so a feature that moves between
+ *  plans can never leave the celebration dialogs stale. */
+export const unlockedFeatures = (role: Role): Feature[] =>
+  (Object.keys(PLANS[role].features) as Feature[]).filter(
+    (f) => PLANS[role].features[f] && !PLANS.basic.features[f],
+  );
+
 export const canTrial = (plan: { role: Role }, trial: Trial): boolean =>
   plan.role === TRIAL_ROLE && trial.eligible;
 

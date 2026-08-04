@@ -6,16 +6,12 @@ import { useEffect, useRef } from "react";
 import Modal from "@/components/ui/Modal";
 import { usePlan } from "@/components/plan/PlanProvider";
 import { startInvestorTrial } from "@/app/actions/plan";
-import { FEATURE_COPY } from "@/lib/entitlements/copy";
+import { FEATURE_COPY, unlockedFeatures } from "@/lib/entitlements/copy";
 import { TRIAL_PARAM, withoutTrialParam } from "@/lib/entitlements/trialFlag";
 import { PLANS, TRIAL_DAYS, TRIAL_ROLE } from "@/lib/entitlements";
-import type { Feature } from "@/lib/entitlements";
 import { IconStar } from "@/lib/icons";
 
-// Derived rather than listed, so a feature that moves between plans can never leave this stale.
-const UNLOCKED = (Object.keys(PLANS[TRIAL_ROLE].features) as Feature[]).filter(
-  (f) => PLANS[TRIAL_ROLE].features[f] && !PLANS.basic.features[f],
-);
+const UNLOCKED = unlockedFeatures(TRIAL_ROLE);
 
 /** Spelled out rather than fmtDate's "08 de ago.", whose period would end the sentence early. */
 function deadline(iso: string): string | null {

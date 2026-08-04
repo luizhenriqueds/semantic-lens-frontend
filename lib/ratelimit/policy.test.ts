@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it } from "vitest";
 import { policyFor, type Bucket, type Tier } from "./policy";
 
-const BUCKETS: Bucket[] = ["page", "search", "export", "image"];
+const BUCKETS: Bucket[] = ["page", "search", "export", "image", "checkout"];
 const TIERS: Tier[] = ["anon", "authed", "basic", "investor", "professional", "platform"];
 
 afterEach(() => {

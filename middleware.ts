@@ -17,6 +17,8 @@ export const PUBLIC = [
   "/register",
   "/auth",
   "/api/emails/preview",
+  // The payment provider has no session; the route authenticates itself on a shared secret.
+  "/api/webhooks",
   "/dashboard",
   "/search",
   "/properties",
