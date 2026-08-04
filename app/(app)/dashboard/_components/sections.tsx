@@ -21,6 +21,7 @@ import {
   FINANCING,
   MODALITY_CHANGE,
   PAYMENT_CHANGE,
+  PRICE_DROP,
   RAIL_SIZE,
   VACANT,
   byInvestment,
@@ -148,6 +149,21 @@ export async function FinancingRailSlot({ seed, now }: SlotProps) {
       moreLabel="Ver com financiamento"
       items={items}
       ctx={{ rail: "financing", now }}
+    />
+  );
+}
+
+export async function PriceDropRailSlot({ seed, now }: SlotProps) {
+  const items = railItems(await fetchPool(PRICE_DROP), "price-drop", seed, now);
+  return (
+    <RailSection
+      title="Baixaram de preço"
+      why="o valor de venda caiu nos últimos 30 dias entre uma oferta e outra"
+      pill="novo"
+      moreHref={await moreHref(PRICE_DROP.href)}
+      moreLabel="Ver todos"
+      items={items}
+      ctx={{ rail: "price-drop", now }}
     />
   );
 }

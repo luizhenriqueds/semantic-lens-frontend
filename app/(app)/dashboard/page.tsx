@@ -28,6 +28,7 @@ import {
   MarketSlot,
   ModalityChangeRailSlot,
   PaymentChangeRailSlot,
+  PriceDropRailSlot,
   SavedRailSlot,
   VacantRailSlot,
 } from "./_components/sections";
@@ -109,6 +110,10 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
 
       <Suspense fallback={null}>
         <FinancingRailSlot seed={seed} now={now} />
+      </Suspense>
+
+      <Suspense fallback={null}>
+        <PriceDropRailSlot seed={seed} now={now} />
       </Suspense>
 
       <Suspense fallback={null}>

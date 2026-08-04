@@ -3,7 +3,7 @@ import { EXPORT_ERROR, EXPORT_ROW_CAP, exportToast, type ExportFailure } from ".
 
 describe("EXPORT_ERROR", () => {
   it("covers every failure reason with real copy", () => {
-    const reasons: ExportFailure[] = ["auth", "plan", "filter", "empty", "error"];
+    const reasons: ExportFailure[] = ["auth", "plan", "filter", "empty", "rate", "error"];
     expect(Object.keys(EXPORT_ERROR).sort()).toEqual([...reasons].sort());
     for (const r of reasons) expect(EXPORT_ERROR[r].length).toBeGreaterThan(0);
   });

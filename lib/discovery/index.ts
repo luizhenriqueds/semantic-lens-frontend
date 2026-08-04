@@ -12,6 +12,7 @@ export {
   HIGHLIGHTS,
   MODALITY_CHANGE,
   PAYMENT_CHANGE,
+  PRICE_DROP,
   RAIL_SIZE,
   VACANT,
   goalPool,

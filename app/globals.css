@@ -5934,15 +5934,22 @@ select.selectish {
   border-radius: 12px;
 }
 .pm-photo {
-  display: none;
-}
-.pm-photo.on {
-  display: block;
   height: 104px;
   margin: 0 0 8px;
   border-radius: 8px;
   overflow: hidden;
   background: var(--surface-2);
+}
+/* Holds the frame while the photo is fetched, so the card does not jump when it lands. */
+.pm-photo.loading {
+  background: linear-gradient(90deg, var(--surface-2), var(--line-soft), var(--surface-2));
+  background-size: 200% 100%;
+  animation: sh 1.2s ease-in-out infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .pm-photo.loading {
+    animation: none;
+  }
 }
 .pm-photo img {
   width: 100%;

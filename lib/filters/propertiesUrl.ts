@@ -1,4 +1,5 @@
 import { parseRange } from "@/lib/facets/range";
+import { CHANGE_KINDS } from "@/lib/types";
 import type {
   AlertCriteriaSet,
   PropertyChangeKind,
@@ -13,7 +14,7 @@ export const LIST_PAGE_SIZE = 24;
 export type PropertiesView = "list" | "analysis" | "calendar" | "map";
 
 const VIEWS = new Set<string>(["list", "analysis", "calendar", "map"]);
-const CHANGE_KINDS = new Set<string>(["modality", "payment"]);
+const CHANGE_KIND_SET = new Set<string>(CHANGE_KINDS);
 
 // Long enough that the rarer half (financing/FGTS starts, ~48/day) still fills a rail.
 export const CHANGE_WINDOW_DAYS = 30;
@@ -157,7 +158,7 @@ export function parsePropertySearchParams(raw: SP): PropertiesQuery {
   const minVisualScore = posInt(one(sp.min_visual_score));
   if (minVisualScore) filters.minVisualScore = Math.min(100, minVisualScore);
   const changeKind = one(sp.change_kind);
-  if (changeKind && CHANGE_KINDS.has(changeKind)) {
+  if (changeKind && CHANGE_KIND_SET.has(changeKind)) {
     filters.changeKind = changeKind as PropertyChangeKind;
     filters.changedWithinDays = posInt(one(sp.changed_within_days)) ?? CHANGE_WINDOW_DAYS;
   }

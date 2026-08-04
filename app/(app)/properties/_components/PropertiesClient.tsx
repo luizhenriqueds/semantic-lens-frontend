@@ -87,6 +87,7 @@ const POI_VISIBLE = 12;
 const CHANGE_LABEL: Record<PropertyChangeKind, string> = {
   payment: "Passou a aceitar financiamento/FGTS",
   modality: "Mudou de modalidade",
+  price_drop: "Baixou de preço",
 };
 
 const PRAZOS: { days: number; label: string }[] = [
@@ -1165,7 +1166,7 @@ export default function PropertiesClient({
         {/* the calendar dims its own day panel instead */}
         <div className={`viewinner${isPending && view !== "calendar" ? " loading" : ""}`}>
           {lockedView && VIEW_FEATURE[lockedView] ? (
-            <UpgradeWall feature={VIEW_FEATURE[lockedView]!} role={role} trial={trial} />
+            <UpgradeWall feature={VIEW_FEATURE[lockedView]!} role={role} trial={trial} art />
           ) : view === "map" ? (
             map && map.points.length ? (
               <>
