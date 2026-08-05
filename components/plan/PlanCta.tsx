@@ -1,11 +1,9 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { startInvestorTrial } from "@/app/actions/plan";
 import PaywallDialog from "@/components/plan/PaywallDialog";
-import { withTrialParam } from "@/lib/entitlements/trialFlag";
+import TrialDialog from "@/components/plan/TrialDialog";
 import { PLANS, TRIAL_DAYS, TRIAL_ROLE } from "@/lib/entitlements";
 import type { Role, Trial } from "@/lib/entitlements";
 
@@ -27,10 +25,8 @@ export default function PlanCta({
   celebrateAt?: string;
   onDone?: () => void;
 }) {
-  const router = useRouter();
-  const [pending, start] = useTransition();
   const [checkout, setCheckout] = useState(false);
-  const [failed, setFailed] = useState(false);
+  const [trialing, setTrialing] = useState(false);
 
   const plan = PLANS[target];
 
@@ -56,26 +52,23 @@ export default function PlanCta({
 
   if (target === TRIAL_ROLE && trial.eligible) {
     return (
-      <button
-        className={className}
-        type="button"
-        disabled={pending}
-        onClick={() =>
-          start(async () => {
-            if (!(await startInvestorTrial())) return setFailed(true);
-            // Close the upsell first: the refresh below re-reads the plan, which would otherwise
-            // flip the open dialog into a paywall for a feature the trial just unlocked.
-            onDone?.();
-            const { pathname, search } = window.location;
-            router.push(withTrialParam(celebrateAt ?? pathname, celebrateAt ? "" : search), {
-              scroll: false,
-            });
-            router.refresh();
-          })
-        }
-      >
-        {pending ? "Ativando…" : failed ? "Tente novamente" : `Testar ${TRIAL_DAYS} dias grátis`}
-      </button>
+      <>
+        <button className={className} type="button" onClick={() => setTrialing(true)}>
+          Testar {TRIAL_DAYS} dias grátis
+        </button>
+        {trialing && (
+          <TrialDialog
+            plan={plan}
+            celebrateAt={celebrateAt}
+            onClose={() => {
+              setTrialing(false);
+              // Also closes the upsell: its refresh re-reads the plan and would otherwise turn
+              // into a paywall for a feature the trial just unlocked.
+              onDone?.();
+            }}
+          />
+        )}
+      </>
     );
   }
 

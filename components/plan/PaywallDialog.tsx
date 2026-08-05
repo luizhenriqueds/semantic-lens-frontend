@@ -3,8 +3,8 @@
 import { useState, useTransition } from "react";
 import { startCheckout, type CheckoutFailure } from "@/app/actions/billing";
 import Modal from "@/components/ui/Modal";
+import PlanPitchList from "@/components/plan/PlanPitchList";
 import { money } from "@/lib/format";
-import { IconCheck } from "@/lib/icons";
 import { TRIAL_DAYS, TRIAL_ROLE } from "@/lib/entitlements";
 import type { Plan, Trial } from "@/lib/entitlements";
 
@@ -51,14 +51,7 @@ export default function PaywallDialog({
         </div>
       </div>
 
-      <ul className="pw-pitch">
-        {(plan.pitch ?? []).map((line) => (
-          <li key={line}>
-            <IconCheck />
-            {line}
-          </li>
-        ))}
-      </ul>
+      <PlanPitchList role={plan.role} />
 
       {error ? (
         <p className="pw-note pw-err">{error}</p>

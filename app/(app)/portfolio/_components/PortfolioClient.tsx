@@ -180,7 +180,7 @@ export default function PortfolioClient({
         <>
           <div className="wlist">
             {pageItems.map((p) => (
-              <PropertyRow key={p.id} p={p} />
+              <PropertyRow key={p.id} p={p} confirmRemove />
             ))}
           </div>
           <Pagination

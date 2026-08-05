@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
+import { createPortal } from "react-dom";
 import { IconPencil, IconTrash } from "@/lib/icons";
 
 export default function ConfirmDialog({
@@ -43,7 +44,8 @@ export default function ConfirmDialog({
 
   if (!open) return null;
 
-  return (
+  // Portalled: a hover-transformed ancestor (e.g. a lifting card) would otherwise clip this fixed backdrop.
+  return createPortal(
     <div className="modal-backdrop" onClick={onCancel}>
       <div
         className="modal"
@@ -76,6 +78,7 @@ export default function ConfirmDialog({
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }

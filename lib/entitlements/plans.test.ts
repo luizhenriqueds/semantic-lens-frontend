@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { CURATED_ALERTS } from "@/lib/alerts/curated";
+import { PLAN_PITCH } from "./copy";
 import { entitlementsFor, PLANS, requiredPlan, SELLABLE_PLANS, toRole, TRIAL_ROLE } from "./plans";
 import type { Feature, Role } from "./plans";
 
@@ -136,7 +137,7 @@ describe("plan matrix", () => {
     expect(PLANS.investor.price).toBeGreaterThan(0);
     expect(PLANS.professional.price).toBeGreaterThan(PLANS.investor.price);
     for (const role of ["investor", "professional"] as Role[]) {
-      expect(PLANS[role].pitch?.length, role).toBeGreaterThan(0);
+      expect(PLAN_PITCH[role]?.length, role).toBeGreaterThan(0);
     }
   });
 

@@ -61,6 +61,28 @@ export const FEATURE_COPY: Record<Feature, { label: string; blurb: string; quota
   },
 };
 
+/** Checkout/trial-dialog highlights per sellable Role. Full comparison is PLAN_CARDS on the marketing page. */
+export const PLAN_PITCH: Partial<Record<Role, readonly { lead: string; text: string }[]>> = {
+  investor: [
+    { lead: "Favoritos e alertas ilimitados", text: "sem teto de carteira nem de buscas salvas" },
+    { lead: "Filtros avançados", text: "deságio, notas, financiamento, FGTS e lugares próximos" },
+    {
+      lead: "Análise de imóveis",
+      text: "distribuição de preço, deságio, área e nota do resultado",
+    },
+    {
+      lead: "Recomendações semanais",
+      text: "sugestões de imóveis semelhantes aos que você salvou",
+    },
+  ],
+  professional: [
+    { lead: "Vantagem de Largada", text: "seus alertas saem antes dos demais planos" },
+    { lead: "Painel de mercado", text: "preço por m², tendências e comparáveis por cidade" },
+    { lead: "Calendário de leilões", text: "a agenda das datas, dia a dia" },
+    { lead: "Relatórios e exportação", text: "buscas, filtros e análises em CSV ou PDF" },
+  ],
+};
+
 // Not Feature flags: these are free on every property page, so they cannot be derived from the
 // plan matrix. Keyed by Role so another tier can gain a block later.
 export const PLAN_INCLUDES: Partial<Record<Role, { heading: string; items: readonly string[] }>> = {

@@ -28,8 +28,6 @@ export type Plan = {
   rank: 0 | 1 | 2 | 3;
   /** Monthly price in BRL. 0 means there is nothing to check out. */
   price: number;
-  /** Checkout summary; only the sellable plans reach the paywall. */
-  pitch?: readonly string[];
   features: Record<Feature, boolean>;
   limits: { favorites: number | null; savedSearches: number | null; recommendations: number };
 };
@@ -93,11 +91,6 @@ export const PLANS: Record<Role, Plan> = {
     label: "Investidor",
     rank: 2,
     price: 39,
-    pitch: [
-      "Favoritos e alertas ilimitados",
-      "Filtros avançados, coleções e aba Análise",
-      "Recomendações e alertas automáticos semanais",
-    ],
     features: INVESTOR_FEATURES,
     limits: { favorites: null, savedSearches: null, recommendations: 5 },
   },
@@ -107,11 +100,6 @@ export const PLANS: Record<Role, Plan> = {
     badge: "Pro",
     rank: 3,
     price: 79,
-    pitch: [
-      "Tudo do Investidor, sem limites",
-      "Painel de mercado, calendário e Regiões",
-      "Vantagem de Largada e exportação CSV/PDF",
-    ],
     features: PRO_FEATURES,
     limits: { favorites: null, savedSearches: null, recommendations: 10 },
   },

@@ -19,10 +19,13 @@ export default function PropertyRow({
   p,
   poiCats,
   poiRadius,
+  confirmRemove,
 }: {
   p: Property;
   poiCats?: string[];
   poiRadius?: number;
+  /** Portfolio list only: removing there is a deliberate step back, not a quick toggle. */
+  confirmRemove?: boolean;
 }) {
   const quartos = p.bedrooms ?? 0;
   const vagas = p.parkingSpots ?? 0;
@@ -40,7 +43,7 @@ export default function PropertyRow({
         <PropertyPhoto src={p.image} alt={`Foto do imóvel: ${p.title}`} sizes="184px" />
         {showDiscount(p) && <span className="disc">−{Math.round(p.discount!)}%</span>}
         {p.inactive && <span className="statuspill">Inativo</span>}
-        <FavoriteButton id={p.id} title={p.title} />
+        <FavoriteButton id={p.id} title={p.title} confirmRemove={confirmRemove} />
       </div>
       <div className="wmain">
         <span className="tag">{p.propertyType}</span>
