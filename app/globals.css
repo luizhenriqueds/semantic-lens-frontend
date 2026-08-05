@@ -661,22 +661,25 @@ button {
   color: var(--primary);
   cursor: pointer;
 }
+/* Notes carry something the user has to act on, so they read as an accent band rather than as
+   another grey panel: a tinted fill and a left rule pull the eye without shouting. */
 .searchnote {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 11px;
   margin: 0 0 16px;
-  padding: 12px 15px;
-  border: 1px solid var(--line-soft);
+  padding: 13px 16px;
+  border: 1px solid var(--primary-soft);
+  border-left: 3px solid var(--primary);
   border-radius: 11px;
-  background: var(--surface-2);
-  color: var(--ink-soft);
+  background: var(--primary-wash);
+  color: var(--ink);
   font-size: 13.5px;
   line-height: 1.45;
 }
 .searchnote svg {
   flex-shrink: 0;
-  color: var(--ink-faint);
+  color: var(--primary);
 }
 
 /* property cards grid */
@@ -1883,11 +1886,50 @@ select.selectish {
   justify-content: flex-end;
   margin-top: 20px;
 }
+/* The billing summary reads as a row: the price and its next-charge line on the left, the cancel
+   action on the right, with room to breathe before the plan comparison below. */
+.setbilling {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px 20px;
+  flex-wrap: wrap;
+  margin: 20px 0 24px;
+  padding: 16px 0 0;
+  border-top: 1px solid var(--line-soft);
+}
+.setbilling-info {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+.setbilling-info b {
+  font-size: 19px;
+  letter-spacing: -0.01em;
+  color: var(--ink);
+}
+.setbilling-info small {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--ink-soft);
+}
+.setbilling-info span {
+  font-size: 13.5px;
+  color: var(--ink-soft);
+}
+.setbilling .btn {
+  flex-shrink: 0;
+}
 .setblock .alertrow:last-of-type {
   margin-bottom: 0;
 }
+/* Same band as .searchnote, but this one is a warning rather than an offer, so it borrows --warn
+   instead of the primary accent. */
 .setwarn {
   margin: 14px 0 0;
+  border-color: color-mix(in srgb, var(--warn) 45%, transparent);
+  border-left-color: var(--warn);
+  background: color-mix(in srgb, var(--warn) 10%, var(--surface));
 }
 .achip.soon {
   color: var(--ink-soft);
@@ -4689,9 +4731,11 @@ select.selectish {
 }
 
 /* empty state */
+/* A dead end still needs to read as deliberate, not as a blank panel: a tinted fill and a solid
+   border give it the same weight as the results it replaces. */
 .emptystate {
-  background: var(--surface);
-  border: 1px dashed var(--line);
+  background: var(--surface-2);
+  border: 1px solid var(--line);
   border-radius: 16px;
   padding: 44px 28px;
   text-align: center;
@@ -5463,7 +5507,16 @@ select.selectish {
   flex: 1;
   min-width: 200px;
 }
-.lockednote button {
+/* Two ways out - upgrade, or sign in to an account that already pays - so they sit together and
+   never wrap apart from each other. */
+.notecta {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-shrink: 0;
+}
+.notecta button,
+.notecta a {
   border: 0;
   background: none;
   padding: 0;
@@ -5471,6 +5524,11 @@ select.selectish {
   font-weight: 700;
   color: var(--primary);
   cursor: pointer;
+  white-space: nowrap;
+}
+.notecta a {
+  text-decoration: underline;
+  text-underline-offset: 3px;
 }
 
 /* ---------- advanced filters: applied chips ---------- */
@@ -6835,7 +6893,7 @@ select.selectish {
   stroke: var(--primary-soft);
 }
 
-/* simulated checkout */
+/* checkout wall: price, pitch and the jump to the provider's hosted page */
 .modal.paywall {
   max-width: 420px;
   text-align: left;
@@ -6890,34 +6948,19 @@ select.selectish {
   stroke-width: 2.4;
   color: var(--primary);
 }
-.pw-form {
-  display: grid;
-  gap: 10px;
-  margin-bottom: 12px;
-  opacity: 0.55;
-}
-.pw-row {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 10px;
-}
-.pw-field span {
-  display: block;
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--ink-soft);
-  margin-bottom: 4px;
-}
-.pw-field input {
-  width: 100%;
-}
+/* Sits between the pitch list and the actions, so it carries its own separation rather than
+   relying on the list's bottom margin. Unqualified on purpose: prefixing it with .modal.paywall
+   would outrank .pw-err below and swallow the error colour. */
 .pw-note {
   font-size: 12.5px;
+  line-height: 1.5;
   color: var(--ink-soft);
-  margin: 0 0 14px;
+  margin: 4px 0 18px;
+  padding-top: 14px;
+  border-top: 1px solid var(--line-soft);
 }
-.pw-note.pw-sent {
-  color: var(--primary);
+.pw-note.pw-err {
+  color: var(--bad);
   font-weight: 600;
 }
 .modal-alt {

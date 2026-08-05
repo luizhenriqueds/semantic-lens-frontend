@@ -1,4 +1,5 @@
 import { POI_RADIUS_M } from "@/lib/pois";
+import { parseQueryTerms } from "./queryTerms";
 import type { AlertCriteriaSet, PropertyFilters } from "@/lib/types";
 
 /** `p_filters` as the list RPCs read it. `ids`/`include_inactive` are query-only:
@@ -7,7 +8,10 @@ export type RpcFilters = AlertCriteriaSet & { ids?: string[]; include_inactive?:
 
 export function toRpcFilters(f: PropertyFilters = {}): RpcFilters {
   const out: RpcFilters = {};
-  if (f.q?.trim()) out.q = f.q.trim();
+  // "apartamento 2 dormitórios" is one text term and one structured one; search_text holds no
+  // bedroom counts, so the phrase only matches once it is split apart here.
+  const terms = parseQueryTerms(f.q ?? "");
+  if (terms.q) out.q = terms.q;
   if (f.uf) out.uf = f.uf;
   if (f.city) out.city = f.city;
   if (f.type) out.type = f.type;
@@ -19,7 +23,9 @@ export function toRpcFilters(f: PropertyFilters = {}): RpcFilters {
     out.range_from = f.range.from;
     if (f.range.to !== Infinity) out.range_to = f.range.to;
   }
-  if (f.minBedrooms) out.min_bedrooms = f.minBedrooms;
+  // The control wins over the typed term: it is the one the user can see and clear.
+  const minBedrooms = f.minBedrooms || terms.minBedrooms;
+  if (minBedrooms) out.min_bedrooms = minBedrooms;
   if (f.maxPrice) out.max_price = f.maxPrice;
   if (f.minArea) out.min_area = f.minArea;
   if (f.poiCats?.length) {

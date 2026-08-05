@@ -718,9 +718,24 @@ export default function PropertiesClient({
             Este link usa filtros do plano {requiredPlan(lockedFilter).label}, que não estão no seu
             plano - a lista abaixo ignora esses filtros.
           </span>
-          <button type="button" onClick={() => require(lockedFilter)}>
-            Ver plano
-          </button>
+          <div className="notecta">
+            <button type="button" onClick={() => require(lockedFilter)}>
+              Ver plano
+            </button>
+            {/* Someone who already pays may simply be signed out on this device. The URL is only
+                readable after mount, so the link degrades to a plain /login before then. */}
+            {role === "anon" && (
+              <Link
+                href={
+                  mounted
+                    ? `/login?redirect=${encodeURIComponent(location.pathname + location.search)}`
+                    : "/login"
+                }
+              >
+                Entrar
+              </Link>
+            )}
+          </div>
         </div>
       )}
 

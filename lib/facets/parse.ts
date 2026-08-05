@@ -129,8 +129,18 @@ function isCenterProximity(
   return words.length > 0 && words.every((w) => w === "centro");
 }
 
-const COUNT_WORD =
-  /^(?:quarto|quartos|dormitorio|dormitorios|dorm|suite|suites|vaga|vagas|garagem|garagens|banheiro|banheiros)$/;
+/** Bedroom nouns people type. Shared with lib/filters/queryTerms.ts, so /search and the
+ *  /properties filter box read the same vocabulary instead of drifting apart. */
+export const BEDROOM_NOUNS =
+  "quarto|quartos|dormitorio|dormitorios|dorm|dorms|suite|suites|qto|qtos|qt|qts";
+
+/** `\b` so "2 qtde" cannot read as two bedrooms; the alternation still lets "quartos" win
+ *  over "quarto". */
+export const BEDROOMS_RE = new RegExp(`(\\d+)\\s*\\+?\\s*(?:${BEDROOM_NOUNS})\\b`);
+
+const COUNT_WORD = new RegExp(
+  `^(?:${BEDROOM_NOUNS}|vaga|vagas|garagem|garagens|banheiro|banheiros)$`,
+);
 
 // Keeps only tokens that can plausibly appear in a listing document - see LEXICAL_NOISE.
 function buildLexical(normalized: string, priceMatch: string | null): string {
@@ -200,9 +210,7 @@ export function parseFacets(raw: string, cities: string[]): Facets {
   if (!city) city = findCity(false);
 
   let bedroomsMin: number | null = null;
-  const bm = normalized.match(
-    /(\d+)\s*\+?\s*(?:quarto|quartos|dormitorio|dormitorios|dorm|suite|suites)/,
-  );
+  const bm = normalized.match(BEDROOMS_RE);
   if (bm) bedroomsMin = parseInt(bm[1], 10);
 
   // Neither retrieval arm nor the reranker honours a count reliably, so these are hard filters.

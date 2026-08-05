@@ -1,6 +1,6 @@
 import type { Role } from "@/lib/entitlements/plans";
 
-export type Bucket = "page" | "search" | "export" | "image";
+export type Bucket = "page" | "search" | "export" | "image" | "checkout";
 export type Tier = Role | "authed";
 
 export type Window = { limit: number; windowMs: number };
@@ -43,6 +43,12 @@ const DEFAULTS: Record<Bucket, BucketPolicy> = {
   image: {
     byTier: { authed: { primary: w(200, MINUTE) } },
     fallback: { primary: w(60, MINUTE) },
+  },
+  // Each attempt opens a real billing object in our provider account, so a loop would litter
+  // their dashboard and trip their own abuse controls before it ever costs us compute.
+  checkout: {
+    byTier: {},
+    fallback: { primary: w(5, MINUTE), secondary: w(20, HOUR) },
   },
 };
 

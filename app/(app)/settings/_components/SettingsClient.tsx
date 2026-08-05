@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useState } from "react";
 import { setCuratedState, updateUserSettings } from "@/app/actions/settings";
 import PasswordInput from "@/components/auth/PasswordInput";
@@ -10,17 +10,19 @@ import ThemeChoice from "./ThemeChoice";
 import PlanBadge from "@/components/plan/PlanBadge";
 import { usePlan } from "@/components/plan/PlanProvider";
 import { useToast } from "@/components/ui/Toaster";
+import { PLAN_TAB } from "@/lib/billing/checkoutFlag";
 import { CURATED_ALERTS } from "@/lib/alerts/curated";
 import { fmtPhone, phoneDigits } from "@/lib/format";
 import { IconArrow, IconBell } from "@/lib/icons";
 import { createClient } from "@/lib/supabase/client";
+import type { Subscription } from "@/lib/data/billing";
 import type { CuratedSlug, CuratedStates, NotificationChannel, UserSettings } from "@/lib/types";
 
-type Tab = "conta" | "plano" | "notificacoes" | "seguranca";
+type Tab = "conta" | typeof PLAN_TAB | "notificacoes" | "seguranca";
 
 const TABS: { key: Tab; label: string }[] = [
   { key: "conta", label: "Conta" },
-  { key: "plano", label: "Plano" },
+  { key: PLAN_TAB, label: "Plano" },
   { key: "notificacoes", label: "Notificações" },
   { key: "seguranca", label: "Segurança" },
 ];
@@ -38,14 +40,21 @@ const CHANNEL_COPY: { key: NotificationChannel; label: string; hint: string; soo
 export default function SettingsClient({
   settings,
   curated,
+  subscription,
 }: {
   settings: UserSettings;
   curated: CuratedStates;
+  subscription: Subscription | null;
 }) {
   const router = useRouter();
   const toast = useToast();
+  const params = useSearchParams();
 
-  const [tab, setTab] = useState<Tab>("conta");
+  // Seeded from the URL so the checkout return lands on the tab it promised.
+  const [tab, setTab] = useState<Tab>(() => {
+    const wanted = params.get("tab");
+    return TABS.some((t) => t.key === wanted) ? (wanted as Tab) : "conta";
+  });
   const [saving, setSaving] = useState<Tab | null>(null);
 
   const [name, setName] = useState(settings.fullName);
@@ -198,7 +207,7 @@ export default function SettingsClient({
         </div>
       )}
 
-      {tab === "plano" && !isAdmin && <PlansPanel />}
+      {tab === PLAN_TAB && !isAdmin && <PlansPanel subscription={subscription} />}
 
       {tab === "notificacoes" && (
         <>

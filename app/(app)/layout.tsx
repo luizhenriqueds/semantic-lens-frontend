@@ -4,6 +4,7 @@ import SessionStores from "@/components/layout/SessionStores";
 import ThemeInit from "@/components/layout/ThemeInit";
 import Sidebar from "@/components/layout/Sidebar";
 import Topbar from "@/components/layout/Topbar";
+import CheckoutReturnDialog from "@/components/plan/CheckoutReturnDialog";
 import PlanProvider from "@/components/plan/PlanProvider";
 import TrialStartedDialog from "@/components/plan/TrialStartedDialog";
 import ToastProvider from "@/components/ui/Toaster";
@@ -26,10 +27,11 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       <PlanProvider role={ent.role} isAdmin={ent.isAdmin} trial={ent.trial}>
         <SessionStores />
         <ThemeInit />
-        {/* Reads the ?trial flag, so it needs a boundary of its own rather than opting every
-            page under this layout out of static rendering. */}
+        {/* Read the ?trial and ?checkout flags, so they need a boundary of their own rather than
+            opting every page under this layout out of static rendering. */}
         <Suspense fallback={null}>
           <TrialStartedDialog />
+          <CheckoutReturnDialog />
         </Suspense>
         <div className="app">
           <Sidebar />

@@ -79,7 +79,9 @@ export function identify(headers: Headers, userId?: string | null): string {
   return ip ? `i:${ipBucket(ip)}` : "i:unknown";
 }
 
-const NEVER_COUNTED = ["/auth/confirm"];
+// A provider retry storm all comes from one IP: counting it would 429 the deliveries, which the
+// provider reads as failure and answers by retrying harder.
+const NEVER_COUNTED = ["/auth/confirm", "/api/webhooks"];
 
 /** Self-hosted Next strips `next-router-prefetch` before middleware, so <Link> prefetch is usually
  *  counted and the `page` budgets absorb it; the check stays for platforms that do forward it. */

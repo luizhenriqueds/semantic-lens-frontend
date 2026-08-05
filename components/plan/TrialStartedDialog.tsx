@@ -6,16 +6,12 @@ import { useEffect, useRef } from "react";
 import Modal from "@/components/ui/Modal";
 import { usePlan } from "@/components/plan/PlanProvider";
 import { startInvestorTrial } from "@/app/actions/plan";
-import { FEATURE_COPY } from "@/lib/entitlements/copy";
+import { FEATURE_COPY, unlockedFeatures } from "@/lib/entitlements/copy";
 import { TRIAL_PARAM, withoutTrialParam } from "@/lib/entitlements/trialFlag";
 import { PLANS, TRIAL_DAYS, TRIAL_ROLE } from "@/lib/entitlements";
-import type { Feature } from "@/lib/entitlements";
-import { IconStar } from "@/lib/icons";
+import { IconCheck, IconStar } from "@/lib/icons";
 
-// Derived rather than listed, so a feature that moves between plans can never leave this stale.
-const UNLOCKED = (Object.keys(PLANS[TRIAL_ROLE].features) as Feature[]).filter(
-  (f) => PLANS[TRIAL_ROLE].features[f] && !PLANS.basic.features[f],
-);
+const UNLOCKED = unlockedFeatures(TRIAL_ROLE);
 
 /** Spelled out rather than fmtDate's "08 de ago.", whose period would end the sentence early. */
 function deadline(iso: string): string | null {
@@ -24,12 +20,6 @@ function deadline(iso: string): string | null {
     ? null
     : d.toLocaleDateString("pt-BR", { day: "2-digit", month: "long" });
 }
-
-const Tick = () => (
-  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden="true">
-    <path d="m5 13 4 4L19 7" />
-  </svg>
-);
 
 /**
  * Owns the whole `?trial=1` flow from the app layout: PlanCta sets the flag after starting the
@@ -82,7 +72,7 @@ export default function TrialStartedDialog() {
 
       <ul className="pw-pitch trialstart-list">
         <li>
-          <Tick />
+          <IconCheck />
           <span>
             <b>Favoritos e alertas ilimitados</b> - sem o teto de {PLANS.basic.limits.favorites}{" "}
             imóveis salvos e {PLANS.basic.limits.savedSearches} buscas.
@@ -90,7 +80,7 @@ export default function TrialStartedDialog() {
         </li>
         {UNLOCKED.map((f) => (
           <li key={f}>
-            <Tick />
+            <IconCheck />
             <span>
               <b>{FEATURE_COPY[f].label}</b> - {FEATURE_COPY[f].blurb}
             </span>
@@ -100,8 +90,8 @@ export default function TrialStartedDialog() {
 
       {/* No "agora não": the trial is already running, so there is nothing left to decline. */}
       <div className="mrow">
-        <Link className="btn solid" href="/properties" onClick={clear}>
-          Explorar os imóveis
+        <Link className="btn solid" href="/dashboard" onClick={clear}>
+          Ir para o painel
         </Link>
       </div>
     </Modal>
