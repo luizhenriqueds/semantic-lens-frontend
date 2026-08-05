@@ -9,6 +9,7 @@ import {
   isPaidRole,
   productIdFor,
 } from "@/lib/billing/abacate";
+import { CHECKOUT_PARAM, PLAN_TAB, type CheckoutFlag } from "@/lib/billing/checkoutFlag";
 import { getUserSubscription } from "@/lib/data/billing";
 import { getEntitlements } from "@/lib/entitlements/server";
 import { PLANS } from "@/lib/entitlements";
@@ -24,19 +25,16 @@ const site = () => process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
 
 /** The browser leaves for the provider's hosted page, so both ends of the round trip land on the
  *  plan tab and CheckoutReturnDialog picks the flag up from there. */
-const returnTo = (flag: "success" | "cancel") => `${site()}/settings?tab=plano&checkout=${flag}`;
+const returnTo = (flag: CheckoutFlag) =>
+  `${site()}/settings?tab=${PLAN_TAB}&${CHECKOUT_PARAM}=${flag}`;
+
+const session = () => requireUser().catch(() => null);
 
 /** The real gate: PaywallDialog runs in the browser and this action is reachable directly. */
 export async function startCheckout(target: Role): Promise<CheckoutResult> {
-  let supabase;
-  let userId: string;
-  try {
-    const session = await requireUser();
-    supabase = session.supabase;
-    userId = session.user.id;
-  } catch {
-    return { ok: false, reason: "auth" };
-  }
+  const auth = await session();
+  if (!auth) return { ok: false, reason: "auth" };
+  const { supabase, user } = auth;
 
   // `target` is caller-supplied: this is what stops startCheckout("platform").
   if (!isPaidRole(target)) return { ok: false, reason: "plan" };
@@ -76,7 +74,7 @@ export async function startCheckout(target: Role): Promise<CheckoutResult> {
       externalId,
       completionUrl: returnTo("success"),
       returnUrl: returnTo("cancel"),
-      metadata: { userId, role: target },
+      metadata: { userId: user.id, role: target },
     });
 
     // The price lives on the AbacatePay product, so a drift there must break checkout loudly
@@ -108,14 +106,10 @@ export type CancelResult =
   | { ok: false; reason: "auth" | "none" | "pending" | "error" };
 
 export async function cancelSubscription(): Promise<CancelResult> {
-  let supabase;
-  try {
-    supabase = (await requireUser()).supabase;
-  } catch {
-    return { ok: false, reason: "auth" };
-  }
+  const auth = await session();
+  if (!auth) return { ok: false, reason: "auth" };
 
-  const subscription = await getUserSubscription(supabase);
+  const subscription = await getUserSubscription(auth.supabase);
   if (!subscription || subscription.status !== "active") return { ok: false, reason: "none" };
   // /subscriptions/cancel takes the subs_... id, which only a webhook ever gives us.
   if (!subscription.providerSubscriptionId) return { ok: false, reason: "pending" };
@@ -127,7 +121,7 @@ export async function cancelSubscription(): Promise<CancelResult> {
     return { ok: false, reason: "error" };
   }
 
-  const { data, error } = await supabase.rpc("request_subscription_cancel", {
+  const { data, error } = await auth.supabase.rpc("request_subscription_cancel", {
     p_id: subscription.id,
   });
   if (error) {
@@ -144,14 +138,10 @@ export type CheckoutState = { state: "pending" | "active" | "failed" | "none"; r
  *  Reads the row directly rather than getEntitlements(), whose React cache() would serve a stale
  *  answer for the whole request. */
 export async function checkoutStatus(): Promise<CheckoutState> {
-  let supabase;
-  try {
-    supabase = (await requireUser()).supabase;
-  } catch {
-    return { state: "none", role: null };
-  }
+  const auth = await session();
+  if (!auth) return { state: "none", role: null };
 
-  const subscription = await getUserSubscription(supabase);
+  const subscription = await getUserSubscription(auth.supabase);
   if (!subscription) return { state: "none", role: null };
 
   const state =

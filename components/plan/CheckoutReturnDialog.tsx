@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { checkoutStatus, type CheckoutState } from "@/app/actions/billing";
 import Modal from "@/components/ui/Modal";
 import Spinner from "@/components/ui/Spinner";
@@ -10,18 +10,10 @@ import { CHECKOUT_PARAM, readCheckoutFlag, withoutCheckoutParam } from "@/lib/bi
 import { FEATURE_COPY, unlockedFeatures } from "@/lib/entitlements/copy";
 import { PLANS } from "@/lib/entitlements";
 import type { Role } from "@/lib/entitlements";
-import { IconStar } from "@/lib/icons";
+import { IconCheck, IconStar } from "@/lib/icons";
 
 // Roughly 30 seconds, front-loaded: the webhook usually lands within a second or two.
 const BACKOFF_MS = [800, 1500, 2500, 4000, 5000, 5000, 5000, 5000];
-
-const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
-
-const Tick = () => (
-  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden="true">
-    <path d="m5 13 4 4L19 7" />
-  </svg>
-);
 
 /**
  * Owns the `?checkout=` round trip back from AbacatePay's hosted page. The return URL is not
@@ -37,6 +29,7 @@ export default function CheckoutReturnDialog() {
   const [status, setStatus] = useState<CheckoutState["state"] | "slow">("pending");
   const [role, setRole] = useState<Role | null>(null);
   const [attempt, setAttempt] = useState(0);
+  const timer = useRef<ReturnType<typeof setTimeout>>(undefined);
 
   const clear = useCallback(
     () => router.replace(withoutCheckoutParam(pathname, params.toString()), { scroll: false }),
@@ -46,10 +39,16 @@ export default function CheckoutReturnDialog() {
   useEffect(() => {
     if (flag !== "success") return;
     let live = true;
+    // Held in a ref so unmount cancels the pending wait instead of leaving a 5s timer holding
+    // the whole component scope alive.
+    const wait = (ms: number) =>
+      new Promise((resolve) => {
+        timer.current = setTimeout(resolve, ms);
+      });
 
     (async () => {
-      for (const wait of BACKOFF_MS) {
-        await sleep(wait);
+      for (const ms of BACKOFF_MS) {
+        await wait(ms);
         if (!live) return;
         const result = await checkoutStatus();
         if (!live) return;
@@ -66,6 +65,7 @@ export default function CheckoutReturnDialog() {
 
     return () => {
       live = false;
+      clearTimeout(timer.current);
     };
   }, [flag, attempt, router]);
 
@@ -110,10 +110,11 @@ export default function CheckoutReturnDialog() {
           <button
             className="btn solid"
             type="button"
+            // No refresh here: the loop already refreshes on success, and doing both fires two
+            // RSC payload fetches inside a second.
             onClick={() => {
               setStatus("pending");
               setAttempt((n) => n + 1);
-              router.refresh();
             }}
           >
             Atualizar
@@ -156,7 +157,7 @@ export default function CheckoutReturnDialog() {
       <ul className="pw-pitch trialstart-list">
         {unlockedFeatures(role).map((f) => (
           <li key={f}>
-            <Tick />
+            <IconCheck />
             <span>
               <b>{FEATURE_COPY[f].label}</b> - {FEATURE_COPY[f].blurb}
             </span>
@@ -165,8 +166,8 @@ export default function CheckoutReturnDialog() {
       </ul>
 
       <div className="mrow">
-        <Link className="btn solid" href="/properties" onClick={clear}>
-          Explorar os imóveis
+        <Link className="btn solid" href="/dashboard" onClick={clear}>
+          Ir para o painel
         </Link>
       </div>
     </Modal>

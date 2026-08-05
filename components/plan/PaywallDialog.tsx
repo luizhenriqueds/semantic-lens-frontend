@@ -4,6 +4,7 @@ import { useState, useTransition } from "react";
 import { startCheckout, type CheckoutFailure } from "@/app/actions/billing";
 import Modal from "@/components/ui/Modal";
 import { money } from "@/lib/format";
+import { IconCheck } from "@/lib/icons";
 import { TRIAL_DAYS, TRIAL_ROLE } from "@/lib/entitlements";
 import type { Plan, Trial } from "@/lib/entitlements";
 
@@ -53,9 +54,7 @@ export default function PaywallDialog({
       <ul className="pw-pitch">
         {(plan.pitch ?? []).map((line) => (
           <li key={line}>
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden="true">
-              <path d="m5 13 4 4L19 7" />
-            </svg>
+            <IconCheck />
             {line}
           </li>
         ))}
@@ -76,8 +75,10 @@ export default function PaywallDialog({
         <button className="btn ghost" type="button" onClick={onClose}>
           Agora não
         </button>
+        {/* No price on the label: it is already the largest thing in the dialog, and repeating it
+            here is what pushed the row past the modal width. */}
         <button className="btn solid" type="button" disabled={pending} onClick={checkout}>
-          {pending ? "Redirecionando…" : `Assinar por ${money(plan.price)}/mês`}
+          {pending ? "Redirecionando…" : "Assinar agora"}
         </button>
       </div>
     </Modal>

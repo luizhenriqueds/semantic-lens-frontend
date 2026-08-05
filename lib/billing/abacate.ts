@@ -32,10 +32,6 @@ export class AbacateError extends Error {
   }
 }
 
-/** By name, not `instanceof`: the class can be duplicated across bundles (see RateLimitError). */
-export const isAbacateError = (err: unknown): err is AbacateError =>
-  err instanceof Error && err.name === "AbacateError";
-
 type Envelope<T> = { data: T | null; error: unknown; success?: boolean };
 
 const messageOf = (body: unknown): string => {

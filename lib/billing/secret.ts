@@ -12,7 +12,7 @@ const QUERY_PARAM = "webhookSecret";
 const equals = (a: string, b: string): boolean =>
   timingSafeEqual(createHash("sha256").update(a).digest(), createHash("sha256").update(b).digest());
 
-export function presentedSecrets(url: URL, headers: Headers): string[] {
+function presentedSecrets(url: URL, headers: Headers): string[] {
   const candidates = [
     url.searchParams.get(QUERY_PARAM),
     ...SECRET_HEADERS.map((h) => headers.get(h)),

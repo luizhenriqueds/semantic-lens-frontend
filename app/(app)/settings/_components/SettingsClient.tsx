@@ -10,6 +10,7 @@ import ThemeChoice from "./ThemeChoice";
 import PlanBadge from "@/components/plan/PlanBadge";
 import { usePlan } from "@/components/plan/PlanProvider";
 import { useToast } from "@/components/ui/Toaster";
+import { PLAN_TAB } from "@/lib/billing/checkoutFlag";
 import { CURATED_ALERTS } from "@/lib/alerts/curated";
 import { fmtPhone, phoneDigits } from "@/lib/format";
 import { IconArrow, IconBell } from "@/lib/icons";
@@ -17,11 +18,11 @@ import { createClient } from "@/lib/supabase/client";
 import type { Subscription } from "@/lib/data/billing";
 import type { CuratedSlug, CuratedStates, NotificationChannel, UserSettings } from "@/lib/types";
 
-type Tab = "conta" | "plano" | "notificacoes" | "seguranca";
+type Tab = "conta" | typeof PLAN_TAB | "notificacoes" | "seguranca";
 
 const TABS: { key: Tab; label: string }[] = [
   { key: "conta", label: "Conta" },
-  { key: "plano", label: "Plano" },
+  { key: PLAN_TAB, label: "Plano" },
   { key: "notificacoes", label: "Notificações" },
   { key: "seguranca", label: "Segurança" },
 ];
@@ -206,7 +207,7 @@ export default function SettingsClient({
         </div>
       )}
 
-      {tab === "plano" && !isAdmin && <PlansPanel subscription={subscription} />}
+      {tab === PLAN_TAB && !isAdmin && <PlansPanel subscription={subscription} />}
 
       {tab === "notificacoes" && (
         <>

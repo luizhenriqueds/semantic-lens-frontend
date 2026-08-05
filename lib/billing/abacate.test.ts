@@ -2,7 +2,6 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   amountMatchesPlan,
   createSubscriptionCheckout,
-  isAbacateError,
   isBillingConfigured,
   isPaidRole,
   priceInCents,
@@ -90,7 +89,7 @@ describe("createSubscriptionCheckout", () => {
 
   it("throws before any request when the key is unset", async () => {
     delete process.env.ABACATEPAY_API_KEY;
-    await expect(createSubscriptionCheckout(INPUT)).rejects.toSatisfy(isAbacateError);
+    await expect(createSubscriptionCheckout(INPUT)).rejects.toThrow(/ABACATEPAY_API_KEY/);
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
@@ -107,7 +106,7 @@ describe("createSubscriptionCheckout", () => {
         status: 200,
       }),
     );
-    await expect(createSubscriptionCheckout(INPUT)).rejects.toSatisfy(isAbacateError);
+    await expect(createSubscriptionCheckout(INPUT)).rejects.toThrow(/resposta inválida/);
   });
 
   it("carries the HTTP status through on a 4xx", async () => {

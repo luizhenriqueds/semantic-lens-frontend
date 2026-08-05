@@ -117,6 +117,11 @@ export const IconClose = (p: P) => (
     <path d="M6 6l12 12M18 6 6 18" />
   </svg>
 );
+export const IconCheck = (p: P) => (
+  <svg {...base(p)}>
+    <path d="m5 13 4 4L19 7" />
+  </svg>
+);
 export const IconPencil = (p: P) => (
   <svg {...base(p)}>
     <path d="M12 20h9" />

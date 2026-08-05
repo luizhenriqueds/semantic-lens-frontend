@@ -67,11 +67,6 @@ const firstWithPrefix = (layers: Bag[], prefix: string): string | null => {
   return null;
 };
 
-const firstNumber = (layers: Bag[], key: string): number | null => {
-  for (const layer of layers) if (typeof layer[key] === "number") return layer[key] as number;
-  return null;
-};
-
 export function parseEvent(body: unknown): ProviderEvent | null {
   const root = asBag(body);
   if (!root) return null;
@@ -89,7 +84,7 @@ export function parseEvent(body: unknown): ProviderEvent | null {
     customerId:
       firstString(layers, "customerId", "customer_id") ?? firstWithPrefix(layers, "cust_"),
     periodEnd: firstString(layers, "nextBilling", "currentPeriodEnd", "periodEnd", "trialEndsAt"),
-    amount: firstNumber(layers, "amount"),
+    amount: (layers.find((l) => typeof l.amount === "number")?.amount as number) ?? null,
     occurredAt: firstString(layers, "occurredAt", "updatedAt", "createdAt", "timestamp"),
     devMode: layers.some((layer) => layer.devMode === true),
   };

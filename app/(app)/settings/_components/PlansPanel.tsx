@@ -34,9 +34,11 @@ export default function PlansPanel({ subscription }: { subscription: Subscriptio
       ? subscription
       : null;
 
-  const cancel = () =>
+  const cancel = () => {
+    // Outside the transition on purpose: a state update inside one is non-urgent, so the dialog
+    // would sit open behind the toast until the whole request commits.
+    setConfirming(false);
     startCancel(async () => {
-      setConfirming(false);
       const result = await cancelSubscription();
       if (!result.ok) {
         return toast(CANCEL_ERROR[result.reason] ?? "Não foi possível cancelar a assinatura");
@@ -45,6 +47,7 @@ export default function PlansPanel({ subscription }: { subscription: Subscriptio
       toast(until ? `Assinatura cancelada. Acesso até ${until}.` : "Assinatura cancelada");
       router.refresh();
     });
+  };
 
   return (
     <>
@@ -64,16 +67,18 @@ export default function PlansPanel({ subscription }: { subscription: Subscriptio
         </div>
 
         {billed && (
-          <div className="setactions setbilling">
-            <p>
+          <div className="setbilling">
+            <div className="setbilling-info">
               <b>
                 {money((billed.amountCents ?? 0) / 100)}
                 <small>/mês</small>
-              </b>{" "}
-              {billed.cancelAtPeriodEnd
-                ? `Cancelamento agendado - acesso até ${fmtDay(billed.currentPeriodEnd) ?? "o fim do período"}.`
-                : `Próxima cobrança em ${fmtDay(billed.currentPeriodEnd) ?? "breve"}.`}
-            </p>
+              </b>
+              <span>
+                {billed.cancelAtPeriodEnd
+                  ? `Cancelamento agendado - acesso até ${fmtDay(billed.currentPeriodEnd) ?? "o fim do período"}.`
+                  : `Próxima cobrança em ${fmtDay(billed.currentPeriodEnd) ?? "breve"}.`}
+              </span>
+            </div>
             {!billed.cancelAtPeriodEnd && (
               <button
                 className="btn ghost"
