@@ -108,27 +108,22 @@ async function runHybrid(
   matchCount = 60,
   withDocs = true,
 ): Promise<PoolRow[]> {
-  const res = await withRetry(
-    () => {
-      const q = supabase.rpc("hybrid_search", {
-        query_text: normalized,
-        query_embedding: embedding,
-        model_name: EMBEDDING_MODEL,
-        match_count: matchCount,
-        filter_type: f.type ?? undefined,
-        filter_city: f.city ?? undefined,
-        filter_bedrooms_min: f.bedroomsMin ?? undefined,
-        filter_parking_min: f.parkingMin ?? undefined,
-        filter_bathrooms_min: f.bathroomsMin ?? undefined,
-        filter_price_max: f.priceMax ?? undefined,
-      });
-      // doc_text is ~1.3 KB a row and only the reranker reads it.
-      return withDocs ? q : (q.select("property_id") as unknown as typeof q);
-    },
-    // A timeout here means the query is too heavy, not that the DB is busy;
-    // the widening cascade already re-issues it, so don't also retry-storm.
-    { retryTimeouts: false },
-  );
+  const res = await withRetry(() => {
+    const q = supabase.rpc("hybrid_search", {
+      query_text: normalized,
+      query_embedding: embedding,
+      model_name: EMBEDDING_MODEL,
+      match_count: matchCount,
+      filter_type: f.type ?? undefined,
+      filter_city: f.city ?? undefined,
+      filter_bedrooms_min: f.bedroomsMin ?? undefined,
+      filter_parking_min: f.parkingMin ?? undefined,
+      filter_bathrooms_min: f.bathroomsMin ?? undefined,
+      filter_price_max: f.priceMax ?? undefined,
+    });
+    // doc_text is ~1.3 KB a row and only the reranker reads it.
+    return withDocs ? q : (q.select("property_id") as unknown as typeof q);
+  });
   if (res.error) throw new PoolError(res.error.message);
   return rows<any>("hybrid_search", res).map((r) => ({
     id: String(r.property_id),

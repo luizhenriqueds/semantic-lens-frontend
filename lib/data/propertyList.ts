@@ -198,7 +198,9 @@ async function loadPropertiesByIds(idsJson: string): Promise<Property[]> {
   const chunks: string[][] = [];
   for (let i = 0; i < ids.length; i += 200) chunks.push(ids.slice(i, i + 200));
   const res = await Promise.all(
-    chunks.map((chunk) => withRetry(() => scoredMv().in("property_id", chunk))),
+    chunks.map((chunk) =>
+      withRetry(() => scoredMv().in("property_id", chunk), { retryTimeouts: true }),
+    ),
   );
   return res.flatMap((r) => rows<any>("property_list_mv", r).map(mapListRow));
 }
@@ -359,7 +361,9 @@ export function getAuctionDayPage(
 type PropertyDetail = Property & { discountPercentile: number | null };
 
 async function loadPropertyById(id: string): Promise<PropertyDetail | null> {
-  const res = await withRetry(() => scoredMv().eq("property_id", id).limit(1));
+  const res = await withRetry(() => scoredMv().eq("property_id", id).limit(1), {
+    retryTimeouts: true,
+  });
   const row = rows<any>("property_list_mv", res)[0];
   if (!row) return null;
   return { ...mapListRow(row), discountPercentile: num(row.discount_percentile) };
@@ -369,8 +373,9 @@ export const getPropertyById = cached(loadPropertyById, "property-by-id");
 
 // Map points carry no photo (4000 of them per view), so popups fetch theirs on open.
 async function loadPropertyImage(id: string): Promise<string | null> {
-  const res = await withRetry(() =>
-    supabase.from("property_list_mv").select("image_url").eq("property_id", id).limit(1),
+  const res = await withRetry(
+    () => supabase.from("property_list_mv").select("image_url").eq("property_id", id).limit(1),
+    { retryTimeouts: true },
   );
   return rows<any>("property-image", res)[0]?.image_url || null;
 }
