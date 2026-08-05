@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
+import { createPortal } from "react-dom";
 import { IconClose } from "@/lib/icons";
 
 /** Backdrop, Escape, scroll lock and the close button, in one place. */
@@ -33,7 +34,8 @@ export default function Modal({
     };
   }, [onClose]);
 
-  return (
+  // Portalled: otherwise an ancestor's scoped CSS or transform could leak into or clip the dialog.
+  return createPortal(
     <div className="modal-backdrop" onClick={onClose}>
       <div
         ref={dialogRef}
@@ -49,6 +51,7 @@ export default function Modal({
         </button>
         {children}
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }

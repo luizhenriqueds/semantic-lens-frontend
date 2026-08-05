@@ -4,7 +4,7 @@ import { useState } from "react";
 import { usePlan } from "@/components/plan/PlanProvider";
 import ConfirmDialog from "@/components/ui/ConfirmDialog";
 import { useToast } from "@/components/ui/Toaster";
-import { useSaved } from "@/lib/saved";
+import { REMOVE_FAVORITE_CONFIRM, useSaved } from "@/lib/saved";
 
 export default function SaveButton({ id, propertyLabel }: { id: string; propertyLabel?: string }) {
   const { isSaved, toggle } = useSaved();
@@ -30,9 +30,7 @@ export default function SaveButton({ id, propertyLabel }: { id: string; property
       </button>
       <ConfirmDialog
         open={confirming}
-        title="Remover da carteira?"
-        message="O imóvel sai da sua carteira e você deixa de acompanhar as datas e avisos dele."
-        confirmLabel="Remover"
+        {...REMOVE_FAVORITE_CONFIRM}
         danger
         onConfirm={() => {
           toggle(id);

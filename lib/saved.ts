@@ -6,6 +6,13 @@ import { createClientStore } from "@/lib/clientStore";
 
 const store = createClientStore<string[]>([], () => getFavoriteIds());
 
+/** Shared "remove from carteira" ConfirmDialog copy (SaveButton, and FavoriteButton on portfolio). */
+export const REMOVE_FAVORITE_CONFIRM = {
+  title: "Remover da carteira?",
+  message: "O imóvel sai da sua carteira e você deixa de acompanhar as datas e avisos dele.",
+  confirmLabel: "Remover",
+} as const;
+
 /** Adopts the server's ids, so a stale in-memory copy cannot hide rows it just sent. */
 export function useSavedSync(serverIds: string[]) {
   const key = serverIds.join(",");
