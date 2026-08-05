@@ -16,7 +16,7 @@ import { semanticCached } from "@/lib/semanticCache";
 import { requireQuota } from "@/lib/ratelimit/guards";
 import { poiPlaceLabel } from "@/lib/pois";
 import type { Poi, Property } from "@/lib/types";
-import { cached, rows, SEARCH_REVALIDATE, withRetry } from "./client";
+import { cached, rows, SEARCH_REVALIDATE, ttlCached, withRetry } from "./client";
 import {
   countProperties,
   getFilterOptionsRaw,
@@ -48,10 +48,13 @@ const rank = (items: Property[], score: (p: Property, i: number) => number): Ran
   items,
 });
 
-async function getCities(): Promise<string[]> {
+// Not `getFilterOptionsRaw()` directly: this runs nested inside `cachedSearch`'s unstable_cache
+// (every search calls it), and unstable_cache skips the read when nested inside another
+// unstable_cache. Without this, "five full scans of the MV" reran on every search.
+const getCities = ttlCached(async () => {
   const { cities } = await getFilterOptionsRaw();
   return [...new Set(cities.map((c) => c.city).filter(Boolean))];
-}
+}, 3600 * 1000);
 
 export async function parseQuery(query: string): Promise<Facets> {
   return parseFacets(canonicalQuery(query), await getCities());
@@ -108,27 +111,22 @@ async function runHybrid(
   matchCount = 60,
   withDocs = true,
 ): Promise<PoolRow[]> {
-  const res = await withRetry(
-    () => {
-      const q = supabase.rpc("hybrid_search", {
-        query_text: normalized,
-        query_embedding: embedding,
-        model_name: EMBEDDING_MODEL,
-        match_count: matchCount,
-        filter_type: f.type ?? undefined,
-        filter_city: f.city ?? undefined,
-        filter_bedrooms_min: f.bedroomsMin ?? undefined,
-        filter_parking_min: f.parkingMin ?? undefined,
-        filter_bathrooms_min: f.bathroomsMin ?? undefined,
-        filter_price_max: f.priceMax ?? undefined,
-      });
-      // doc_text is ~1.3 KB a row and only the reranker reads it.
-      return withDocs ? q : (q.select("property_id") as unknown as typeof q);
-    },
-    // A timeout here means the query is too heavy, not that the DB is busy;
-    // the widening cascade already re-issues it, so don't also retry-storm.
-    { retryTimeouts: false },
-  );
+  const res = await withRetry(() => {
+    const q = supabase.rpc("hybrid_search", {
+      query_text: normalized,
+      query_embedding: embedding,
+      model_name: EMBEDDING_MODEL,
+      match_count: matchCount,
+      filter_type: f.type ?? undefined,
+      filter_city: f.city ?? undefined,
+      filter_bedrooms_min: f.bedroomsMin ?? undefined,
+      filter_parking_min: f.parkingMin ?? undefined,
+      filter_bathrooms_min: f.bathroomsMin ?? undefined,
+      filter_price_max: f.priceMax ?? undefined,
+    });
+    // doc_text is ~1.3 KB a row and only the reranker reads it.
+    return withDocs ? q : (q.select("property_id") as unknown as typeof q);
+  });
   if (res.error) throw new PoolError(res.error.message);
   return rows<any>("hybrid_search", res).map((r) => ({
     id: String(r.property_id),

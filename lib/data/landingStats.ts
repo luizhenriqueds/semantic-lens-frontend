@@ -67,9 +67,11 @@ const POI_CATEGORIES = 29;
 // It is not a "family" and never appears on the landing page.
 const UNGROUPED = "Não agrupados";
 
-async function headCount(table: string, apply: (q: any) => any): Promise<number> {
+// `select=*` on a HEAD+count=exact request still costs ~2x a single narrow column, so each
+// caller names one cheap column instead of pulling every row's full width.
+async function headCount(table: string, column: string, apply: (q: any) => any): Promise<number> {
   const res = await withRetry(() =>
-    apply(supabase.from(table).select("*", { count: "exact", head: true })),
+    apply(supabase.from(table).select(column, { count: "exact", head: true })),
   );
   if (res.error) {
     console.error(`[data] landing count "${table}" failed: ${res.error.message}`);
@@ -82,18 +84,20 @@ async function loadLandingStats(): Promise<LandingStats | null> {
   try {
     const [activeProperties, pois, regions, clusters, ufCounts, featured, dashboard] =
       await Promise.all([
-        headCount("property_list_mv", (q) => q.eq("is_listable", true)),
-        headCount("pois", (q) => q),
-        headCount("region_cells", (q) => q),
-        headCount("clusters", (q) => q.neq("label", UNGROUPED)),
+        headCount("property_list_mv", "property_id", (q) => q.eq("is_listable", true)),
+        headCount("pois", "id", (q) => q),
+        headCount("region_cells", "h3", (q) => q),
+        headCount("clusters", "cluster_id", (q) => q.neq("label", UNGROUPED)),
         Promise.all(
           UFS.map((uf) =>
-            headCount("property_list_mv", (q) => q.eq("is_listable", true).eq("uf", uf)),
+            headCount("property_list_mv", "property_id", (q) =>
+              q.eq("is_listable", true).eq("uf", uf),
+            ),
           ),
         ),
         Promise.all(
           FEATURED_CLUSTERS.map((label) =>
-            headCount("property_list_mv", (q) =>
+            headCount("property_list_mv", "property_id", (q) =>
               q.eq("is_listable", true).eq("cluster_label", label),
             ).then((n) => [label, n] as const),
           ),

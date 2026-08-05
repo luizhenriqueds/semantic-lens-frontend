@@ -36,6 +36,7 @@ export type AlertCriteriaSet = {
   range_from?: number;
   range_to?: number;
   min_bedrooms?: number;
+  bedrooms_eq?: number;
   max_price?: number;
   min_area?: number;
   min_discount?: number;

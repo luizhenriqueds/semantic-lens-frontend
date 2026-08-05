@@ -27,6 +27,7 @@ function describeSet(c: AlertCriteriaSet): string {
   if (c.min_discount != null) parts.push(`desconto ≥ ${c.min_discount}%`);
   if (c.max_price != null) parts.push(`até ${moneyShort(c.max_price)}`);
   if (c.min_bedrooms != null) parts.push(`${c.min_bedrooms}+ quartos`);
+  if (c.bedrooms_eq != null) parts.push(`${c.bedrooms_eq} quartos`);
   if (c.min_area != null) parts.push(`${c.min_area}+ m²`);
   if (c.poi_ids?.length) parts.push(`${placeLabel(c.poi_ids)} (${fmtDist(radiusOf(c))})`);
   if (c.poi_cats?.length)
@@ -54,6 +55,7 @@ function setChips(c: AlertCriteriaSet): string[] {
   if (c.min_discount != null) chips.push(`Desconto ≥ ${c.min_discount}%`);
   if (c.max_price != null) chips.push(`Até ${moneyShort(c.max_price)}`);
   if (c.min_bedrooms != null) chips.push(`${c.min_bedrooms}+ quartos`);
+  if (c.bedrooms_eq != null) chips.push(`${c.bedrooms_eq} quartos`);
   if (c.min_area != null) chips.push(`${c.min_area}+ m²`);
   if (c.poi_ids?.length) {
     const s = placeLabel(c.poi_ids);

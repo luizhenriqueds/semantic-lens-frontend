@@ -16,14 +16,12 @@ export type QueryResult<T> = { data: T[] | null; error: { message: string } | nu
 const TRANSIENT =
   /statement timeout|canceling statement|timeout|fetch failed|ECONN|socket hang up/i;
 
-// Retries transient failures (e.g. Postgres `statement timeout` under load).
-// The queries are normally sub-100ms, so a couple of short backoffs recover
-// from load spikes without poisoning the request cache with an empty result.
-// `retryTimeouts: false` for calls where a timeout means the query itself is too
-// slow (not load) - retrying only multiplies the wait.
+// Retries transient failures, but not a `statement timeout` by default - retrying an already-
+// heavy query only piles more load onto a struggling DB. `retryTimeouts: true` opts back in for
+// cheap, indexed lookups where a timeout is more likely a blip than real query cost.
 export async function withRetry<T>(
   build: () => PromiseLike<QueryResult<T>>,
-  { retryTimeouts = true }: { retryTimeouts?: boolean } = {},
+  { retryTimeouts = false }: { retryTimeouts?: boolean } = {},
 ): Promise<QueryResult<T>> {
   const canRetry = (msg: string) =>
     TRANSIENT.test(msg) && (retryTimeouts || !/timeout|canceling/i.test(msg));
@@ -34,6 +32,10 @@ export async function withRetry<T>(
   }
   return res;
 }
+
+// Opts a cheap, indexed lookup back into retrying a `statement timeout` - see `withRetry`.
+export const withRetryTimeouts = <T>(build: () => PromiseLike<QueryResult<T>>) =>
+  withRetry(build, { retryTimeouts: true });
 
 export function rows<T>(name: string, res: QueryResult<T>): T[] {
   if (res.error) {
@@ -56,6 +58,23 @@ export async function fetchAllRows<T>(
     if (batch.length < PAGE) break;
   }
   return out;
+}
+
+// Plain TTL cache for a value with no key, not `cached`: unstable_cache skips the read when it
+// runs nested inside another unstable_cache (see propertyList.ts's dayIdsCache for the keyed
+// version of the same workaround).
+export function ttlCached<T>(load: () => Promise<T>, ttlMs: number): () => Promise<T> {
+  let slot: { at: number; promise: Promise<T> } | null = null;
+  return () => {
+    const now = Date.now();
+    if (slot && now - slot.at <= ttlMs) return slot.promise;
+    const promise = load().catch((e) => {
+      slot = null;
+      throw e;
+    });
+    slot = { at: now, promise };
+    return promise;
+  };
 }
 
 // Wraps a loader in next's request cache. Extra args become part of the cache key.

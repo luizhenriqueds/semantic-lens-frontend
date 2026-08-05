@@ -15,7 +15,7 @@
   --line: #dce2df;
   --line-soft: #e8ece9;
   --good: #2f5d3a;
-  --warn: #9a7b3b;
+  --warn: #c1631a;
   --bad: #c0392b;
   --heat: 47, 93, 58;
   --shadow: 43, 46, 34;
@@ -34,7 +34,7 @@
   --line: #343e39;
   --line-soft: #2e3833;
   --good: #8fb07e;
-  --warn: #c9a557;
+  --warn: #e0954f;
   --bad: #e08a7d;
   --heat: 143, 176, 126;
   --shadow: 0, 0, 0;
@@ -669,8 +669,6 @@ button {
   gap: 11px;
   margin: 0 0 16px;
   padding: 13px 16px;
-  border: 1px solid var(--primary-soft);
-  border-left: 3px solid var(--primary);
   border-radius: 11px;
   background: var(--primary-wash);
   color: var(--ink);
@@ -6094,7 +6092,7 @@ select.selectish {
   --line: #d3ddd6;
   --line-soft: #e2eae5;
   --good: #2f5d3a;
-  --warn: #9a7b3b;
+  --warn: #c1631a;
   position: relative;
   display: flex;
   flex-direction: column;

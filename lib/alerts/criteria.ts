@@ -13,6 +13,7 @@ const CRITERIA_KEYS = [
   "range_from",
   "range_to",
   "min_bedrooms",
+  "bedrooms_eq",
   "max_price",
   "min_area",
   "min_discount",
