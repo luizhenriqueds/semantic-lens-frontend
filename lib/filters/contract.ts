@@ -23,9 +23,8 @@ export function toRpcFilters(f: PropertyFilters = {}): RpcFilters {
     out.range_from = f.range.from;
     if (f.range.to !== Infinity) out.range_to = f.range.to;
   }
-  // The control wins over the typed term: it is the one the user can see and clear.
-  const minBedrooms = f.minBedrooms || terms.minBedrooms;
-  if (minBedrooms) out.min_bedrooms = minBedrooms;
+  if (f.minBedrooms) out.min_bedrooms = f.minBedrooms;
+  if (terms.bedroomsEq) out.bedrooms_eq = terms.bedroomsEq;
   if (f.maxPrice) out.max_price = f.maxPrice;
   if (f.minArea) out.min_area = f.minArea;
   if (f.poiCats?.length) {

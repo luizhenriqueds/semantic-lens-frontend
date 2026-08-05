@@ -16,7 +16,7 @@ import { semanticCached } from "@/lib/semanticCache";
 import { requireQuota } from "@/lib/ratelimit/guards";
 import { poiPlaceLabel } from "@/lib/pois";
 import type { Poi, Property } from "@/lib/types";
-import { cached, rows, SEARCH_REVALIDATE, withRetry } from "./client";
+import { cached, rows, SEARCH_REVALIDATE, ttlCached, withRetry } from "./client";
 import {
   countProperties,
   getFilterOptionsRaw,
@@ -48,10 +48,13 @@ const rank = (items: Property[], score: (p: Property, i: number) => number): Ran
   items,
 });
 
-async function getCities(): Promise<string[]> {
+// Not `getFilterOptionsRaw()` directly: this runs nested inside `cachedSearch`'s unstable_cache
+// (every search calls it), and unstable_cache skips the read when nested inside another
+// unstable_cache. Without this, "five full scans of the MV" reran on every search.
+const getCities = ttlCached(async () => {
   const { cities } = await getFilterOptionsRaw();
   return [...new Set(cities.map((c) => c.city).filter(Boolean))];
-}
+}, 3600 * 1000);
 
 export async function parseQuery(query: string): Promise<Facets> {
   return parseFacets(canonicalQuery(query), await getCities());

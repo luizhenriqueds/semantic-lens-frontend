@@ -7,9 +7,14 @@ import { BEDROOM_NOUNS } from "@/lib/facets/parse";
  *  the RPC changes.
  *
  *  The vocabulary comes from lib/facets/parse.ts, which does the same job for /search. */
-const BEDROOM_NOUN = new RegExp(`^(?:${BEDROOM_NOUNS})$`);
+const BEDROOM_NOUN_LIST = BEDROOM_NOUNS.split("|");
 
-export type QueryTerms = { q: string; minBedrooms?: number };
+// Prefix, not exact: while the user is still typing "2 dorm|", the noun isn't complete yet, and
+// the strict version dropped the count until the last letter landed.
+const isBedroomNoun = (tok: string): boolean =>
+  tok.length >= 2 && BEDROOM_NOUN_LIST.some((n) => n.startsWith(tok));
+
+export type QueryTerms = { q: string; bedroomsEq?: number };
 
 export function parseQueryTerms(raw: string): QueryTerms {
   // Matched on the folded tokens, kept as typed: `q` is shown back to the user in alert
@@ -18,24 +23,23 @@ export function parseQueryTerms(raw: string): QueryTerms {
   const tokens = raw.trim().split(/\s+/).filter(Boolean);
   const folded = normalize(raw).split(" ").filter(Boolean);
   const kept: string[] = [];
-  let minBedrooms: number | undefined;
+  let bedroomsEq: number | undefined;
 
   for (let i = 0; i < tokens.length; i++) {
     const count = Number(folded[i]);
     // A bare "3" is a neighbourhood number as often as a bedroom count, so the noun is required.
     const isBedrooms =
-      Number.isInteger(count) &&
-      count >= 1 &&
-      count <= 20 &&
-      BEDROOM_NOUN.test(folded[i + 1] ?? "");
+      Number.isInteger(count) && count >= 1 && count <= 20 && isBedroomNoun(folded[i + 1] ?? "");
 
     if (isBedrooms) {
-      minBedrooms ??= count;
+      // A typed count is exact ("2 dormitórios" means 2, not 2+) - the advanced "Quartos" filter
+      // already owns the "at least" case.
+      bedroomsEq ??= count;
       i++; // the noun is consumed with the number
       continue;
     }
     kept.push(tokens[i]);
   }
 
-  return { q: kept.join(" "), minBedrooms };
+  return { q: kept.join(" "), bedroomsEq };
 }

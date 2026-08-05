@@ -33,6 +33,10 @@ export async function withRetry<T>(
   return res;
 }
 
+// Opts a cheap, indexed lookup back into retrying a `statement timeout` - see `withRetry`.
+export const withRetryTimeouts = <T>(build: () => PromiseLike<QueryResult<T>>) =>
+  withRetry(build, { retryTimeouts: true });
+
 export function rows<T>(name: string, res: QueryResult<T>): T[] {
   if (res.error) {
     console.error(`[data] query "${name}" failed: ${res.error.message}`);
@@ -54,6 +58,23 @@ export async function fetchAllRows<T>(
     if (batch.length < PAGE) break;
   }
   return out;
+}
+
+// Plain TTL cache for a value with no key, not `cached`: unstable_cache skips the read when it
+// runs nested inside another unstable_cache (see propertyList.ts's dayIdsCache for the keyed
+// version of the same workaround).
+export function ttlCached<T>(load: () => Promise<T>, ttlMs: number): () => Promise<T> {
+  let slot: { at: number; promise: Promise<T> } | null = null;
+  return () => {
+    const now = Date.now();
+    if (slot && now - slot.at <= ttlMs) return slot.promise;
+    const promise = load().catch((e) => {
+      slot = null;
+      throw e;
+    });
+    slot = { at: now, promise };
+    return promise;
+  };
 }
 
 // Wraps a loader in next's request cache. Extra args become part of the cache key.

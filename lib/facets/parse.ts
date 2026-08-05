@@ -40,11 +40,14 @@ function allTokensExplained(f: Facets, extra: (t: string) => boolean): boolean {
     .every((t) => core.has(t) || LOCALITY_WORDS.has(t) || extra(t));
 }
 
-// True when the goal words are the whole query ("comprar, reformar e revender"): nothing for
-// retrieval to match on, so the goal score alone answers it. Type/city are already hard filters.
+// True when the goal words are the whole query ("comprar, reformar e revender") or combined only
+// with hard filters goal_top's own p_filters already applies ("apartamento 2 quartos com boa
+// liquidez"): nothing for retrieval to match on either way, so the goal score alone answers it.
+// Type/city are already hard filters; bathrooms are excluded like isStructural - goal_top has no
+// bathroom filter, so a query naming one would silently drop it.
 export function isPureGoal(f: Facets): boolean {
-  if (!f.goal || f.poi || f.center) return false;
-  return allTokensExplained(f, (t) => GOAL_FILLER.has(t) || isGoalWord(t));
+  if (!f.goal || f.poi || f.center || f.bathroomsMin != null) return false;
+  return allTokensExplained(f, (t) => GOAL_FILLER.has(t) || isGoalWord(t) || isCountToken(t));
 }
 
 // True when every word already became a predicate ("casa 02 quartos"), leaving nothing to rank.
@@ -53,7 +56,7 @@ export function isStructural(f: Facets): boolean {
   if (f.goal || f.poi || f.center || f.bathroomsMin != null) return false;
   const hasFacet =
     !!f.type || !!f.city || f.bedroomsMin != null || f.parkingMin != null || f.priceMax != null;
-  return hasFacet && allTokensExplained(f, (t) => COUNT_WORD.test(t) || /^\d+$/.test(t));
+  return hasFacet && allTokensExplained(f, isCountToken);
 }
 
 const POI_CATEGORY_WORDS = new Set(POI_CATEGORY_KEYWORDS.flatMap(([kws]) => kws));
@@ -141,6 +144,9 @@ export const BEDROOMS_RE = new RegExp(`(\\d+)\\s*\\+?\\s*(?:${BEDROOM_NOUNS})\\b
 const COUNT_WORD = new RegExp(
   `^(?:${BEDROOM_NOUNS}|vaga|vagas|garagem|garagens|banheiro|banheiros)$`,
 );
+
+// A count word ("quartos") or the bare number in front of one ("2").
+const isCountToken = (t: string) => COUNT_WORD.test(t) || /^\d+$/.test(t);
 
 // Keeps only tokens that can plausibly appear in a listing document - see LEXICAL_NOISE.
 function buildLexical(normalized: string, priceMatch: string | null): string {

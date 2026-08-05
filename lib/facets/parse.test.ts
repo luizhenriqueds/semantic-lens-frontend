@@ -140,6 +140,15 @@ describe("isPureGoal", () => {
     expect(pure("apartamento para revender em Campo Grande")).toBe(true);
   });
 
+  it("counts a bedroom/parking count as a hard filter too", () => {
+    expect(pure("apartamento 2 quartos airbnb")).toBe(true);
+    expect(pure("casa 3 quartos 2 vagas para renda de temporada")).toBe(true);
+  });
+
+  it("is false when a bathroom count is present - goal_top can't filter on it", () => {
+    expect(pure("apartamento 2 banheiros airbnb")).toBe(false);
+  });
+
   it("is false when the query also describes the property", () => {
     expect(pure("apartamento amplo em zona comercial")).toBe(false);
     expect(pure("casa com piscina para temporada")).toBe(false);

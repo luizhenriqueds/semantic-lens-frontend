@@ -1,6 +1,6 @@
 import { supabase } from "@/lib/supabase";
 import type { PriceHistoryPoint, Recommendation, ScoreExplain, ScoreTerm } from "@/lib/types";
-import { cached, num, rows, withRetry } from "./client";
+import { cached, num, rows, withRetryTimeouts } from "./client";
 
 const dashless = (s: string) => s.replace(/[--]/g, "-");
 const IMPACTS = ["ajuda", "neutro", "pesa"];
@@ -8,15 +8,13 @@ const IMPACTS = ["ajuda", "neutro", "pesa"];
 // The `components` JSONB is heavy, so it is fetched per-property rather than
 // joined into the bulk properties result.
 async function loadScoreExplain(id: string): Promise<ScoreExplain | null> {
-  const res = await withRetry(
-    () =>
-      supabase
-        .from("property_scores")
-        .select("components")
-        .eq("property_id", id)
-        .eq("score_version", 1)
-        .limit(1),
-    { retryTimeouts: true },
+  const res = await withRetryTimeouts(() =>
+    supabase
+      .from("property_scores")
+      .select("components")
+      .eq("property_id", id)
+      .eq("score_version", 1)
+      .limit(1),
   );
   const inv = rows<any>("property-score-explain", res)[0]?.components?.investment;
   if (!Array.isArray(inv)) return null;
@@ -50,14 +48,12 @@ export const getScoreExplain = cached(loadScoreExplain, "property-score-explain"
 async function loadPropertyDetailText(
   id: string,
 ): Promise<{ description: string | null; visualNote: string | null; lastSeen: string | null }> {
-  const res = await withRetry(
-    () =>
-      supabase
-        .from("properties")
-        .select("canonical_description,visual_note,last_seen")
-        .eq("property_id", id)
-        .limit(1),
-    { retryTimeouts: true },
+  const res = await withRetryTimeouts(() =>
+    supabase
+      .from("properties")
+      .select("canonical_description,visual_note,last_seen")
+      .eq("property_id", id)
+      .limit(1),
   );
   const row = rows<any>("property-detail-text", res)[0];
   return {
@@ -73,19 +69,16 @@ export const getPropertyDetailText = cached(loadPropertyDetailText, "property-de
 // is dated from where the previous ended and `first_seen` opens the series.
 async function loadPriceHistory(id: string): Promise<PriceHistoryPoint[]> {
   const [listed, prop] = await Promise.all([
-    withRetry(
-      () =>
-        supabase
-          .from("listings")
-          .select("appraised_value,sale_value,discount,modality,snapshot_date")
-          .eq("property_id", id)
-          .order("snapshot_date", { ascending: true })
-          .order("id", { ascending: true }),
-      { retryTimeouts: true },
+    withRetryTimeouts(() =>
+      supabase
+        .from("listings")
+        .select("appraised_value,sale_value,discount,modality,snapshot_date")
+        .eq("property_id", id)
+        .order("snapshot_date", { ascending: true })
+        .order("id", { ascending: true }),
     ),
-    withRetry(
-      () => supabase.from("properties").select("first_seen").eq("property_id", id).limit(1),
-      { retryTimeouts: true },
+    withRetryTimeouts(() =>
+      supabase.from("properties").select("first_seen").eq("property_id", id).limit(1),
     ),
   ]);
 
@@ -119,14 +112,12 @@ async function loadPriceHistory(id: string): Promise<PriceHistoryPoint[]> {
 export const getPriceHistory = cached(loadPriceHistory, "price-history");
 
 async function loadRecommendations(id: string): Promise<Recommendation[]> {
-  const res = await withRetry(
-    () =>
-      supabase
-        .from("property_recommendations")
-        .select("kind,rank,similarity,rec_property_id")
-        .eq("property_id", id)
-        .order("rank", { ascending: true }),
-    { retryTimeouts: true },
+  const res = await withRetryTimeouts(() =>
+    supabase
+      .from("property_recommendations")
+      .select("kind,rank,similarity,rec_property_id")
+      .eq("property_id", id)
+      .order("rank", { ascending: true }),
   );
   return rows<any>("property-recommendations", res)
     .filter((r) => r.kind === "similar" || r.kind === "visual")
