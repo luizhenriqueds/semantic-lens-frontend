@@ -46,7 +46,7 @@ export function welcome({ name, url }: { name?: string; url: string }): Email {
           },
           {
             title: "Coleções de oportunidades parecidas",
-            body: "Navegue por “famílias” de imóveis equivalentes e compare lado a lado sem abrir dezenas de editais.",
+            body: "Navegue por coleções de imóveis equivalentes e compare lado a lado sem abrir dezenas de editais.",
           },
           {
             title: "Regiões e o que há por perto",

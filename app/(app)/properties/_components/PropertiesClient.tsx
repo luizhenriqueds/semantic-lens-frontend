@@ -1162,7 +1162,7 @@ export default function PropertiesClient({
           >
             {PROPERTY_SORTS.map((s) => (
               <option key={s.param} value={s.param}>
-                Ordenar: {s.label}
+                {s.param === sortParam(sort) ? `Ordenar: ${s.label}` : s.label}
               </option>
             ))}
           </select>

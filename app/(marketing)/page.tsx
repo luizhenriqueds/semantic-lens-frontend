@@ -145,8 +145,8 @@ export default async function LandingPage() {
         },
         {
           v: countShort(stats.clusters),
-          k: "famílias de imóveis",
-          note: "coleções de imóveis parecidos",
+          k: "coleções de imóveis",
+          note: "por tipo, preço e região",
         },
         ...(stats.discountMedian != null
           ? [
@@ -440,7 +440,7 @@ export default async function LandingPage() {
                       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
                         <path d="m5 13 4 4L19 7" />
                       </svg>
-                      Português coloquial, sem dropdowns nem juridiquês
+                      Linguagem natural, sem dropdowns nem juridiquês
                     </li>
                     <li>
                       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
@@ -628,7 +628,7 @@ export default async function LandingPage() {
                       <i>3</i> avaliação visual
                     </span>
                   </div>
-                  <h3>A cara do imóvel também vira nota</h3>
+                  <h3>A fachada do imóvel também vira nota</h3>
                   <p>
                     A partir da foto do anúncio, a Lavra dá uma nota de 0 a 100 para{" "}
                     <b>fachada, acabamento e estado de conservação</b> - um sinal a mais para
@@ -986,10 +986,9 @@ export default async function LandingPage() {
               <span className="lp-seclabel">a região, medida</span>
               <h3>Você não compra só o imóvel. Compra a região.</h3>
               <p>
-                {stats
-                  ? `A Lavra divide o país em ${countShort(stats.regions)} regiões e mede, em cada uma, a distância real até ${countShort(stats.pois)} pontos de referência em ${stats.poiCategories} categorias`
-                  : "A Lavra divide o país em pequenas regiões e mede, em cada uma, a distância real até centenas de milhares de pontos de referência"}{" "}
-                - de escola e hospital a restaurante, shopping e ponto de ônibus.
+                A Lavra divide o país em pequenas regiões e mede, em cada uma, a distância real até
+                centenas de milhares de pontos de referência - de escola e hospital a restaurante,
+                shopping e ponto de ônibus.
               </p>
               <p>
                 Regiões mais completas puxam a nota para cima. No mapa, quanto mais escura a célula,
@@ -1128,51 +1127,6 @@ export default async function LandingPage() {
               </div>
             </div>
           </div>
-
-          <p className="lp-region-bridge lp-reveal">Na prática, é assim que uma região aparece:</p>
-
-          <div className="lp-sc-region lp-reveal lp-d2">
-            <div className="lp-sc-reghead">
-              <div>
-                <span className="lp-seclabel lp-sc-lbl">Perfil da região</span>
-                <b>Porto Canoa · Serra/ES</b>
-              </div>
-              <div className="lp-sc-chips">
-                <span>Temporada</span>
-                <span>Familiar</span>
-              </div>
-            </div>
-            <div className="lp-sc-reggrid">
-              <div className="lp-sc-regscores">
-                <ScoreBars
-                  items={[
-                    { k: "Moradia familiar", v: 88 },
-                    { k: "Caminhabilidade", v: 88 },
-                    { k: "Conveniência", v: 85 },
-                    { k: "Temporada", v: 83 },
-                  ]}
-                />
-              </div>
-              <div className="lp-sc-pois">
-                {[
-                  { k: "Parque", v: "234 m" },
-                  { k: "Supermercado", v: "299 m" },
-                  { k: "Restaurante", v: "471 m" },
-                  { k: "Shopping", v: "514 m" },
-                  { k: "Universidade", v: "749 m" },
-                  { k: "Hospital", v: "928 m" },
-                ].map((p) => (
-                  <div className="lp-sc-poi" key={p.k}>
-                    <span>{p.k}</span>
-                    <b>{p.v}</b>
-                  </div>
-                ))}
-              </div>
-            </div>
-            <div className="lp-sc-foot">
-              Distância em linha reta até o serviço mais próximo, a partir de dados abertos de mapa.
-            </div>
-          </div>
         </div>
       </section>
 
@@ -1191,9 +1145,8 @@ export default async function LandingPage() {
                 <span className="lp-no">portais de leilão</span>
               </div>
               <p>
-                Calculamos o preço <b>mediano por m²</b> da região (que evita distorções de anúncios
-                fora da curva) e refinamos para o imóvel específico, comparando só anúncios de área
-                e nº de quartos parecidos.
+                Calculamos o preço <b>mediano por m²</b> da região e refinamos para o imóvel
+                específico, comparando só anúncios de área e nº de quartos parecidos.
               </p>
             </div>
             <div className="lp-marketviz lp-reveal lp-d1">
@@ -1237,12 +1190,12 @@ export default async function LandingPage() {
       <section className="lp-band lp-chapter lp-deep">
         <div className="lp-wrap">
           <div className="lp-sechead lp-reveal">
-            <span className="lp-seclabel">famílias de imóveis</span>
-            <h2>Famílias de imóveis, montadas automaticamente</h2>
+            <span className="lp-seclabel">coleções de imóveis</span>
+            <h2>Coleções de imóveis, montadas automaticamente</h2>
             <p>
               A Lavra agrupa imóveis parecidos entre si - tipo, tamanho, faixa de preço e perfil de
               região - e dá um nome a cada coleção. Em vez de filtrar campo por campo, você entra
-              direto na família que combina com o seu plano.
+              direto na coleção que combina com o seu plano.
             </p>
           </div>
           <div className="lp-clusters lp-m-slide">
@@ -1375,7 +1328,7 @@ export default async function LandingPage() {
           </Rail>
 
           <p className="lp-simnote lp-reveal">
-            Repare nos parecidos visualmente: fachadas praticamente idênticas e notas de{" "}
+            Repare nos imóveis parecidos visualmente: fachadas praticamente idênticas e notas de{" "}
             <b>85 a 47</b>. O que separa um do outro é o preço - o de nota 85 sai 59% abaixo da
             avaliação; o de nota 52 só 41%, e custa quase o dobro.
           </p>
@@ -1578,20 +1531,18 @@ export default async function LandingPage() {
               </summary>
               <div className="lp-ans">
                 <p>
-                  Cada imóvel recebe notas de 0 a 100, a partir de quatro blocos de dados: o{" "}
-                  <b>preço</b> (desconto sobre a avaliação da Caixa e preço por m² frente a anúncios
-                  reais do mercado aberto na mesma região), a <b>região</b> (distância real até
-                  escolas, hospitais, supermercados, parques e outras categorias de ponto de
-                  referência), as <b>características do imóvel</b> (tipo, área, quartos, vagas,
-                  situação de ocupação) e a <b>facilidade de revenda</b> daquele tipo naquela
-                  cidade.
+                  Cada imóvel recebe notas de 0 a 100 a partir de quatro blocos de dados:{" "}
+                  <b>preço</b> (desconto sobre a avaliação da Caixa e preço por m² frente ao mercado
+                  aberto na região), <b>região</b> (distância real até escolas, hospitais,
+                  supermercados, parques e outras categorias de referência),{" "}
+                  <b>características do imóvel</b> (tipo, área, quartos, vagas, situação de
+                  ocupação) e <b>facilidade de revenda</b> daquele tipo naquela cidade.
                 </p>
                 <p>
-                  Três coisas valem saber: as notas são <b>comparativas</b> - posicionam o imóvel em
-                  relação aos outros da mesma cidade, é um ranking e não um selo de aprovação;{" "}
-                  <b>não são caixa-preta</b> - toda nota abre a explicação fator a fator, o que
-                  puxou para cima e o que puxou para baixo; e <b>os pesos mudam por tipo</b> -
-                  moradia, terreno e comercial se valorizam de formas diferentes.
+                  As notas são <b>comparativas</b> - um ranking, não um selo de aprovação -,{" "}
+                  <b>não são caixa-preta</b> - toda nota vem com a explicação fator a fator - e{" "}
+                  <b>os pesos mudam por tipo</b>: moradia, terreno e comercial se valorizam de
+                  formas diferentes.
                 </p>
               </div>
             </details>
@@ -1609,8 +1560,7 @@ export default async function LandingPage() {
                   Que o imóvel está à frente da maioria dos concorrentes diretos dele - imóveis do
                   mesmo tipo, na mesma cidade. As notas da Lavra são <b>relativas</b>: servem para
                   ranquear e comparar rapidamente, não para dizer que um negócio é bom em termos
-                  absolutos. Uma nota 87 num mercado caro e uma nota 87 num mercado barato
-                  significam a mesma coisa: “melhor que a maioria por perto”.
+                  absolutos.
                 </p>
               </div>
             </details>
@@ -1625,10 +1575,10 @@ export default async function LandingPage() {
               </summary>
               <div className="lp-ans">
                 <p>
-                  Não, e nunca vai ser. A nota olha preço, região e características a partir de
-                  dados públicos. Ela não lê o edital, não avalia a situação jurídica, não sabe de
-                  dívida de condomínio, de ação judicial nem do custo real de desocupação. Antes de
-                  dar lance, leia o edital e, se possível, consulte um advogado. A decisão continua
+                  Não, e nunca vai ser. A nota olha preço, região e características do imóvel a
+                  partir de dados públicos - ela não lê o edital, não avalia a situação jurídica e
+                  não sabe de dívida de condomínio, ação judicial ou custo de desocupação. Antes de
+                  dar lance, leia o edital e, se possível, consulte um advogado: a decisão continua
                   sendo sua.
                 </p>
               </div>
@@ -1644,11 +1594,10 @@ export default async function LandingPage() {
               </summary>
               <div className="lp-ans">
                 <p>
-                  Não. A Lavra é independente. Os imóveis vêm da base pública de leilões e venda
-                  direta da Caixa Econômica Federal, que a Lavra coleta, organiza e analisa. Não
-                  somos afiliados, patrocinados nem endossados pela Caixa, não intermediamos lances
-                  e não recebemos comissão sobre arremates. O lance é dado sempre no canal oficial
-                  da Caixa.
+                  Não. A Lavra é independente: coletamos, organizamos e analisamos a base pública de
+                  leilões e venda direta da Caixa Econômica Federal. Não somos afiliados,
+                  patrocinados nem endossados pela Caixa, não intermediamos lances nem recebemos
+                  comissão sobre arremates - o lance é sempre dado no canal oficial da Caixa.
                 </p>
               </div>
             </details>
@@ -1663,10 +1612,10 @@ export default async function LandingPage() {
               </summary>
               <div className="lp-ans">
                 <p>
-                  De três fontes, todas públicas ou licenciadas.{" "}
-                  <b>Imóveis, valores de avaliação, lances e datas</b>: base pública de leilões e
-                  venda direta da Caixa. <b>Pontos de referência e distâncias</b>: bases abertas de
-                  mapas. <b>Preço de mercado</b>: anúncios reais de imóveis parecidos em portais do
+                  De três fontes públicas ou licenciadas: <b>imóveis, avaliação, lances e datas</b>{" "}
+                  vêm da base de leilões e venda direta da Caixa;{" "}
+                  <b>pontos de referência e distâncias</b>, de bases abertas de mapas; e{" "}
+                  <b>preço de mercado</b>, de anúncios reais de imóveis parecidos em portais do
                   mercado aberto - portais de leilão ficam de fora de propósito, para a comparação
                   ser sempre com o mercado normal.
                 </p>
@@ -1689,10 +1638,10 @@ export default async function LandingPage() {
                   {POI_ORDER.map((k) => POI_LABEL[k]).join(", ")}.
                 </p>
                 <p>
-                  Para cada imóvel a Lavra calcula a <b>distância real até o mais próximo</b> de
-                  cada categoria, e não apenas quantos existem no bairro. É isso que alimenta a nota
-                  da região e as notas de uso - uma universidade a 700 m pesa no aluguel estudantil,
-                  um parque a 200 m pesa na moradia familiar.
+                  Para cada imóvel, calculamos a <b>distância real até o mais próximo</b> de cada
+                  categoria - não apenas quantos existem no bairro. É isso que alimenta a nota da
+                  região e as notas de uso: uma universidade a 700 m pesa no aluguel estudantil, um
+                  parque a 200 m pesa na moradia familiar.
                 </p>
               </div>
             </details>
@@ -1708,11 +1657,10 @@ export default async function LandingPage() {
               <div className="lp-ans">
                 <p>
                   O desconto sobre a avaliação é só metade da história: ele compara o lance com o
-                  valor que a própria Caixa avaliou. A outra metade é o mercado - a Lavra calcula o
-                  preço <b>mediano</b> por m² de imóveis parecidos anunciados na mesma região (a
-                  mediana evita que um anúncio fora da curva distorça tudo) e refina comparando só
-                  área e número de quartos semelhantes. Quando há poucos anúncios, a estimativa se
-                  apoia numa área maior e a Lavra reduz a confiança daquele número.
+                  valor que a Caixa avaliou. A outra metade é o mercado - calculamos o preço{" "}
+                  <b>mediano</b> por m² de imóveis parecidos anunciados na mesma região e refinamos
+                  comparando só área e número de quartos semelhantes. Quando há poucos anúncios, a
+                  estimativa se apoia numa área maior e reduzimos a confiança daquele número.
                 </p>
               </div>
             </details>
@@ -1728,9 +1676,8 @@ export default async function LandingPage() {
               <div className="lp-ans">
                 <p>
                   Diariamente. Novos imóveis entram, arrematados saem e as notas são recalculadas
-                  para refletir a base ativa daquele dia. Com uma conta, você pode salvar buscas e
-                  receber por e-mail o que apareceu de novo, no ritmo que escolher: diário ou
-                  semanal.
+                  para refletir a base ativa do dia. Com uma conta, você pode salvar buscas e
+                  receber por e-mail as novidades, no ritmo que escolher: diário ou semanal.
                 </p>
               </div>
             </details>
@@ -1747,8 +1694,8 @@ export default async function LandingPage() {
                 <p>
                   Porque a oferta da Caixa muda todo dia. Um imóvel pode ser arrematado, ter o
                   leilão suspenso, mudar de modalidade ou simplesmente sair da lista entre uma
-                  atualização e outra. Quando isso acontece, a Lavra marca o anúncio como inativo em
-                  vez de apagá-lo.
+                  atualização e outra - quando isso acontece, marcamos o anúncio como inativo em vez
+                  de apagá-lo.
                 </p>
               </div>
             </details>
@@ -1781,10 +1728,10 @@ export default async function LandingPage() {
               </summary>
               <div className="lp-ans">
                 <p>
-                  Não. Você descreve o que procura em português comum - “apartamento de 2 quartos
+                  Não. Você descreve o que procura em linguagem natural - “apartamento de 2 quartos
                   até R$ 150 mil no Rio, perto de metrô” - e a Lavra traduz isso em filtros e notas.
                   Para dar o lance, aí sim vale estudar o edital: é lá que estão as regras de
-                  pagamento, as dívidas que acompanham o imóvel e a situação de ocupação.
+                  pagamento, as dívidas do imóvel e a situação de ocupação.
                 </p>
               </div>
             </details>

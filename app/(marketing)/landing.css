@@ -2878,8 +2878,7 @@ footer.lp-foot .lp-fine {
   margin-bottom: 34px;
 }
 .lp-showband .lp-sc-card,
-.lp-showband .lp-sc-side,
-.lp-showband .lp-sc-region {
+.lp-showband .lp-sc-side {
   box-shadow: 0 18px 44px rgba(var(--shadow), 0.09);
 }
 .lp-sc-photo {
@@ -3025,77 +3024,6 @@ footer.lp-foot .lp-fine {
   letter-spacing: 0.12em;
   margin-bottom: 14px;
 }
-.lp-sc-region {
-  margin-top: 22px;
-  background: var(--surface);
-  border: 1px solid var(--line);
-  border-radius: 20px;
-  padding: 24px;
-}
-.lp-sc-reghead {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  margin-bottom: 20px;
-}
-.lp-sc-reghead .lp-sc-lbl {
-  margin-bottom: 5px;
-}
-.lp-sc-reghead b {
-  font-size: 18px;
-  font-weight: 700;
-  letter-spacing: -0.02em;
-}
-.lp-sc-chips {
-  display: flex;
-  gap: 7px;
-}
-.lp-sc-chips span {
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--primary);
-  background: var(--primary-wash);
-  border-radius: 100px;
-  padding: 6px 13px;
-}
-.lp-sc-reggrid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 26px;
-}
-.lp-sc-pois {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 9px;
-  align-content: start;
-}
-.lp-sc-poi {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 8px;
-  background: var(--surface-2);
-  border: 1px solid var(--line-soft);
-  border-radius: 11px;
-  padding: 10px 13px;
-  font-size: 13px;
-}
-.lp-sc-poi span {
-  color: var(--ink-soft);
-}
-.lp-sc-poi b {
-  font-family: var(--font-mono), ui-monospace, monospace;
-  font-size: 12.5px;
-  font-weight: 500;
-  color: var(--primary);
-}
-.lp-sc-foot {
-  margin-top: 18px;
-  font-size: 12.5px;
-  color: var(--ink-faint);
-}
 .lp-sc-cta {
   display: flex;
   flex-wrap: wrap;
@@ -3106,20 +3034,15 @@ footer.lp-foot .lp-fine {
 }
 
 @media (max-width: 900px) {
-  .lp-showcase,
-  .lp-sc-reggrid {
+  .lp-showcase {
     grid-template-columns: 1fr;
   }
   .lp-sc-attrs {
     grid-template-columns: repeat(2, 1fr);
   }
-  .lp-sc-reggrid {
-    gap: 20px;
-  }
   /* Single column across the full wrap turns a card into a poster on a tablet. Phones are
      narrower than the cap, so they are unaffected. */
-  .lp-showcase,
-  .lp-sc-region {
+  .lp-showcase {
     max-width: 620px;
     margin-inline: auto;
   }
@@ -3166,12 +3089,6 @@ footer.lp-foot .lp-fine {
 }
 .lp-hint-more:hover {
   text-decoration: underline;
-}
-
-.lp-region-bridge {
-  margin: 46px 0 18px;
-  font-size: 15px;
-  color: var(--ink-soft);
 }
 
 /* ---------- spot illustrations ----------
