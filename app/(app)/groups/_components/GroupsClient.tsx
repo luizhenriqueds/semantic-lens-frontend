@@ -109,7 +109,7 @@ export default function GroupsClient({
         >
           {SORTS.map((s) => (
             <option key={s.key} value={s.key}>
-              Ordenar: {s.label}
+              {s.key === sort ? `Ordenar: ${s.label}` : s.label}
             </option>
           ))}
         </select>
