@@ -3066,26 +3066,102 @@ select.selectish {
   color: var(--ink-faint);
   margin-bottom: 7px;
 }
-.phist-mod-flow {
+.phist-timeline,
+.phist-timeline-nested {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.phist-timeline-nested {
+  margin-top: 2px;
+}
+.phist-timeline-item {
+  position: relative;
   display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 6px;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 6px 0;
+}
+.phist-timeline-item::before {
+  content: "";
+  position: absolute;
+  left: 4px;
+  top: 0;
+  bottom: 0;
+  width: 1.5px;
+  background: var(--line);
+}
+.phist-timeline-item:first-child::before {
+  top: 13px;
+}
+.phist-timeline-item:last-child::before {
+  bottom: calc(100% - 13px);
+}
+.phist-timeline-dot {
+  position: relative;
+  top: 4px;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--ink-faint);
+  border: 2px solid var(--surface-2);
+  flex-shrink: 0;
+  z-index: 1;
+}
+.phist-timeline-body {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+}
+.phist-timeline-label {
   font-size: 13px;
   font-weight: 600;
   color: var(--ink-soft);
 }
-.phist-mod-step {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
+.phist-timeline-meta {
+  font-size: 11.5px;
+  font-weight: 500;
+  color: var(--ink-faint);
 }
-.phist-mod-step.now {
+.phist-timeline-item.now .phist-timeline-label {
+  color: var(--primary);
+  font-weight: 700;
+}
+.phist-timeline-item.now .phist-timeline-dot {
+  background: var(--primary);
+}
+.phist-timeline-toggle > details {
+  width: 100%;
+}
+.phist-timeline-toggle summary {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  list-style: none;
+}
+.phist-timeline-toggle summary::-webkit-details-marker {
+  display: none;
+}
+.phist-timeline-toggle summary .phist-timeline-dot {
+  background: var(--line);
+  border-color: var(--surface-2);
+}
+.phist-timeline-toggle summary .phist-timeline-label {
   color: var(--primary);
 }
-.phist-mod-step i {
-  font-style: normal;
-  color: var(--ink-faint);
+.phist-timeline-chevron {
+  margin-left: auto;
+  width: 7px;
+  height: 7px;
+  border-right: 1.5px solid var(--ink-faint);
+  border-bottom: 1.5px solid var(--ink-faint);
+  transform: rotate(45deg);
+  transition: transform 0.15s ease;
+}
+.phist-timeline-toggle details[open] .phist-timeline-chevron {
+  transform: rotate(-135deg);
 }
 
 .modeswitch {
@@ -3476,6 +3552,21 @@ select.selectish {
 }
 .propmap {
   height: min(70vh, 620px);
+}
+.propmap-cluster-wrap {
+  background: transparent;
+  border: none;
+}
+.propmap-cluster {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  border: 2px solid var(--surface);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.35);
+  font-weight: 700;
+  font-size: 12px;
 }
 .pm-price {
   font-weight: 700;

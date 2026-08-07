@@ -4,11 +4,29 @@ import type { PriceHistoryPoint } from "@/lib/types";
 const W = 640;
 const H = 200;
 const PAD = { top: 24, right: 16, bottom: 28, left: 16 };
+// Above this many transitions, the middle ones collapse behind a toggle.
+const COLLAPSE_ABOVE = 5;
 
 function fmt(iso: string): string {
   const d = new Date(iso);
   if (isNaN(d.getTime())) return iso;
   return d.toLocaleDateString("pt-BR", { day: "2-digit", month: "short", year: "2-digit" });
+}
+
+type Transition = { modality: string; date: string; saleValue: number };
+
+function TimelineRow({ t, now }: { t: Transition; now?: boolean }) {
+  return (
+    <li className={`phist-timeline-item${now ? " now" : ""}`}>
+      <span className="phist-timeline-dot" aria-hidden="true" />
+      <div className="phist-timeline-body">
+        <span className="phist-timeline-label">{t.modality}</span>
+        <span className="phist-timeline-meta">
+          {fmt(t.date)} · {money(t.saleValue)}
+        </span>
+      </div>
+    </li>
+  );
 }
 
 // Renders the historical listing price for a property that was published more
@@ -62,11 +80,14 @@ export default function PriceHistory({ points }: { points: PriceHistoryPoint[] }
 
   const stroke = stable ? "var(--primary-soft)" : down ? "var(--good)" : "var(--warn)";
 
-  // Distinct modalities in order - the property may have moved between auction formats.
-  const modalities = pts.reduce<string[]>((acc, p) => {
-    if (p.modality && p.modality !== acc[acc.length - 1]) acc.push(p.modality);
+  // Distinct modalities in order, keeping the date/price of the announcement that introduced each.
+  const transitions = pts.reduce<Transition[]>((acc, p) => {
+    if (p.modality && p.modality !== acc[acc.length - 1]?.modality) {
+      acc.push({ modality: p.modality, date: p.date, saleValue: p.saleValue });
+    }
     return acc;
   }, []);
+  const middleTransitions = transitions.slice(1, -1);
 
   return (
     <div className="infoblock">
@@ -150,26 +171,40 @@ export default function PriceHistory({ points }: { points: PriceHistoryPoint[] }
         </text>
       </svg>
 
-      {modalities.length > 1 && (
+      {transitions.length > 1 && (
         <div className="phist-mod">
           <span className="phist-mod-lbl">Mudança de modalidade</span>
-          <div className="phist-mod-flow">
-            {modalities.map((m, i) => (
-              <span
-                key={i}
-                className={`phist-mod-step${i === modalities.length - 1 ? " now" : ""}`}
-              >
-                {i > 0 && <i aria-hidden="true">→</i>}
-                {m}
-              </span>
-            ))}
-          </div>
+          <ol className="phist-timeline">
+            <TimelineRow t={transitions[0]} />
+            {middleTransitions.length > 0 &&
+              (transitions.length > COLLAPSE_ABOVE ? (
+                <li className="phist-timeline-item phist-timeline-toggle">
+                  <details>
+                    <summary>
+                      <span className="phist-timeline-dot" aria-hidden="true" />
+                      <span className="phist-timeline-label">
+                        +{middleTransitions.length} mudanças
+                      </span>
+                      <span className="phist-timeline-chevron" aria-hidden="true" />
+                    </summary>
+                    <ol className="phist-timeline-nested">
+                      {middleTransitions.map((t, i) => (
+                        <TimelineRow key={i} t={t} />
+                      ))}
+                    </ol>
+                  </details>
+                </li>
+              ) : (
+                middleTransitions.map((t, i) => <TimelineRow key={i} t={t} />)
+              ))}
+            <TimelineRow t={transitions[transitions.length - 1]} now />
+          </ol>
         </div>
       )}
 
       <div className="rnote">
         {stable
-          ? modalities.length > 1
+          ? transitions.length > 1
             ? "Este imóvel foi reanunciado pelo mesmo valor, mas em outra modalidade de venda."
             : "Este imóvel já foi anunciado mais de uma vez pelo mesmo valor de venda."
           : down

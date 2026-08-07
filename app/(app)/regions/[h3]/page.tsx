@@ -17,6 +17,7 @@ import {
   getRegion,
   getRegionPois,
 } from "@/lib/data";
+import { centroid, clusterByProximity } from "@/lib/geo";
 import { hasReliableMarket, statsForRegion } from "@/lib/market";
 import { nearbyPois, regionHighlights } from "@/lib/pois";
 import { IconBack, IconPin } from "@/lib/icons";
@@ -36,6 +37,9 @@ function avg(list: Property[], field: keyof Property["scores"]): number | null {
   if (!vals.length) return null;
   return Math.round(vals.reduce((a, b) => a + b, 0) / vals.length);
 }
+
+// Caps concurrent POI lookups per region page; smaller stray clusters are dropped first.
+const MAX_POI_CLUSTERS = 24;
 
 // Dynamic: the app layout reads the auth cookie, so this route can't be static.
 export const dynamic = "force-dynamic";
@@ -74,19 +78,27 @@ export default async function RegionPage({ params }: { params: Promise<{ h3: str
   const market = statsForRegion(marketStats, region).filter(hasReliableMarket);
 
   const geo = here.filter((p) => p.lat != null && p.lon != null);
-  const center =
-    geo.length > 0
-      ? {
-          lat: geo.reduce((s, p) => s + p.lat!, 0) / geo.length,
-          lon: geo.reduce((s, p) => s + p.lon!, 0) / geo.length,
-        }
-      : null;
-  const nearby = center
-    ? nearbyPois(await getPoisNear(center.lat, center.lon, 5000), center.lat, center.lon, {
-        radius: 3000,
-        limit: 80,
-      })
-    : [];
+  const center = geo.length > 0 ? centroid(geo) : null;
+
+  // One POI lookup per ~1km sub-cluster, not one for the whole region - a region-wide
+  // centroid can land far from any actual property and drag in kilometres-away "nearby" POIs.
+  const poiClusters = clusterByProximity(geo)
+    .sort((a, b) => b.length - a.length)
+    .slice(0, MAX_POI_CLUSTERS);
+  const nearbyLists = await Promise.all(
+    poiClusters.map((cluster) => {
+      const c = centroid(cluster);
+      return getPoisNear(c.lat, c.lon, 5000).then((pois) =>
+        nearbyPois(pois, c.lat, c.lon, { radius: 3000, limit: 80 }),
+      );
+    }),
+  );
+  const seenPoiIds = new Set<number>();
+  const nearby = nearbyLists.flat().filter((p) => {
+    if (seenPoiIds.has(p.id)) return false;
+    seenPoiIds.add(p.id);
+    return true;
+  });
 
   return (
     <section className="view">
