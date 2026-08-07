@@ -40,6 +40,22 @@ function priceLine(p: Property): string {
   return `<span class="pm-price">${money(p.saleValue)}</span>${disc}`;
 }
 
+// Log scale so clusters below ~100 aren't all indistinguishably faint.
+const CLUSTER_LIGHT: [number, number, number] = [198, 224, 202];
+const CLUSTER_DARK: [number, number, number] = [24, 82, 43];
+
+function clusterIcon(cluster: L.MarkerCluster): L.DivIcon {
+  const count = cluster.getChildCount();
+  const t = Math.min(Math.log(count + 1) / Math.log(1000), 1);
+  const [r, g, b] = CLUSTER_LIGHT.map((c, i) => Math.round(c + (CLUSTER_DARK[i] - c) * t));
+  const size = 34 + Math.round(t * 20);
+  return L.divIcon({
+    html: `<div class="propmap-cluster" style="width:${size}px;height:${size}px;line-height:${size}px;background:rgb(${r},${g},${b});color:${t > 0.45 ? "#fff" : "var(--primary)"}"><span>${count}</span></div>`,
+    className: "propmap-cluster-wrap",
+    iconSize: L.point(size, size),
+  });
+}
+
 const photoCache = new Map<string, string | null>();
 const photoPending = new Set<string>();
 
@@ -116,6 +132,7 @@ export default function PropertiesMap({ properties }: { properties: Property[] }
       showCoverageOnHover: false,
       maxClusterRadius: 55,
       chunkedLoading: true,
+      iconCreateFunction: clusterIcon,
     }).addTo(map);
     map.on("popupopen", (e) => void resolvePhoto(e.popup));
 

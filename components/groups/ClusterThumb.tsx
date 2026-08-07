@@ -4,6 +4,14 @@ import Image from "next/image";
 import { useState } from "react";
 import { IconCollection } from "@/lib/icons";
 
+// Own re-hosted images can go through next/image's optimizer; hotlinked fallbacks can't
+// (see PropertyPhoto's `unoptimized`).
+const SUPABASE_STORAGE_PREFIX = process.env.NEXT_PUBLIC_SUPABASE_URL
+  ? `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/`
+  : null;
+const isOwnStorage = (src: string) =>
+  SUPABASE_STORAGE_PREFIX != null && src.startsWith(SUPABASE_STORAGE_PREFIX);
+
 // Builds an uncluttered cover for a cluster by combining up to 4 property
 // photos into a mosaic. The layout adapts to how many photos we have so a
 // small group never looks empty and a big group never looks busy.
@@ -29,7 +37,7 @@ export default function ClusterThumb({ images, label }: { images: string[]; labe
             alt={`Imóvel da coleção ${label}`}
             fill
             sizes="(max-width: 700px) 100vw, 340px"
-            unoptimized
+            unoptimized={!isOwnStorage(src)}
             onError={() => setFailed((prev) => new Set(prev).add(src))}
             style={{ objectFit: "cover" }}
           />
