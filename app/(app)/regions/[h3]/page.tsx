@@ -8,7 +8,6 @@ import RegionMapTabs from "@/components/region/RegionMapTabs";
 import SameAddressGroups from "@/components/region/SameAddressGroups";
 import RegionScoreBars from "@/components/region/RegionScoreBars";
 import RegionMarket from "@/components/market/RegionMarket";
-import ExportButton from "@/components/export/ExportButton";
 import UpgradeWall from "@/components/plan/UpgradeWall";
 import { getEntitlements } from "@/lib/entitlements/server";
 import {
@@ -121,7 +120,6 @@ export default async function RegionPage({ params }: { params: Promise<{ h3: str
               Ver {here.length} {here.length > 1 ? "imóveis" : "imóvel"} em leilão aqui
             </Link>
           )}
-          <ExportButton pdf={`/report/region/${region.h3}`} />
         </div>
       </div>
 

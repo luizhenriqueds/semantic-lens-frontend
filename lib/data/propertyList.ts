@@ -541,10 +541,25 @@ const EMPTY_CLUSTER_STATS: ClusterStats = {
   sampleImages: [],
 };
 
+const clusterImageBucket = supabase.storage.from(
+  process.env.SUPABASE_STORAGE_BUCKET ?? "property-images",
+);
+
+// Mirrors pipeline.alerts.email.cards.resolve_image_url: the re-hosted copy outlives delistings.
+export function resolveSampleImageUrl(path: string | null, fallback: string | null): string | null {
+  if (!path) return fallback;
+  if (path.startsWith("http")) return path;
+  return clusterImageBucket.getPublicUrl(path).data.publicUrl;
+}
+
 async function loadClusterStats(): Promise<Record<number, ClusterStats>> {
   const data = await rpcJson("cluster_stats_all", {});
   const out: Record<number, ClusterStats> = {};
   for (const r of (data ?? []) as any[]) {
+    const rawImages = (r.sample_images ?? []) as {
+      image_path: string | null;
+      image_url: string | null;
+    }[];
     out[Number(r.cluster_id)] = {
       count: Number(r.count ?? 0),
       medianPrice: num(r.median_price),
@@ -555,7 +570,9 @@ async function loadClusterStats(): Promise<Record<number, ClusterStats>> {
       avgAge: num(r.avg_age),
       topCity: r.top_city ? titleCase(String(r.top_city)) : null,
       cityCount: Number(r.city_count ?? 0),
-      sampleImages: (r.sample_images ?? []) as string[],
+      sampleImages: rawImages
+        .map((s) => resolveSampleImageUrl(s.image_path, s.image_url))
+        .filter((u): u is string => Boolean(u)),
     };
   }
   return out;
