@@ -26,7 +26,7 @@ function Histogram({
   edges: number[];
   tickFmt?: (v: number) => string;
   unit?: string;
-  /** Omitted for a dimension the list cannot be filtered on: the bars then carry no drill-down. */
+  /** Omitted for a dimension the list cannot be filtered on. */
   dim?: RangeDim;
   onPick?: (dim: RangeDim, from: number, to: number) => void;
 }) {

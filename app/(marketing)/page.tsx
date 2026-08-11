@@ -17,7 +17,7 @@ import ShowcaseGallery from "@/app/(marketing)/_components/ShowcaseGallery";
 import { SIMILAR, SIMILAR_SEED } from "@/app/(marketing)/_data/similar";
 import { getLandingStats } from "@/lib/data/landingStats";
 import { PLANS, TRIAL_DAYS, type Role } from "@/lib/entitlements";
-import { PAYMENT_NOTE, PLAN_INCLUDES } from "@/lib/entitlements/copy";
+import { canTrial, PAYMENT_NOTE, PLAN_INCLUDES } from "@/lib/entitlements/copy";
 import { getEntitlements } from "@/lib/entitlements/server";
 import { countShort, money } from "@/lib/format";
 import { POI_LABEL, POI_ORDER } from "@/lib/pois";
@@ -47,6 +47,7 @@ type StatTile = { v: string; suffix?: string; k: string; note: string; accent?: 
 const PLAN_CARDS: {
   role: Role;
   trial: string;
+  trialOver?: string;
   subnote?: string;
   popular?: boolean;
   features: { lead?: string; text: string }[];
@@ -66,6 +67,7 @@ const PLAN_CARDS: {
   {
     role: "investor",
     trial: `${TRIAL_DAYS} dias grátis, sem cartão`,
+    trialOver: "Para quem acompanha leilões de perto",
     popular: true,
     subnote: `Tudo do ${PLANS.basic.label}, mais:`,
     features: [
@@ -1433,6 +1435,8 @@ export default async function LandingPage() {
             {PLAN_CARDS.map((card, i) => {
               const plan = PLANS[card.role];
               const includes = PLAN_INCLUDES[card.role];
+              // `canTrial` is false for anon, who is exactly who the offer is for.
+              const offerTrial = ent.role === "anon" || canTrial(plan, ent.trial);
               return (
                 <div
                   className={`lp-plan lp-reveal${card.popular ? " lp-pop" : ""}${i ? ` lp-d${i}` : ""}`}
@@ -1446,7 +1450,9 @@ export default async function LandingPage() {
                     <span className="lp-amt">{money(plan.price)}</span>
                     <span className="lp-per">/mês</span>
                   </div>
-                  <div className="lp-trial">{card.trial}</div>
+                  <div className="lp-trial">
+                    {!offerTrial && card.trialOver ? card.trialOver : card.trial}
+                  </div>
                   {card.subnote && <div className="lp-subnote">{card.subnote}</div>}
                   <ul>
                     {card.features.map((f) => (

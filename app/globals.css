@@ -20,19 +20,20 @@
   --heat: 47, 93, 58;
   --shadow: 43, 46, 34;
 }
-/* tema escuro — "Breu" */
+/* tema escuro — "Breu": pitch, not a dark green. */
 [data-theme="dark"] {
-  --bg: #1a211e;
-  --surface: #232b28;
-  --surface-2: #293330;
-  --ink: #e6eae6;
-  --ink-soft: #a4ada6;
-  --ink-faint: #737c75;
+  --bg: #17181a;
+  --surface: #222325;
+  --surface-2: #2a2b2d;
+  --ink: #e8e9ea;
+  --ink-soft: #a8abac;
+  --ink-faint: #74777a;
   --primary: #8fb07e;
   --primary-soft: #6e9160;
-  --primary-wash: #2a352d;
-  --line: #343e39;
-  --line-soft: #2e3833;
+  /* The one tinted neutral: it backs green text and chips. */
+  --primary-wash: #26302a;
+  --line: #363739;
+  --line-soft: #2f3032;
   --good: #8fb07e;
   --warn: #e0954f;
   --bad: #e08a7d;
@@ -5969,7 +5970,6 @@ select.selectish {
   stroke: var(--primary);
 }
 
-/* Quieter than .rowpoichip on purpose: a payment option is context, not a match to highlight. */
 .paybadges {
   display: flex;
   gap: 6px;
@@ -6210,15 +6210,12 @@ select.selectish {
   --good: #2f5d3a;
   --warn: #c1631a;
   position: relative;
-  /* The card is the counterpart of the form opposite it, so it takes the middle band and centres
-     on the pane exactly as the form does. Centring the head and the card together as one stack
-     instead pushed the card down by half the head. `min-content` on the first row keeps the head
-     from being squeezed when the viewport is too short for that, falling back to a plain stack. */
+  /* Centres the card on the pane like the form opposite; as one stack it sat half a head lower.
+     `min-content` keeps the head from being squeezed on a short viewport. */
   display: grid;
   grid-template-rows: minmax(min-content, 1fr) auto 1fr;
   justify-items: start;
-  /* The balancing row would otherwise count towards the pane's intrinsic height and scroll the
-     whole page; capped, it only ever spends space the viewport already has. */
+  /* Uncapped, the balancing row adds to the pane's intrinsic height and scrolls the page. */
   max-height: 100dvh;
   padding: 56px 64px;
   overflow: hidden;

@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { criteriaToParams, parsePropertySearchParams, sortParam } from "./propertiesUrl";
+import {
+  criteriaToParams,
+  DEFAULT_SORT,
+  parsePropertySearchParams,
+  sortParam,
+} from "./propertiesUrl";
 import { toRpcFilters } from "./contract";
 import type { AlertCriteriaSet, PropertyFilters } from "@/lib/types";
 
@@ -120,12 +125,12 @@ describe("sort", () => {
   it("falls back to the default for anything else", () => {
     expect(parse("sort=nonsense").sort).toBe("desconto");
     expect(parse("").sort).toBe("desconto");
+    expect(sortParam(parse("").sort)).toBe(DEFAULT_SORT);
   });
 });
 
 describe("criteria round-trip", () => {
-  // The alert edit flow compares the criteria rebuilt from this URL against the stored ones, so
-  // any key that does not survive the trip would read as an edit the user never made.
+  // A key that does not survive the trip reads as an edit the user never made.
   it("rebuilds the same criteria the alert stored", () => {
     const stored: AlertCriteriaSet = {
       q: "casa com quintal",

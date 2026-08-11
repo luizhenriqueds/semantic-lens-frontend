@@ -1,7 +1,6 @@
 import type { Property } from "@/lib/types";
 
-/** How the arrematante can pay. The row is kept even when the edital offers neither: cards sit
- *  side by side in a grid, and dropping it on some of them pulls every line below out of step. */
+/** Kept even when empty: cards are grid siblings, and dropping the row misaligns the rest. */
 export default function PayBadges({ p }: { p: Property }) {
   const labels = [
     p.acceptsFinancing ? "Financiamento" : null,

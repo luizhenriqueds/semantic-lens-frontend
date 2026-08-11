@@ -42,9 +42,7 @@ export async function listAlerts(): Promise<Alert[]> {
   return user ? data.listAlerts(supabase) : [];
 }
 
-/** The alert pages are server-rendered and `staleTimes.dynamic` keeps their payload warm for two
- *  minutes, so a write has to drop them from the router cache - otherwise the next navigation
- *  lands on the counts and rules from before the edit. */
+/** `staleTimes.dynamic` keeps the alert pages warm, so a write has to drop them from the cache. */
 function revalidateAlerts(id?: string) {
   revalidatePath("/alerts");
   if (id) revalidatePath(`/alerts/${id}`);

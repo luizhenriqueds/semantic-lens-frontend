@@ -30,8 +30,7 @@ export default async function SearchResults({
   let limited = false;
   let fallbackNote: string | null = null;
 
-  // The browse branch is inside the try as well: a failed read that escaped here would replace
-  // the whole view, search box included, with the error boundary.
+  // Browse is inside the try too: an escaped read replaces the view, search box included.
   try {
     if (query) {
       const result = await hybridSearch(query);

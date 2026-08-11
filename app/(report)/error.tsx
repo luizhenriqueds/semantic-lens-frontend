@@ -3,8 +3,7 @@
 import * as Sentry from "@sentry/nextjs";
 import { useEffect } from "react";
 
-/** Nested inside ReportLayout, like ReportDenied. Without it a failed read here falls through to
- *  global-error, which replaces the whole document with an unstyled page. */
+/** Without it a failed read falls through to global-error, which blanks the whole document. */
 export default function ReportError({
   error,
   reset,

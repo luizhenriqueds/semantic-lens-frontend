@@ -24,8 +24,7 @@ export default async function PropertiesReportPage({
   // Same parse and same plan gate as /properties, so the button can forward the query verbatim.
   const { filters } = gateFilters(parsePropertySearchParams(await searchParams).filters, ent);
   const rpc = toRpcFilters(filters);
-  // Nothing under (report) has an error boundary, and a missing pair of charts is not worth
-  // failing a print job for: the report drops them exactly as the analysis view does.
+  // A missing pair of charts is not worth failing a print job for.
   const [data, proximity] = await Promise.all([
     getAnalysis(filters),
     getProximity(filters).catch(() => undefined),

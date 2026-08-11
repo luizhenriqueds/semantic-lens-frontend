@@ -5,7 +5,6 @@ import { useEffect } from "react";
 import EmptyState from "@/components/ui/EmptyState";
 import { IconBuilding } from "@/lib/icons";
 
-// Nested inside AppLayout, so the sidebar and topbar survive and only the page body is replaced.
 export default function AppError({
   error,
   reset,

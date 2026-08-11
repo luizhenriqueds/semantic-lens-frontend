@@ -222,8 +222,7 @@
     background: var(--bg);
   }
 }
-/* The full row needs ~1050px of content, so it has to fold well before the phone breakpoint:
-   between the two the links wrapped to a second line and the CTA stretched with them. */
+/* The full row needs ~1050px of content, so it folds well before the phone breakpoint. */
 @media (max-width: 1100px) {
   .lp-navtoggle {
     display: grid;

@@ -68,8 +68,7 @@ export async function exportPropertiesCsv(
   const rpc = toRpcFilters(filters);
   if (!hasAnyCriteria(rpc)) return { ok: false, reason: "filter" };
 
-  // The read throws on a failed query rather than resolving empty, so "nothing matched" and
-  // "the query never ran" stay distinguishable in the toast.
+  // The read throws rather than resolving empty, so "nothing matched" stays distinguishable.
   const page = await getPropertiesForExport(filters, sort, EXPORT_ROW_CAP).catch(() => null);
   if (!page) return { ok: false, reason: "error" };
   return build(page.items, page.total, "imoveis", await criteriaLabel(rpc), gate.origin);

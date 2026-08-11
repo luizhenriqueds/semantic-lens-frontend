@@ -272,11 +272,10 @@ export default function PropertiesClient({
   /** Gate whose filters the URL asked for and the plan does not include, so they were dropped. */
   lockedFilter?: Feature;
   h3Label?: string;
-  /** Set when the page was opened from an alert's "Ajustar filtros", so the edit can be saved back. */
+  /** Set when opened from an alert's "Ajustar filtros", so the edit can be saved back onto it. */
   alertId?: string;
   list?: { items: Property[]; total: number };
   analysis?: AnalysisData;
-  /** Absent when its counts failed; the two charts it feeds are then simply not drawn. */
   proximity?: ProximityData;
   calendar?: {
     counts: Record<string, number>;
@@ -454,7 +453,6 @@ export default function PropertiesClient({
   const reportParams = useMemo(() => criteriaToParams(alertCriteria), [alertCriteria]);
 
   const canAlert = hasAnyCriteria(alertCriteria);
-  // Named after the collection when there is one: the criteria only carry its id.
   const alertLabel = useMemo(
     () => describeCriteria(alertCriteria, criteriaLabels(clusters)),
     [alertCriteria, clusters],
@@ -468,7 +466,6 @@ export default function PropertiesClient({
     toast(res.ok ? "Alerta criado" : alertError(res.reason));
   };
 
-  // Arrived from an alert's "Ajustar filtros": the edit belongs to that alert, not to a new one.
   const editing = alertId ? alerts.find((a) => a.id === alertId) : undefined;
   const alertChanged = editing != null && !sameCriteria(editing.criteria ?? null, alertCriteria);
 

@@ -85,8 +85,7 @@
 .report .angrid.an3 {
   grid-template-columns: 1fr 1fr 1fr;
 }
-/* The scatter is dropped in print, so its row is left holding one card - without this it prints
-   as a half-empty band, and the wasted height pushes the tail of the report onto another sheet. */
+/* Print drops the scatter, leaving its row one card: full width, or it prints as a half-empty band. */
 .report .angrid > .ancard:only-child {
   grid-column: 1 / -1;
 }
@@ -147,13 +146,11 @@
 .report .histo-bars {
   height: 70px;
 }
-/* Three chart rows only clear a sheet together; a few px per row is what keeps the last one from
-   being pushed whole, which would leave a blank band and spill the tail onto another page. */
+/* A few px per row is what keeps the third chart row on the same sheet as the first two. */
 .report .rankbars {
   gap: 7px;
 }
-/* On paper the name is the information and the bar is decoration, so the label takes the room -
-   at the screen's split, three columns of these truncate almost every city and neighbourhood. */
+/* On paper the name is the information: the screen's split truncates almost every city. */
 .report .rankrow {
   grid-template-columns: minmax(0, 1.7fr) 1fr auto;
   gap: 7px;
@@ -306,9 +303,7 @@
   color: var(--ink-soft);
 }
 
-/* No `size`: every grid here is fluid, so pinning A4 buys nothing and costs a clipped right edge
-   whenever the sheet in the print dialog is not A4 - the page is laid out at A4's width and then
-   painted on the narrower paper. Letting the sheet drive keeps Letter and A5 intact too. */
+/* No `size`: the grids are fluid, and pinning A4 clips the right edge on a Letter or A5 sheet. */
 @page {
   margin: 14mm 12mm 16mm;
 }

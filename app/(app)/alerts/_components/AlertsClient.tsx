@@ -93,7 +93,6 @@ export default function AlertsClient({
     null,
   );
 
-  // Criteria carry a collection's id, not its name; alerts saved from /properties need both.
   const labels = criteriaLabels(clusters);
 
   const ufs = options.ufs;

@@ -12,8 +12,7 @@ export const ANALYSIS_EDGES: Record<"price" | "discount" | "area" | "invest", nu
 // four histograms. Until then each bucket below is one more count on the same RPC, so keep them few.
 export const CENTER_EDGES = [0, 2000, 5000, 10_000, 15_000, Infinity];
 
-/** Stands in for "any known distance" when counting the open last bucket. A property farther than
- *  this from its own city centre is a bad coordinate, not a suburb. */
+/** Stands in for "any known distance": farther than this is a bad coordinate, not a suburb. */
 export const CENTER_MAX_M = 100_000;
 
 export const PROXIMITY_POIS = [

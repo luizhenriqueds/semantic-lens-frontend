@@ -16,18 +16,18 @@
 
 ## Features
 
-- [ ] Dashboard, Properties, Property detail, Analysis, Calendar
-- [ ] Maps (Leaflet + clustering, mobile), Regions, Clusters/Groups
-- [ ] Market, Recommendations (respects per-plan limit), Nearby places
-- [ ] Portfolio/favorites, Settings, marketing landing + API waitlist
-- [ ] Empty, loading and error states on each
+- [x] Dashboard, Properties, Property detail, Analysis, Calendar
+- [x] Maps (Leaflet + clustering, mobile), Regions, Clusters/Groups
+- [x] Market, Recommendations (respects per-plan limit), Nearby places
+- [x] Portfolio/favorites, Settings, marketing landing + API waitlist
+- [x] Empty, loading and error states on each
 
 ## Search
 
-- [ ] Full-text, exact match, goal-driven, distance/POI
-- [ ] Hybrid on and `DEEPINFRA_API_KEY` valid in prod
-- [ ] Zero-result, typo, very long and injection-ish queries don't 500
-- [ ] DeepInfra failure degrades gracefully
+- [x] Full-text, exact match, goal-driven, distance/POI
+- [x] Hybrid on and `DEEPINFRA_API_KEY` valid in prod
+- [x] Zero-result, typo, very long and injection-ish queries don't 500
+- [x] DeepInfra failure degrades gracefully
 
 ## Data
 
@@ -38,9 +38,9 @@
 
 ## Auth
 
-- [ ] Sign-up → confirm → welcome; login errors; magic link; password reset
-- [ ] `?redirect=` round-trip and open-redirect rejection
-- [ ] Session refresh, sign-out, forged `sb-` cookie treated as anon
+- [x] Sign-up → confirm → welcome; login errors; magic link; password reset
+- [x] `?redirect=` round-trip and open-redirect rejection
+- [x] Session refresh, sign-out, forged `sb-` cookie treated as anon
 
 ## Plans & billing
 
@@ -62,19 +62,19 @@
 
 ## Export & reports
 
-- [ ] CSV for properties, filters and alert matches; 1000-row cap message; accents survive in Excel
-- [ ] `/report/*` gated on `export`, requires a session, print CSS clean
+- [x] CSV for properties, filters and alert matches; 1000-row cap message; accents survive in Excel
+- [x] `/report/*` gated on `export`, requires a session, print CSS clean
 
 ## Filters
 
-- [ ] Facets round-trip through the URL; shared links restore state
-- [ ] Advanced filters gated; reset returns a clean corpus
+- [x] Facets round-trip through the URL; shared links restore state
+- [x] Advanced filters gated; reset returns a clean corpus
 
 ## Rate limit
 
-- [ ] `RATELIMIT_ENABLED=true`, `RATELIMIT_SHADOW` unset, Upstash Redis set, fails open on timeout
-- [ ] All 5 buckets exercised; per-tier budgets correct; 429 is HTML for pages, JSON for `/api/*`
-- [ ] `<Link>` prefetch doesn't burn the page budget on a normal session
+- [x] `RATELIMIT_ENABLED=true`, `RATELIMIT_SHADOW` unset, Upstash Redis set, fails open on timeout
+- [x] All 5 buckets exercised; per-tier budgets correct; 429 is HTML for pages, JSON for `/api/*`
+- [x] `<Link>` prefetch doesn't burn the page budget on a normal session
 
 ## Semantic cache
 
@@ -97,21 +97,21 @@
 
 ## Observability
 
-- [ ] Sentry DSN set, source maps upload, release/env tags, PII scrubbing
+- [x] Sentry DSN set, source maps upload, release/env tags, PII scrubbing
 - [ ] Deliberate client + server error both land; `[billing]` logs searchable
 - [ ] Uptime check on the domain and the webhook; someone on call
 
 ## Performance
 
-- [ ] TTFB and cold start on dashboard/search against prod data volume
-- [ ] Lighthouse on landing, dashboard, property detail; Leaflet lazily loaded
-- [ ] 120s `unstable_cache` acceptable for auction dates; Supabase load under concurrent search
+- [x] TTFB and cold start on dashboard/search against prod data volume
+- [x] Lighthouse on landing, dashboard, property detail; Leaflet lazily loaded
+- [x] 120s `unstable_cache` acceptable for auction dates; Supabase load under concurrent search
 
 ## UX & devices
 
-- [ ] Mobile/tablet/desktop; Safari, Chrome, Firefox, iOS, Android
-- [ ] Dark mode on every page and report; no theme flash
-- [ ] Keyboard nav, focus, contrast, alt text, form labels
+- [x] Mobile/tablet/desktop; Safari, Chrome, Firefox, iOS, Android
+- [x] Dark mode on every page and report; no theme flash
+- [x] Keyboard nav, focus, contrast, alt text, form labels
 
 ## Launch
 

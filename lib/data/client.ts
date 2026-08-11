@@ -20,8 +20,7 @@ const TIMEOUT = /timeout|canceling/i;
 const MAX_RETRIES = 3;
 
 // Retries transient failures, but not a `statement timeout` - retrying an already-heavy query only
-// piles more load onto a struggling DB. `timeoutRetries` opts back in, and caps how far: the full
-// budget for a cheap indexed lookup, one attempt for a read that cannot tell empty from failed.
+// piles more load onto a struggling DB. `timeoutRetries` opts back in, and caps how far.
 export async function withRetry<T>(
   build: () => PromiseLike<QueryResult<T>>,
   { timeoutRetries = 0 }: { timeoutRetries?: number } = {},

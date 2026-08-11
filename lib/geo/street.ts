@@ -24,8 +24,7 @@ export function streetOf(rawAddress: string | null | undefined): string | null {
 
 const CEP = /\bcep:?\s*\d{5}-?\d{3}/i;
 
-/** Every address in the base ends "- CEP: nnnnn-nnn, CIDADE - ESTADO", and the city is already
- *  on its own line wherever this renders, so the tail is dropped. */
+/** Every address ends "- CEP: nnnnn-nnn, CIDADE - ESTADO"; the city already has its own line. */
 export function addressLine(rawAddress: string | null | undefined): string | null {
   if (!rawAddress) return null;
   const cased = titleCase(rawAddress).replace(/\bCep\b/g, "CEP");

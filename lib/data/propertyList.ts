@@ -37,12 +37,12 @@ import {
 
 const MAP_POINT_LIMIT = 4000;
 
-// Scoring is the last step of a batch run, so a row with no investment score is still being
-// processed and the rest of its data may be incomplete. Applied to raw RPC rows; the MV reads
-// below get the same gate from `scoredMv`.
-const isScored = (r: any): boolean => r.investment != null;
+// No score means the batch is still processing the row. A zero sale value is an ingestion error,
+// and it reads as a 100% discount - straight to the top of the default sort.
+const isListableRow = (r: any): boolean => r.investment != null && Number(r.sale_value) > 0;
 
-export const isListable = (p: Property): boolean => !p.inactive && p.scores.investment != null;
+export const isListable = (p: Property): boolean =>
+  !p.inactive && p.scores.investment != null && (p.saleValue ?? 0) > 0;
 
 // `cols as "*"` only shapes the type: PostgREST cannot parse a non-literal column list, and
 // every caller reads the rows through `rows<any>`. Making it generic instead stalls tsc.
@@ -53,8 +53,9 @@ const scoredMv = (cols = "*") =>
     .not("investment", "is", null);
 
 // The portfolio and the detail page still show inactive listings, so only the reads that build
-// lists gate on `is_listable` as well.
-export const listableMv = (cols = "*") => scoredMv(cols).eq("is_listable", true);
+// lists gate on `is_listable` and on a real price.
+export const listableMv = (cols = "*") =>
+  scoredMv(cols).eq("is_listable", true).gt("sale_value", 0);
 
 function mapListRow(r: any): Property {
   return {
@@ -114,10 +115,7 @@ function mapListRow(r: any): Property {
 }
 
 // `required: true` for a read whose caller cannot tell an empty result from a failed one: left
-// tolerant, a timeout resolves to `null`, the loader maps that to an empty result, and `cached`
-// memoises the emptiness for the whole revalidate window. Throwing keeps the failure out of
-// unstable_cache. Those reads also get one timeout retry - the rest stay on the default of none,
-// since they have a real empty state and re-running a heavy query would only add load.
+// tolerant, a timeout resolves to null and `cached` memoises the emptiness for the whole window.
 async function rpcJson(
   name: string,
   args: Record<string, unknown>,
@@ -157,7 +155,7 @@ async function loadPropertiesPage(
   );
   return {
     total: data?.total ?? 0,
-    items: ((data?.items ?? []) as any[]).filter(isScored).map(mapListRow),
+    items: ((data?.items ?? []) as any[]).filter(isListableRow).map(mapListRow),
   };
 }
 
@@ -241,7 +239,7 @@ async function loadGoalTop(goal: string, filtersJson: string, limit: number): Pr
     p_filters: JSON.parse(filtersJson),
     p_limit: limit,
   });
-  return ((data ?? []) as any[]).filter(isScored).map(mapListRow);
+  return ((data ?? []) as any[]).filter(isListableRow).map(mapListRow);
 }
 
 const cachedGoalTop = cached(loadGoalTop, "goal-top", SEARCH_REVALIDATE);
@@ -411,7 +409,7 @@ async function loadMapPoints(filtersJson: string): Promise<{ points: MapPoint[];
     p_filters: JSON.parse(filtersJson),
     p_limit: MAP_POINT_LIMIT,
   });
-  const points = ((data?.points ?? []) as any[]).filter(isScored).map((r): MapPoint => ({
+  const points = ((data?.points ?? []) as any[]).filter(isListableRow).map((r): MapPoint => ({
     id: r.property_id,
     lat: Number(r.lat),
     lon: Number(r.lon),
@@ -539,10 +537,8 @@ export function getAnalysis(filters: PropertyFilters): Promise<AnalysisData> {
   return cachedAnalysis(JSON.stringify(toRpcFilters(filters)));
 }
 
-// `loadCount`, not `countProperties`: unstable_cache skips its read when nested inside another
-// one, and the whole result is cached here as a single entry instead of one per bucket. The counts
-// are `required` so a timeout throws - tolerant, a failed bucket would draw as a truthful-looking
-// zero bar.
+// `loadCount`, not `countProperties`: unstable_cache skips a read nested inside another.
+// `required` so a failed bucket cannot draw as a truthful-looking zero.
 async function loadProximity(filtersJson: string): Promise<ProximityData> {
   const filters = JSON.parse(filtersJson) as RpcFilters;
   const radius = filters.poi_radius_m ?? POI_RADIUS_M;
@@ -553,15 +549,13 @@ async function loadProximity(filtersJson: string): Promise<ProximityData> {
     Promise.all(
       CENTER_EDGES.slice(1).map((e) => count({ max_center_m: Math.min(e, CENTER_MAX_M) })),
     ),
-    // The category being counted replaces any nearby-places filter already in play; ANDing a
-    // category with itself would just restate the filter instead of describing the set.
+    // The counted category replaces any nearby-places filter in play.
     Promise.all(PROXIMITY_POIS.map((cat) => count({ poi_cats: [cat], poi_radius_m: radius }))),
   ]);
 
   return {
     // The counts are cumulative, so each bucket is the step between two of them.
     center: cumulative.map((n, i) => Math.max(0, n - (cumulative[i - 1] ?? 0))),
-    // Ranked, like the other Rank charts: what matters is which places are common.
     pois: PROXIMITY_POIS.map((cat, i) => ({
       label: POI_LABEL[cat] ?? cat,
       value: poiCounts[i],
