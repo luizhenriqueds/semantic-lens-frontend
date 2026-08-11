@@ -3,7 +3,7 @@ import ReportDenied from "@/app/(report)/_components/ReportDenied";
 import ReportShell from "@/app/(report)/_components/ReportShell";
 import AnalysisReportBody from "./_components/AnalysisReportBody";
 import { describeCriteria, hasAnyCriteria } from "@/lib/alerts";
-import { getAnalysis } from "@/lib/data";
+import { getAnalysis, getProximity } from "@/lib/data";
 import { getEntitlements } from "@/lib/entitlements/server";
 import { toRpcFilters } from "@/lib/filters/contract";
 import { gateFilters } from "@/lib/filters/gate";
@@ -24,7 +24,12 @@ export default async function PropertiesReportPage({
   // Same parse and same plan gate as /properties, so the button can forward the query verbatim.
   const { filters } = gateFilters(parsePropertySearchParams(await searchParams).filters, ent);
   const rpc = toRpcFilters(filters);
-  const data = await getAnalysis(filters);
+  // Nothing under (report) has an error boundary, and a missing pair of charts is not worth
+  // failing a print job for: the report drops them exactly as the analysis view does.
+  const [data, proximity] = await Promise.all([
+    getAnalysis(filters),
+    getProximity(filters).catch(() => undefined),
+  ]);
 
   return (
     <ReportShell
@@ -37,7 +42,7 @@ export default async function PropertiesReportPage({
       generatedAt={new Date()}
     >
       <section className="report-section">
-        <AnalysisReportBody data={data} />
+        <AnalysisReportBody data={data} proximity={proximity} />
       </section>
 
       <AutoPrint />

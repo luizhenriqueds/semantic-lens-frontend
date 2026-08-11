@@ -7,7 +7,7 @@ import PlanCta from "@/components/plan/PlanCta";
 import { usePlan } from "@/components/plan/PlanProvider";
 import ConfirmDialog from "@/components/ui/ConfirmDialog";
 import { useToast } from "@/components/ui/Toaster";
-import { FEATURE_COPY, PLAN_INCLUDES } from "@/lib/entitlements/copy";
+import { FEATURE_COPY, PAYMENT_NOTE, PLAN_INCLUDES } from "@/lib/entitlements/copy";
 import { PLANS, SELLABLE_PLANS, TRIAL_DAYS, TRIAL_ROLE } from "@/lib/entitlements";
 import { fmtDay, money } from "@/lib/format";
 import type { Subscription } from "@/lib/data/billing";
@@ -149,6 +149,7 @@ export default function PlansPanel({ subscription }: { subscription: Subscriptio
             );
           })}
         </div>
+        <p className="dr-note">{PAYMENT_NOTE}</p>
       </div>
     </>
   );

@@ -17,7 +17,7 @@ import ShowcaseGallery from "@/app/(marketing)/_components/ShowcaseGallery";
 import { SIMILAR, SIMILAR_SEED } from "@/app/(marketing)/_data/similar";
 import { getLandingStats } from "@/lib/data/landingStats";
 import { PLANS, TRIAL_DAYS, type Role } from "@/lib/entitlements";
-import { PLAN_INCLUDES } from "@/lib/entitlements/copy";
+import { PAYMENT_NOTE, PLAN_INCLUDES } from "@/lib/entitlements/copy";
 import { getEntitlements } from "@/lib/entitlements/server";
 import { countShort, money } from "@/lib/format";
 import { POI_LABEL, POI_ORDER } from "@/lib/pois";
@@ -1507,7 +1507,7 @@ export default async function LandingPage() {
           </div>
 
           <p className="lp-plans-note">
-            Sem fidelidade - cancele quando quiser. O plano {PLANS.basic.label} não expira.
+            {PAYMENT_NOTE} Sem fidelidade. O plano {PLANS.basic.label} não expira.
           </p>
         </div>
       </section>

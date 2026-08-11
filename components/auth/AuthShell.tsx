@@ -21,20 +21,22 @@ export default function AuthShell({ children }: { children: React.ReactNode }) {
           <rect width="100%" height="100%" fill="url(#au-hx)" />
         </svg>
 
-        <span className="au-brand">
-          <LavraLogo size={30} />
-          <span>
-            lavra<i>.</i>
+        <div className="au-demo-head">
+          <span className="au-brand">
+            <LavraLogo size={30} />
+            <span>
+              lavra<i>.</i>
+            </span>
           </span>
-        </span>
 
-        <div className="au-tagline">
-          <h2>
-            Encontre o arremate certo <em>antes de todo mundo</em>.
-          </h2>
-          <p>
-            Descreva o que procura e a busca ranqueia os imóveis em leilão que combinam com você.
-          </p>
+          <div className="au-tagline">
+            <h2>
+              Encontre o arremate certo <em>antes de todo mundo</em>.
+            </h2>
+            <p>
+              Descreva o que procura e a busca ranqueia os imóveis em leilão que combinam com você.
+            </p>
+          </div>
         </div>
 
         <AuthDemo />

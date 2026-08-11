@@ -45,6 +45,9 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
     sort: HIGHLIGHTS.sort,
     pageSize: HIGHLIGHTS.pageSize,
   });
+  // Not awaited until the Promise.all below; the no-op handler only keeps that window from
+  // raising an unhandled rejection.
+  highlights.catch(() => {});
 
   const [{ supabase, user }, ent] = await Promise.all([getUser(), getEntitlements()]);
   const seed = daySeed(user?.id ?? null);
@@ -58,9 +61,13 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
   // The hero is the LCP element: a priority image inside a Suspense boundary cannot be
   // preloaded from the initial HTML, so this one pool is awaited rather than streamed.
   const open = stillOpen(pool.items, now);
-  const hero = pickHero(open, seed);
+  // A cached pool outlives its auctions; dropping the hero for the rest of that window is worse
+  // than showing one that just closed, and HeroPick omits the countdown once it has passed.
+  const visible = open.length ? open : pool.items;
+
+  const hero = pickHero(visible, seed);
   const featured = byInvestment(
-    seededPick(open, 6, "highlights", seed, {
+    seededPick(visible, 6, "highlights", seed, {
       exclude: hero ? new Set([hero.id]) : undefined,
     }),
   );

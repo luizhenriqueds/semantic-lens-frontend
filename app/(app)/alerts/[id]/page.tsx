@@ -2,8 +2,8 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import AlertMatches from "./_components/AlertMatches";
 import EmptyState from "@/components/ui/EmptyState";
-import { criteriaChips, describeCriteria, isAnyCriteria } from "@/lib/alerts";
-import { getMatchedPage } from "@/lib/data";
+import { criteriaChips, criteriaLabels, describeCriteria, isAnyCriteria } from "@/lib/alerts";
+import { getClusters, getMatchedPage } from "@/lib/data";
 import { getAlert } from "@/lib/data/alerts";
 import { criteriaToParams, parsePropertySort } from "@/lib/filters/propertiesUrl";
 import { IconBell, IconPencil, IconSearch, IconSliders } from "@/lib/icons";
@@ -27,10 +27,17 @@ export default async function AlertPage({
 
   const criteria = alert.criteria;
   const listable = criteria && !isAnyCriteria(criteria) ? criteria : null;
-  const list = listable ? await getMatchedPage(listable, sort, page) : null;
+  const [list, clusters] = await Promise.all([
+    listable ? getMatchedPage(listable, sort, page) : null,
+    criteria ? getClusters() : [],
+  ]);
 
-  const chips = criteria ? criteriaChips(criteria) : [];
-  const adjustHref = listable ? `/properties?${criteriaToParams(listable)}` : null;
+  const labels = criteriaLabels(clusters);
+  const chips = criteria ? criteriaChips(criteria, labels) : [];
+  // Carries the alert id so the list can offer to save the changed filters back onto it.
+  const adjustHref = listable
+    ? `/properties?${criteriaToParams(listable)}&alert=${alert.id}`
+    : null;
 
   let content;
   if (!criteria) {
@@ -91,7 +98,7 @@ export default async function AlertPage({
             <h1>{alert.name}</h1>
             <p>
               {alert.freq}
-              {criteria ? ` · ${describeCriteria(criteria)}` : ""}
+              {criteria ? ` · ${describeCriteria(criteria, labels)}` : ""}
               {alert.on ? "" : " · pausado"}
             </p>
           </div>

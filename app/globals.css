@@ -4943,6 +4943,8 @@ select.selectish {
   display: flex;
   align-items: flex-end;
   gap: 4px;
+  /* Here rather than inline on the element, so the print stylesheet can shorten it. */
+  height: 130px;
 }
 .histo-bar {
   flex: 1;
@@ -5967,6 +5969,27 @@ select.selectish {
   stroke: var(--primary);
 }
 
+/* Quieter than .rowpoichip on purpose: a payment option is context, not a match to highlight. */
+.paybadges {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-top: 9px;
+  /* Reserved even when empty, so a card offering neither still lines up with its neighbours. */
+  min-height: 22px;
+}
+.paybadge {
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--ink-soft);
+  background: var(--surface-2);
+  border: 1px solid var(--line-soft);
+  border-radius: 100px;
+  /* 16 + 2*2 padding + 2*1 border = the 22px the empty row reserves, to the pixel. */
+  line-height: 16px;
+  padding: 2px 9px;
+}
+
 @media (max-width: 640px) {
   .filterdrawer {
     top: auto;
@@ -6165,7 +6188,9 @@ select.selectish {
 /* Auth pages (sign in / sign up) */
 .au-split {
   display: grid;
-  grid-template-columns: 1fr minmax(520px, 720px);
+  /* clamp, not minmax: grid maximises a minmax track to its growth limit before the 1fr gets
+     anything, which left the demo pane a third of the width on a narrow desktop. */
+  grid-template-columns: 1fr clamp(520px, 45%, 720px);
   min-height: 100vh;
   min-height: 100dvh;
 }
@@ -6185,14 +6210,27 @@ select.selectish {
   --good: #2f5d3a;
   --warn: #c1631a;
   position: relative;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  gap: 26px;
+  /* The card is the counterpart of the form opposite it, so it takes the middle band and centres
+     on the pane exactly as the form does. Centring the head and the card together as one stack
+     instead pushed the card down by half the head. `min-content` on the first row keeps the head
+     from being squeezed when the viewport is too short for that, falling back to a plain stack. */
+  display: grid;
+  grid-template-rows: minmax(min-content, 1fr) auto 1fr;
+  justify-items: start;
+  /* The balancing row would otherwise count towards the pane's intrinsic height and scroll the
+     whole page; capped, it only ever spends space the viewport already has. */
+  max-height: 100dvh;
   padding: 56px 64px;
   overflow: hidden;
   background: var(--bg);
   color: var(--ink);
+}
+.au-demo-head {
+  align-self: end;
+  display: flex;
+  flex-direction: column;
+  gap: 26px;
+  padding-bottom: 26px;
 }
 .au-hexbg {
   position: absolute;
@@ -6599,6 +6637,11 @@ select.selectish {
   border-color: var(--primary-soft);
   background: var(--primary-wash);
   color: var(--primary);
+}
+@media (max-width: 1120px) {
+  .au-demo-pane {
+    padding: 44px 40px;
+  }
 }
 @media (max-width: 940px) {
   .au-split {

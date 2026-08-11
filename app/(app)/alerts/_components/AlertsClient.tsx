@@ -17,6 +17,7 @@ import { useToast } from "@/components/ui/Toaster";
 import {
   alertError,
   criteriaChips,
+  criteriaLabels,
   describeCriteria,
   hasAnyCriteria,
   isAnyCriteria,
@@ -29,6 +30,7 @@ import { IconArrow, IconBell, IconPencil, IconPlus, IconSliders, IconTrash } fro
 import type {
   AlertCriteria,
   AlertCriteriaSet,
+  Cluster,
   FilterOptions,
   ResolvedAlertQuery,
   Scores,
@@ -61,7 +63,13 @@ const precoLabel = (n: number) => (n >= 1_000_000 ? "R$ 1 mi" : `R$ ${n / 1000} 
 type Mode = "filtros" | "descricao";
 type DescCount = { count: number; capped: boolean };
 
-export default function AlertsClient({ options }: { options: FilterOptions }) {
+export default function AlertsClient({
+  options,
+  clusters,
+}: {
+  options: FilterOptions;
+  clusters: Cluster[];
+}) {
   const { alerts, add, toggle, update, remove } = useAlerts();
   const { require, showQuotaUpsell, limit } = usePlan();
   const toast = useToast();
@@ -84,6 +92,9 @@ export default function AlertsClient({ options }: { options: FilterOptions }) {
   const [resolved, setResolved] = useState<{ query: string; result: ResolvedAlertQuery } | null>(
     null,
   );
+
+  // Criteria carry a collection's id, not its name; alerts saved from /properties need both.
+  const labels = criteriaLabels(clusters);
 
   const ufs = options.ufs;
   const cidades = useMemo(
@@ -227,7 +238,7 @@ export default function AlertsClient({ options }: { options: FilterOptions }) {
     const c = a.criteria && !isAnyCriteria(a.criteria) ? a.criteria : null;
     if (c) {
       setMode("filtros");
-      setNome(a.name === describeCriteria(c) ? "" : a.name);
+      setNome(a.name === describeCriteria(c, labels) ? "" : a.name);
       setScoreKey(c.score_key ?? "");
       setMinScore(c.score_min != null ? String(c.score_min) : "");
       setUf(c.uf ?? "");
@@ -256,7 +267,7 @@ export default function AlertsClient({ options }: { options: FilterOptions }) {
       criteria = result.criteria;
       dropped = result.dropped;
     }
-    const name = mode === "descricao" ? phrase : phrase || describeCriteria(draft);
+    const name = mode === "descricao" ? phrase : phrase || describeCriteria(draft, labels);
     if (editingId) {
       if (!(await update(editingId, { name, freq, criteria }))) {
         toast("Você já tem um alerta com esse nome");
@@ -478,7 +489,7 @@ export default function AlertsClient({ options }: { options: FilterOptions }) {
                     <>
                       <b>{draftCount}</b>{" "}
                       {draftCount === 1 ? "imóvel corresponde" : "imóveis correspondem"} hoje
-                      <span className="apreview-sum"> · {describeCriteria(draft)}</span>
+                      <span className="apreview-sum"> · {describeCriteria(draft, labels)}</span>
                     </>
                   )
                 ) : (
@@ -544,7 +555,7 @@ export default function AlertsClient({ options }: { options: FilterOptions }) {
                       <span className="apreview-sum"> · sem {resolvedFor.dropped.join(" e ")}</span>
                     )}
                     <div className="achips" style={{ marginTop: 8 }}>
-                      {criteriaChips(resolvedFor.criteria).map((c) => (
+                      {criteriaChips(resolvedFor.criteria, labels).map((c) => (
                         <span className="achip" key={c}>
                           {c}
                         </span>
@@ -565,7 +576,7 @@ export default function AlertsClient({ options }: { options: FilterOptions }) {
           const counting =
             (isDesc && desc === undefined) || (!!a.criteria && filterCounts[a.id] === undefined);
           const count = a.criteria ? (filterCounts[a.id] ?? null) : (desc?.count ?? null);
-          const chips = a.criteria ? criteriaChips(a.criteria) : [];
+          const chips = a.criteria ? criteriaChips(a.criteria, labels) : [];
           return (
             <div className="alertrow" key={a.id}>
               <div className="ai">

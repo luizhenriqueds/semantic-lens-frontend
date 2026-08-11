@@ -30,8 +30,10 @@ export default async function SearchResults({
   let limited = false;
   let fallbackNote: string | null = null;
 
-  if (query) {
-    try {
+  // The browse branch is inside the try as well: a failed read that escaped here would replace
+  // the whole view, search box included, with the error boundary.
+  try {
+    if (query) {
       const result = await hybridSearch(query);
       // Proximity and pure-goal branches already read the rows to rank them.
       const found = result.items ?? (await getPropertiesByIds(result.hits.map((h) => h.id)));
@@ -39,13 +41,13 @@ export default async function SearchResults({
       items = result.hits.map((h) => byId.get(h.id)).filter((p): p is Property => p != null);
       items = spreadByLocality(items);
       if (result.fallback && items.length) fallbackNote = result.fallbackNote;
-    } catch (err) {
-      limited = isRateLimitError(err);
-      failed = true;
+    } else {
+      const browse = await getPropertiesPage({ sort: "desconto", pageSize: BROWSE_LIMIT });
+      items = browse.items;
     }
-  } else {
-    const browse = await getPropertiesPage({ sort: "desconto", pageSize: BROWSE_LIMIT });
-    items = browse.items;
+  } catch (err) {
+    limited = isRateLimitError(err);
+    failed = true;
   }
 
   const ordered = sortProperties(items, sort);
@@ -70,7 +72,13 @@ export default async function SearchResults({
       {failed ? (
         <EmptyState
           icon={<IconSearch />}
-          title={limited ? RATE_LIMIT_TITLE : "Busca indisponível no momento"}
+          title={
+            limited
+              ? RATE_LIMIT_TITLE
+              : query
+                ? "Busca indisponível no momento"
+                : "Imóveis indisponíveis no momento"
+          }
         >
           {limited
             ? RATE_LIMIT_SEARCH

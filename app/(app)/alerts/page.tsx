@@ -1,8 +1,8 @@
 import AlertsClient from "./_components/AlertsClient";
-import { getFilterOptions } from "@/lib/data";
+import { getClusters, getFilterOptions } from "@/lib/data";
 
 export default async function AlertsPage() {
-  const options = await getFilterOptions();
+  const [options, clusters] = await Promise.all([getFilterOptions(), getClusters()]);
   return (
     <section className="view">
       <div className="pagehead">
@@ -12,7 +12,7 @@ export default async function AlertsPage() {
           imóvel que combina. Ative ou desative quando quiser.
         </p>
       </div>
-      <AlertsClient options={options} />
+      <AlertsClient options={options} clusters={clusters} />
     </section>
   );
 }

@@ -21,6 +21,18 @@ describe("describeCriteria", () => {
     expect(describeCriteria({ poi_ids: [1, 2] })).toBe("Perto dos locais selecionados (2,0 km)");
   });
 
+  it("names the collection an alert was saved from", () => {
+    const labels = { clusters: { 12: "Compactos para renda" } };
+    expect(describeCriteria({ cluster_id: 12 }, labels)).toBe("Compactos para renda");
+    expect(describeCriteria({ cluster_id: 12, type: "Apartamento" }, labels)).toBe(
+      "Apartamento · Compactos para renda",
+    );
+  });
+
+  it("still describes a collection when its name was not loaded", () => {
+    expect(describeCriteria({ cluster_id: 12 })).toBe("Coleção");
+  });
+
   it("joins the branches of an OR", () => {
     expect(describeCriteria({ any: [{ type: "Casa" }, { type: "Apartamento" }] })).toBe(
       "Casa ou Apartamento",
@@ -38,6 +50,13 @@ describe("criteriaChips", () => {
 
   it("defaults the radius when the criteria leave it out", () => {
     expect(criteriaChips({ poi_cats: ["university"] })).toEqual(["Universidade · até 2,0 km"]);
+  });
+
+  it("chips a collection by name", () => {
+    expect(criteriaChips({ cluster_id: 12 }, { clusters: { 12: "Compactos para renda" } })).toEqual(
+      ["Compactos para renda"],
+    );
+    expect(criteriaChips({ cluster_id: 12 })).toEqual(["Coleção"]);
   });
 
   it("keeps each branch of an OR whole", () => {

@@ -18,6 +18,7 @@ const mono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000"),
   title: "Lavra - Leilões inteligentes",
   description:
     "A primeira busca semântica e geográfica de leilões de imóveis do Brasil. Descreva o que procura e compare milhares de editais.",

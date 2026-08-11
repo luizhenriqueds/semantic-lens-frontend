@@ -14,6 +14,7 @@ export {
   getMapPoints,
   getFilterOptions,
   getAnalysis,
+  getProximity,
   getAuctionCalendar,
   getClusterStatsAll,
   clusterStatsFor,
