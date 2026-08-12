@@ -18,13 +18,20 @@ import AuctionCalendar from "./AuctionCalendar";
 import PropertiesAnalysis from "./PropertiesAnalysis";
 import { useToast } from "@/components/ui/Toaster";
 import { fmtDist, moneyShort, SCORE_LABEL } from "@/lib/format";
-import { alertError, describeCriteria, hasAnyCriteria, useAlerts } from "@/lib/alerts";
+import {
+  alertError,
+  criteriaLabels,
+  describeCriteria,
+  hasAnyCriteria,
+  sameCriteria,
+  useAlerts,
+} from "@/lib/alerts";
 import { mapPointToProperty } from "@/lib/mapPoints";
 import { rangeLabel, type RangeDim } from "@/lib/facets/range";
 import { toRpcFilters } from "@/lib/filters/contract";
 import { requiredPlan, VIEW_FEATURE } from "@/lib/entitlements";
 import type { Feature } from "@/lib/entitlements";
-import type { AnalysisData } from "@/lib/facets/analysis";
+import type { AnalysisData, ProximityData } from "@/lib/facets/analysis";
 import type {
   AlertCriteriaSet,
   Cluster,
@@ -247,8 +254,10 @@ export default function PropertiesClient({
   lockedView,
   lockedFilter,
   h3Label,
+  alertId,
   list,
   analysis,
+  proximity,
   calendar,
   map,
 }: {
@@ -263,8 +272,11 @@ export default function PropertiesClient({
   /** Gate whose filters the URL asked for and the plan does not include, so they were dropped. */
   lockedFilter?: Feature;
   h3Label?: string;
+  /** Set when opened from an alert's "Ajustar filtros", so the edit can be saved back onto it. */
+  alertId?: string;
   list?: { items: Property[]; total: number };
   analysis?: AnalysisData;
+  proximity?: ProximityData;
   calendar?: {
     counts: Record<string, number>;
     day: string | null;
@@ -385,7 +397,7 @@ export default function PropertiesClient({
     });
   };
 
-  const { alerts, add: addAlert } = useAlerts();
+  const { alerts, add: addAlert, update } = useAlerts();
   const toast = useToast();
 
   const ufs = filterOptions.ufs;
@@ -441,7 +453,10 @@ export default function PropertiesClient({
   const reportParams = useMemo(() => criteriaToParams(alertCriteria), [alertCriteria]);
 
   const canAlert = hasAnyCriteria(alertCriteria);
-  const alertLabel = useMemo(() => describeCriteria(alertCriteria), [alertCriteria]);
+  const alertLabel = useMemo(
+    () => describeCriteria(alertCriteria, criteriaLabels(clusters)),
+    [alertCriteria, clusters],
+  );
   const alertExists =
     canAlert && alerts.some((a) => a.name.trim().toLowerCase() === alertLabel.trim().toLowerCase());
 
@@ -449,6 +464,23 @@ export default function PropertiesClient({
     if (!canAlert || !require("savedSearches")) return;
     const res = await addAlert(alertLabel, "Aviso diário", alertCriteria);
     toast(res.ok ? "Alerta criado" : alertError(res.reason));
+  };
+
+  const editing = alertId ? alerts.find((a) => a.id === alertId) : undefined;
+  const alertChanged = editing != null && !sameCriteria(editing.criteria ?? null, alertCriteria);
+
+  const saveAlert = async () => {
+    if (!editing || !canAlert || !require("savedSearches")) return;
+    // A name the user typed is theirs to keep; one derived from the old filters has to follow them.
+    const labels = criteriaLabels(clusters);
+    const wasDerived = editing.criteria
+      ? editing.name === describeCriteria(editing.criteria, labels)
+      : false;
+    const ok = await update(editing.id, {
+      criteria: alertCriteria,
+      ...(wasDerived && { name: alertLabel }),
+    });
+    toast(ok ? "Alerta atualizado" : "Você já tem um alerta com esse nome");
   };
 
   const goTo = (p: number) => {
@@ -638,9 +670,19 @@ export default function PropertiesClient({
               : "Lista de imóveis em leilão que estamos acompanhando. Clique em um imóvel para ver os detalhes."}
           </p>
         </div>
+        {canAlert && alertChanged && (
+          <button type="button" className="btn solid" style={{ flexShrink: 0 }} onClick={saveAlert}>
+            <IconBell width={16} height={16} strokeWidth={1.8} /> Salvar filtros no alerta
+          </button>
+        )}
         {canAlert &&
-          (alertExists ? (
-            <Link className="btn ghost" href="/alerts" style={{ flexShrink: 0 }}>
+          !alertChanged &&
+          (editing || alertExists ? (
+            <Link
+              className="btn ghost"
+              href={editing ? `/alerts/${editing.id}` : "/alerts"}
+              style={{ flexShrink: 0 }}
+            >
               <IconBell width={16} height={16} strokeWidth={1.8} /> Editar alerta
               <IconArrow width={15} height={15} strokeWidth={1.8} />
             </Link>
@@ -1200,7 +1242,9 @@ export default function PropertiesClient({
               </EmptyState>
             )
           ) : view === "analysis" ? (
-            analysis && <PropertiesAnalysis data={analysis} onPickRange={pickRange} />
+            analysis && (
+              <PropertiesAnalysis data={analysis} proximity={proximity} onPickRange={pickRange} />
+            )
           ) : view === "calendar" ? (
             calendar && (
               <AuctionCalendar

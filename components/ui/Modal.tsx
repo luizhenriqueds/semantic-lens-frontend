@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { IconClose } from "@/lib/icons";
 
@@ -19,8 +19,13 @@ export default function Modal({
   children: React.ReactNode;
 }) {
   const dialogRef = useRef<HTMLDivElement>(null);
+  // Opened from a URL flag (?checkout=, ?trial=1) these render on the server first, where
+  // `document` does not exist.
+  const [portal, setPortal] = useState<HTMLElement | null>(null);
+  useEffect(() => setPortal(document.body), []);
 
   useEffect(() => {
+    if (!portal) return;
     const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
     document.addEventListener("keydown", onKey);
     document.body.style.overflow = "hidden";
@@ -32,7 +37,9 @@ export default function Modal({
       document.body.style.overflow = "";
       opener?.focus();
     };
-  }, [onClose]);
+  }, [onClose, portal]);
+
+  if (!portal) return null;
 
   // Portalled: otherwise an ancestor's scoped CSS or transform could leak into or clip the dialog.
   return createPortal(
@@ -52,6 +59,6 @@ export default function Modal({
         {children}
       </div>
     </div>,
-    document.body,
+    portal,
   );
 }

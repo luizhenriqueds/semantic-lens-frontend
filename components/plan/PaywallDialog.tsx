@@ -6,6 +6,7 @@ import Modal from "@/components/ui/Modal";
 import PlanPitchList from "@/components/plan/PlanPitchList";
 import { money } from "@/lib/format";
 import { TRIAL_DAYS, TRIAL_ROLE } from "@/lib/entitlements";
+import { PAYMENT_NOTE } from "@/lib/entitlements/copy";
 import type { Plan, Trial } from "@/lib/entitlements";
 
 const ERROR_COPY: Record<CheckoutFailure, string> = {
@@ -57,7 +58,7 @@ export default function PaywallDialog({
         <p className="pw-note pw-err">{error}</p>
       ) : (
         <p className="pw-note">
-          Pagamento no cartão, processado pela AbacatePay. Cancele quando quiser.
+          {PAYMENT_NOTE}
           {plan.role === TRIAL_ROLE && trial.eligible
             ? ` Ou teste ${TRIAL_DAYS} dias grátis, sem cartão.`
             : ""}

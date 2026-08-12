@@ -30,7 +30,7 @@ describe("withRetry", () => {
 
   it("retries a statement timeout when the caller opts in", async () => {
     const build = failThenSucceed(TIMEOUT_ERROR, 2);
-    const promise = withRetry(build, { retryTimeouts: true });
+    const promise = withRetry(build, { timeoutRetries: 3 });
     await vi.runAllTimersAsync();
     const result = await promise;
     expect(build).toHaveBeenCalledTimes(2);
@@ -44,6 +44,30 @@ describe("withRetry", () => {
     const result = await promise;
     expect(build).toHaveBeenCalledTimes(2);
     expect(result.error).toBeNull();
+  });
+
+  it("caps timeout retries at timeoutRetries", async () => {
+    const build = vi.fn(async (): Promise<QueryResult<unknown>> => ({
+      data: null,
+      error: TIMEOUT_ERROR,
+    }));
+    const promise = withRetry(build, { timeoutRetries: 1 });
+    await vi.runAllTimersAsync();
+    const result = await promise;
+    expect(build).toHaveBeenCalledTimes(2);
+    expect(result.error).toEqual(TIMEOUT_ERROR);
+  });
+
+  it("keeps the full budget for non-timeout failures when timeoutRetries is capped", async () => {
+    const build = vi.fn(async (): Promise<QueryResult<unknown>> => ({
+      data: null,
+      error: CONN_ERROR,
+    }));
+    const promise = withRetry(build, { timeoutRetries: 1 });
+    await vi.runAllTimersAsync();
+    const result = await promise;
+    expect(build).toHaveBeenCalledTimes(4);
+    expect(result.error).toEqual(CONN_ERROR);
   });
 
   it("gives up after 3 retries", async () => {

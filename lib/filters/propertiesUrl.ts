@@ -36,8 +36,11 @@ export const DEFAULT_SORT: SortParam = "discount";
 const BY_PARAM = new Map(PROPERTY_SORTS.map((s) => [s.param as string, s]));
 const BY_LEGACY = new Map(PROPERTY_SORTS.map((s) => [s.sort as string, s]));
 
+// Derived, so the URL default and the parsed default cannot drift apart.
+const FALLBACK_SORT = BY_PARAM.get(DEFAULT_SORT)!.sort;
+
 export const parsePropertySort = (v: string | undefined): PropertySort =>
-  (BY_PARAM.get(v ?? "") ?? BY_LEGACY.get(v ?? ""))?.sort ?? "desconto";
+  (BY_PARAM.get(v ?? "") ?? BY_LEGACY.get(v ?? ""))?.sort ?? FALLBACK_SORT;
 
 export const sortParam = (sort: PropertySort): SortParam =>
   PROPERTY_SORTS.find((s) => s.sort === sort)?.param ?? DEFAULT_SORT;

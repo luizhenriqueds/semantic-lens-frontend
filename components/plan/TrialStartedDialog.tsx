@@ -90,9 +90,15 @@ export default function TrialStartedDialog() {
 
       {/* No "agora não": the trial is already running, so there is nothing left to decline. */}
       <div className="mrow">
-        <Link className="btn solid" href="/dashboard" onClick={clear}>
-          Ir para o painel
-        </Link>
+        {pathname === "/dashboard" ? (
+          <button className="btn solid" type="button" onClick={clear}>
+            Começar a explorar
+          </button>
+        ) : (
+          <Link className="btn solid" href="/dashboard" onClick={clear}>
+            Ir para o painel
+          </Link>
+        )}
       </div>
     </Modal>
   );

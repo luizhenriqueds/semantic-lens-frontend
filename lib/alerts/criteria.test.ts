@@ -1,5 +1,33 @@
 import { describe, expect, it } from "vitest";
-import { fromLegacyCriteria, isLegacyCriteria, sanitizeCriteria } from "./criteria";
+import { fromLegacyCriteria, isLegacyCriteria, sameCriteria, sanitizeCriteria } from "./criteria";
+
+describe("sameCriteria", () => {
+  it("ignores key order, so a set rebuilt from the URL matches the stored one", () => {
+    expect(sameCriteria({ city: "Bauru", type: "Casa" }, { type: "Casa", city: "Bauru" })).toBe(
+      true,
+    );
+  });
+
+  it("sees a changed, added or removed filter", () => {
+    expect(sameCriteria({ city: "Bauru" }, { city: "Marilia" })).toBe(false);
+    expect(sameCriteria({ city: "Bauru" }, { city: "Bauru", min_bedrooms: 2 })).toBe(false);
+    expect(sameCriteria({ city: "Bauru", min_bedrooms: 2 }, { city: "Bauru" })).toBe(false);
+  });
+
+  it("treats a missing set as different from any real one", () => {
+    expect(sameCriteria(null, { city: "Bauru" })).toBe(false);
+    expect(sameCriteria(undefined, null)).toBe(true);
+  });
+
+  it("compares OR branches by their contents", () => {
+    expect(sameCriteria({ any: [{ type: "Casa" }] }, { any: [{ type: "Apartamento" }] })).toBe(
+      false,
+    );
+    expect(
+      sameCriteria({ any: [{ type: "Casa", uf: "SP" }] }, { any: [{ uf: "SP", type: "Casa" }] }),
+    ).toBe(true);
+  });
+});
 
 describe("sanitizeCriteria", () => {
   it("drops keys outside the contract, which would make the pipeline skip the alert", () => {

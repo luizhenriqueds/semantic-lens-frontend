@@ -31,6 +31,7 @@ import {
   SCORE_GENERAL_EXPLAIN,
   showDiscount,
 } from "@/lib/format";
+import { addressLine } from "@/lib/geo";
 
 // Dynamic: the app layout reads the auth cookie, so this route can't be static.
 export const dynamic = "force-dynamic";
@@ -64,6 +65,7 @@ export default async function PropertyPage({ params }: { params: Promise<{ id: s
           {p.occupancyStatus ? ` · ${p.occupancyStatus}` : ""}
         </div>
         <h1>{heading}</h1>
+        {p.rawAddress && <div className="loc">{addressLine(p.rawAddress)}</div>}
         <div className="loc">
           {p.city}/{p.uf}
           {p.centerProximity != null && ` · a ${fmtDist(p.centerProximity)} do centro`}

@@ -8,7 +8,31 @@ export const ANALYSIS_EDGES: Record<"price" | "discount" | "area" | "invest", nu
   invest: [0, 30, 40, 50, 60, 70, 80, 90, Infinity],
 };
 
+// TODO(backend): fold both into `property_analysis`, which already scans these rows for the other
+// four histograms. Until then each bucket below is one more count on the same RPC, so keep them few.
+export const CENTER_EDGES = [0, 2000, 5000, 10_000, 15_000, Infinity];
+
+/** Stands in for "any known distance": farther than this is a bad coordinate, not a suburb. */
+export const CENTER_MAX_M = 100_000;
+
+export const PROXIMITY_POIS = [
+  "school",
+  "supermarket",
+  "bus_station",
+  "pharmacy",
+  "hospital",
+  "park",
+] as const;
+
 export type RankRow = { label: string; value: number };
+
+export type ProximityData = {
+  /** One count per `CENTER_EDGES` bucket. */
+  center: number[];
+  pois: RankRow[];
+  /** Whatever radius the counts actually used, so the caption cannot drift from the data. */
+  poiRadiusM: number;
+};
 
 export type AnalysisData = {
   count: number;

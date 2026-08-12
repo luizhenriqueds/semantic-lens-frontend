@@ -3,8 +3,13 @@
 import Link from "next/link";
 import EmptyState from "@/components/ui/EmptyState";
 import { fmtBucket, fmtValue, rangeHref, type RangeDim } from "@/lib/facets/range";
-import { ANALYSIS_EDGES, type AnalysisData } from "@/lib/facets/analysis";
-import { money, moneyShort, SCORE_LABEL } from "@/lib/format";
+import {
+  ANALYSIS_EDGES,
+  CENTER_EDGES,
+  type AnalysisData,
+  type ProximityData,
+} from "@/lib/facets/analysis";
+import { fmtDist, money, moneyShort, SCORE_LABEL } from "@/lib/format";
 import { moneyM2 } from "@/lib/market";
 import { IconBuilding } from "@/lib/icons";
 
@@ -21,26 +26,32 @@ function Histogram({
   edges: number[];
   tickFmt?: (v: number) => string;
   unit?: string;
-  dim: RangeDim;
-  onPick: (dim: RangeDim, from: number, to: number) => void;
+  /** Omitted for a dimension the list cannot be filtered on. */
+  dim?: RangeDim;
+  onPick?: (dim: RangeDim, from: number, to: number) => void;
 }) {
   const bars = counts.map((c, i) => ({ c, from: edges[i], to: edges[i + 1] ?? Infinity }));
   const max = Math.max(...counts, 1);
-  const H = 130;
-  const tick = (v: number) => (tickFmt ? tickFmt(v) : fmtValue(dim, v));
+  const tick = tickFmt ?? (dim ? (v: number) => fmtValue(dim, v) : String);
+  const bucket = (from: number, to: number) =>
+    dim
+      ? fmtBucket(dim, from, to)
+      : to === Infinity
+        ? `${tick(from)} ou mais`
+        : `${tick(from)} - ${tick(to)}`;
 
   return (
     <div className="histo">
-      <div className="histo-bars" style={{ height: H }}>
+      <div className="histo-bars">
         {bars.map((b, i) => {
-          const title = `${fmtBucket(dim, b.from, b.to)}: ${b.c} ${unit}`;
+          const title = `${bucket(b.from, b.to)}: ${b.c} ${unit}`;
           const bar = (
             <>
               <span className="hb-count">{b.c || ""}</span>
               <i style={{ height: `${(b.c / max) * 100}%` }} />
             </>
           );
-          return b.c ? (
+          return b.c && dim && onPick ? (
             <Link
               key={i}
               className="histo-bar link"
@@ -152,11 +163,13 @@ function Rank({
 
 export default function PropertiesAnalysis({
   data,
+  proximity,
   onPickRange,
   /** The scatter reads a point only on hover, so the printable report drops it. */
   hideScatter,
 }: {
   data: AnalysisData;
+  proximity?: ProximityData;
   onPickRange: (dim: RangeDim, from: number, to: number) => void;
   hideScatter?: boolean;
 }) {
@@ -256,6 +269,25 @@ export default function PropertiesAnalysis({
             onPick={onPickRange}
           />
         </div>
+        {proximity && (
+          <>
+            <div className="ancard">
+              <h3>Distância até o centro</h3>
+              <p className="ansub">
+                Quantos imóveis em cada faixa de distância do centro da cidade. Imóveis sem
+                coordenada ficam de fora.
+              </p>
+              <Histogram counts={proximity.center} edges={CENTER_EDGES} tickFmt={fmtDist} />
+            </div>
+            <div className="ancard">
+              <h3>Lugares próximos</h3>
+              <p className="ansub">
+                Quantos imóveis têm cada tipo de lugar num raio de {fmtDist(proximity.poiRadiusM)}.
+              </p>
+              <Rank rows={proximity.pois} fmt={(v) => v.toLocaleString("pt-BR")} />
+            </div>
+          </>
+        )}
       </div>
 
       <div className="angrid">

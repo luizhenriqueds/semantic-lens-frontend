@@ -112,6 +112,9 @@ export const unlockedFeatures = (role: Role): Feature[] =>
 export const canTrial = (plan: { role: Role }, trial: Trial): boolean =>
   plan.role === TRIAL_ROLE && trial.eligible;
 
+/** One string, so the three checkout surfaces cannot drift apart. */
+export const PAYMENT_NOTE = "Pagamento seguro via AbacatePay. Cancele quando quiser.";
+
 export function upsellTitle(
   feature: Feature,
   role: Role,

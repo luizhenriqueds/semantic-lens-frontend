@@ -70,6 +70,19 @@ export function sanitizeCriteria(raw: unknown): AlertCriteria | null {
 
 const hasAnySet = (c: AlertCriteriaSet): boolean => Object.keys(c).length > 0;
 
+const stable = (v: unknown): string =>
+  JSON.stringify(v ?? null, (_k, val) =>
+    val && typeof val === "object" && !Array.isArray(val)
+      ? Object.fromEntries(Object.entries(val).sort(([a], [b]) => a.localeCompare(b)))
+      : val,
+  );
+
+/** Key-order insensitive: a set rebuilt from the URL has to compare equal to the stored one. */
+export const sameCriteria = (
+  a: AlertCriteria | null | undefined,
+  b: AlertCriteria | null | undefined,
+): boolean => stable(a) === stable(b);
+
 export const hasAnyCriteria = (c: AlertCriteria | null | undefined): boolean =>
   c != null && branchesOf(c).some(hasAnySet);
 

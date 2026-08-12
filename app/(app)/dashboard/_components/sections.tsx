@@ -49,12 +49,18 @@ type SlotProps = { seed: number; now: Date };
 const moreHref = async (href: string | null): Promise<string | null> =>
   href ? unlockedHref(href, await getEntitlements()) : null;
 
+// Unguarded, one timed-out pool reaches the error boundary and takes the whole dashboard with it.
+function emptyPool(err: unknown): { items: Property[]; total: number } {
+  console.error(`[dashboard] rail pool failed: ${err instanceof Error ? err.message : err}`);
+  return { items: [], total: 0 };
+}
+
 async function fetchPool(pool: Pool): Promise<Property[]> {
   const { items } = await getPropertiesPage({
     filters: pool.filters,
     sort: pool.sort,
     pageSize: pool.pageSize,
-  });
+  }).catch(emptyPool);
   return items;
 }
 
@@ -240,7 +246,7 @@ export async function SavedRailSlot({
       filters: { city: anchor.city, type: anchor.propertyType },
       sort: "score",
       pageSize: 20,
-    });
+    }).catch(emptyPool);
     pool = [...pool, ...items];
   }
 

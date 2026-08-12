@@ -13,6 +13,7 @@ import { POI_ICON } from "@/lib/icons";
 import { POI_LABEL } from "@/lib/pois";
 import PropertyPhoto from "@/components/property/PropertyPhoto";
 import FavoriteButton from "@/components/property/FavoriteButton";
+import PayBadges from "@/components/property/PayBadges";
 import Ring from "@/components/ui/Ring";
 
 export default function PropertyRow({
@@ -68,6 +69,7 @@ export default function PropertyRow({
             </span>
           )}
         </div>
+        <PayBadges p={p} />
         {poiChips.length > 0 && (
           <div className="rowpoi">
             {poiChips.map(({ c, d }) => {

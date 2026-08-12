@@ -3,13 +3,14 @@
 import { headers } from "next/headers";
 import { getAlert } from "@/lib/data/alerts";
 import {
+  getClusters,
   getMatchedForExport,
   getPropertiesByIds,
   getPropertiesForExport,
   hybridSearch,
   isListable,
 } from "@/lib/data";
-import { describeCriteria, hasAnyCriteria, isAnyCriteria } from "@/lib/alerts";
+import { criteriaLabels, describeCriteria, hasAnyCriteria, isAnyCriteria } from "@/lib/alerts";
 import { spreadByLocality } from "@/lib/diversify";
 import { toRpcFilters } from "@/lib/filters/contract";
 import { sortProperties, type SearchSort } from "@/lib/searchSort";
@@ -67,8 +68,10 @@ export async function exportPropertiesCsv(
   const rpc = toRpcFilters(filters);
   if (!hasAnyCriteria(rpc)) return { ok: false, reason: "filter" };
 
-  const { items, total } = await getPropertiesForExport(filters, sort, EXPORT_ROW_CAP);
-  return build(items, total, "imoveis", criteriaLabel(rpc), gate.origin);
+  // The read throws rather than resolving empty, so "nothing matched" stays distinguishable.
+  const page = await getPropertiesForExport(filters, sort, EXPORT_ROW_CAP).catch(() => null);
+  if (!page) return { ok: false, reason: "error" };
+  return build(page.items, page.total, "imoveis", await criteriaLabel(rpc), gate.origin);
 }
 
 export async function exportSearchCsv(query: string, sort: SearchSort): Promise<ExportResult> {
@@ -107,11 +110,15 @@ export async function exportAlertMatchesCsv(
   const alert = await getAlert(supabase, alertId);
   if (!alert?.criteria || isAnyCriteria(alert.criteria)) return { ok: false, reason: "empty" };
 
-  const { items, total } = await getMatchedForExport(alert.criteria, sort, EXPORT_ROW_CAP);
-  return build(items, total, "alerta", alert.name || criteriaLabel(alert.criteria), gate.origin);
+  const page = await getMatchedForExport(alert.criteria, sort, EXPORT_ROW_CAP).catch(() => null);
+  if (!page) return { ok: false, reason: "error" };
+  const label = alert.name || (await criteriaLabel(alert.criteria));
+  return build(page.items, page.total, "alerta", label, gate.origin);
 }
 
 // describeCriteria answers "Novos imóveis" for an empty set - alert language, wrong on a file.
-function criteriaLabel(c: AlertCriteria): string | null {
-  return hasAnyCriteria(c) ? describeCriteria(c) : null;
+// Labelled like every screen is, so a collection-filtered file is not named "coleção".
+async function criteriaLabel(c: AlertCriteria): Promise<string | null> {
+  if (!hasAnyCriteria(c)) return null;
+  return describeCriteria(c, criteriaLabels(await getClusters()));
 }

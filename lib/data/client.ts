@@ -16,17 +16,19 @@ export type QueryResult<T> = { data: T[] | null; error: { message: string } | nu
 const TRANSIENT =
   /statement timeout|canceling statement|timeout|fetch failed|ECONN|socket hang up/i;
 
-// Retries transient failures, but not a `statement timeout` by default - retrying an already-
-// heavy query only piles more load onto a struggling DB. `retryTimeouts: true` opts back in for
-// cheap, indexed lookups where a timeout is more likely a blip than real query cost.
+const TIMEOUT = /timeout|canceling/i;
+const MAX_RETRIES = 3;
+
+// Retries transient failures, but not a `statement timeout` - retrying an already-heavy query only
+// piles more load onto a struggling DB. `timeoutRetries` opts back in, and caps how far.
 export async function withRetry<T>(
   build: () => PromiseLike<QueryResult<T>>,
-  { retryTimeouts = false }: { retryTimeouts?: boolean } = {},
+  { timeoutRetries = 0 }: { timeoutRetries?: number } = {},
 ): Promise<QueryResult<T>> {
-  const canRetry = (msg: string) =>
-    TRANSIENT.test(msg) && (retryTimeouts || !/timeout|canceling/i.test(msg));
+  const canRetry = (msg: string, done: number) =>
+    TRANSIENT.test(msg) && (!TIMEOUT.test(msg) || done < timeoutRetries);
   let res = await build();
-  for (let i = 0; i < 3 && res.error && canRetry(res.error.message); i++) {
+  for (let i = 0; i < MAX_RETRIES && res.error && canRetry(res.error.message, i); i++) {
     await new Promise((r) => setTimeout(r, 250 * (i + 1)));
     res = await build();
   }
@@ -35,7 +37,7 @@ export async function withRetry<T>(
 
 // Opts a cheap, indexed lookup back into retrying a `statement timeout` - see `withRetry`.
 export const withRetryTimeouts = <T>(build: () => PromiseLike<QueryResult<T>>) =>
-  withRetry(build, { retryTimeouts: true });
+  withRetry(build, { timeoutRetries: MAX_RETRIES });
 
 export function rows<T>(name: string, res: QueryResult<T>): T[] {
   if (res.error) {

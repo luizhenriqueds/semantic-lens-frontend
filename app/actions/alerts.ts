@@ -1,5 +1,6 @@
 "use server";
 
+import { revalidatePath } from "next/cache";
 import * as data from "@/lib/data/alerts";
 import { countMatched, hybridSearch, RESULT_LIMIT } from "@/lib/data";
 import { isAnyCriteria } from "@/lib/alerts/criteria";
@@ -41,6 +42,12 @@ export async function listAlerts(): Promise<Alert[]> {
   return user ? data.listAlerts(supabase) : [];
 }
 
+/** `staleTimes.dynamic` keeps the alert pages warm, so a write has to drop them from the cache. */
+function revalidateAlerts(id?: string) {
+  revalidatePath("/alerts");
+  if (id) revalidatePath(`/alerts/${id}`);
+}
+
 export async function createAlert(
   name: string,
   freq: string,
@@ -49,7 +56,7 @@ export async function createAlert(
   const { supabase, user } = await requireUser();
   const ent = await getEntitlements();
   if (!ent.can("savedSearches")) return { ok: false, reason: "limit" };
-  return data.createAlert(
+  const res = await data.createAlert(
     supabase,
     user.id,
     user.email ?? "",
@@ -58,17 +65,25 @@ export async function createAlert(
     criteria ? gateCriteria(criteria, ent) : criteria,
     ent.limit("savedSearches"),
   );
+  if (res.ok) revalidateAlerts(res.alert.id);
+  return res;
 }
 
 export async function updateAlert(id: string, patch: AlertPatch): Promise<boolean> {
   const { supabase } = await requireUser();
   // The pause toggle is the hot caller and carries no criteria, so it skips the plan read.
-  if (!patch.criteria) return data.updateAlert(supabase, id, patch);
-  const ent = await getEntitlements();
-  return data.updateAlert(supabase, id, { ...patch, criteria: gateCriteria(patch.criteria, ent) });
+  const ok = patch.criteria
+    ? await data.updateAlert(supabase, id, {
+        ...patch,
+        criteria: gateCriteria(patch.criteria, await getEntitlements()),
+      })
+    : await data.updateAlert(supabase, id, patch);
+  if (ok) revalidateAlerts(id);
+  return ok;
 }
 
 export async function deleteAlert(id: string): Promise<void> {
   const { supabase } = await requireUser();
-  return data.deleteAlert(supabase, id);
+  await data.deleteAlert(supabase, id);
+  revalidateAlerts(id);
 }

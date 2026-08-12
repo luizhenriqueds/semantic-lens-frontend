@@ -20,19 +20,20 @@
   --heat: 47, 93, 58;
   --shadow: 43, 46, 34;
 }
-/* tema escuro — "Breu" */
+/* tema escuro — "Breu": pitch, not a dark green. */
 [data-theme="dark"] {
-  --bg: #1a211e;
-  --surface: #232b28;
-  --surface-2: #293330;
-  --ink: #e6eae6;
-  --ink-soft: #a4ada6;
-  --ink-faint: #737c75;
+  --bg: #17181a;
+  --surface: #222325;
+  --surface-2: #2a2b2d;
+  --ink: #e8e9ea;
+  --ink-soft: #a8abac;
+  --ink-faint: #74777a;
   --primary: #8fb07e;
   --primary-soft: #6e9160;
-  --primary-wash: #2a352d;
-  --line: #343e39;
-  --line-soft: #2e3833;
+  /* The one tinted neutral: it backs green text and chips. */
+  --primary-wash: #26302a;
+  --line: #363739;
+  --line-soft: #2f3032;
   --good: #8fb07e;
   --warn: #e0954f;
   --bad: #e08a7d;
@@ -4943,6 +4944,8 @@ select.selectish {
   display: flex;
   align-items: flex-end;
   gap: 4px;
+  /* Here rather than inline on the element, so the print stylesheet can shorten it. */
+  height: 130px;
 }
 .histo-bar {
   flex: 1;
@@ -5967,6 +5970,26 @@ select.selectish {
   stroke: var(--primary);
 }
 
+.paybadges {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-top: 9px;
+  /* Reserved even when empty, so a card offering neither still lines up with its neighbours. */
+  min-height: 22px;
+}
+.paybadge {
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--ink-soft);
+  background: var(--surface-2);
+  border: 1px solid var(--line-soft);
+  border-radius: 100px;
+  /* 16 + 2*2 padding + 2*1 border = the 22px the empty row reserves, to the pixel. */
+  line-height: 16px;
+  padding: 2px 9px;
+}
+
 @media (max-width: 640px) {
   .filterdrawer {
     top: auto;
@@ -6165,7 +6188,9 @@ select.selectish {
 /* Auth pages (sign in / sign up) */
 .au-split {
   display: grid;
-  grid-template-columns: 1fr minmax(520px, 720px);
+  /* clamp, not minmax: grid maximises a minmax track to its growth limit before the 1fr gets
+     anything, which left the demo pane a third of the width on a narrow desktop. */
+  grid-template-columns: 1fr clamp(520px, 45%, 720px);
   min-height: 100vh;
   min-height: 100dvh;
 }
@@ -6185,14 +6210,24 @@ select.selectish {
   --good: #2f5d3a;
   --warn: #c1631a;
   position: relative;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  gap: 26px;
+  /* Centres the card on the pane like the form opposite; as one stack it sat half a head lower.
+     `min-content` keeps the head from being squeezed on a short viewport. */
+  display: grid;
+  grid-template-rows: minmax(min-content, 1fr) auto 1fr;
+  justify-items: start;
+  /* Uncapped, the balancing row adds to the pane's intrinsic height and scrolls the page. */
+  max-height: 100dvh;
   padding: 56px 64px;
   overflow: hidden;
   background: var(--bg);
   color: var(--ink);
+}
+.au-demo-head {
+  align-self: end;
+  display: flex;
+  flex-direction: column;
+  gap: 26px;
+  padding-bottom: 26px;
 }
 .au-hexbg {
   position: absolute;
@@ -6599,6 +6634,11 @@ select.selectish {
   border-color: var(--primary-soft);
   background: var(--primary-wash);
   color: var(--primary);
+}
+@media (max-width: 1120px) {
+  .au-demo-pane {
+    padding: 44px 40px;
+  }
 }
 @media (max-width: 940px) {
   .au-split {

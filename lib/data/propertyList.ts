@@ -2,8 +2,16 @@ import { BRT_OFFSET_MS } from "@/lib/auctionTime";
 import { supabase } from "@/lib/supabase";
 import { escapeLike } from "@/lib/facets";
 import { deriveTitle, titleCase } from "@/lib/format";
-import { ANALYSIS_EDGES, type AnalysisData } from "@/lib/facets/analysis";
-import { toRpcFilters } from "@/lib/filters/contract";
+import {
+  ANALYSIS_EDGES,
+  CENTER_EDGES,
+  CENTER_MAX_M,
+  PROXIMITY_POIS,
+  type AnalysisData,
+  type ProximityData,
+} from "@/lib/facets/analysis";
+import { POI_LABEL, POI_RADIUS_M } from "@/lib/pois";
+import { toRpcFilters, type RpcFilters } from "@/lib/filters/contract";
 import { LIST_PAGE_SIZE } from "@/lib/filters/propertiesUrl";
 import type { ClusterStats } from "@/lib/clusters";
 import type {
@@ -29,12 +37,12 @@ import {
 
 const MAP_POINT_LIMIT = 4000;
 
-// Scoring is the last step of a batch run, so a row with no investment score is still being
-// processed and the rest of its data may be incomplete. Applied to raw RPC rows; the MV reads
-// below get the same gate from `scoredMv`.
-const isScored = (r: any): boolean => r.investment != null;
+// No score means the batch is still processing the row. A zero sale value is an ingestion error,
+// and it reads as a 100% discount - straight to the top of the default sort.
+const isListableRow = (r: any): boolean => r.investment != null && Number(r.sale_value) > 0;
 
-export const isListable = (p: Property): boolean => !p.inactive && p.scores.investment != null;
+export const isListable = (p: Property): boolean =>
+  !p.inactive && p.scores.investment != null && (p.saleValue ?? 0) > 0;
 
 // `cols as "*"` only shapes the type: PostgREST cannot parse a non-literal column list, and
 // every caller reads the rows through `rows<any>`. Making it generic instead stalls tsc.
@@ -45,8 +53,9 @@ const scoredMv = (cols = "*") =>
     .not("investment", "is", null);
 
 // The portfolio and the detail page still show inactive listings, so only the reads that build
-// lists gate on `is_listable` as well.
-export const listableMv = (cols = "*") => scoredMv(cols).eq("is_listable", true);
+// lists gate on `is_listable` and on a real price.
+export const listableMv = (cols = "*") =>
+  scoredMv(cols).eq("is_listable", true).gt("sale_value", 0);
 
 function mapListRow(r: any): Property {
   return {
@@ -105,12 +114,24 @@ function mapListRow(r: any): Property {
   };
 }
 
-async function rpcJson(name: string, args: Record<string, unknown>): Promise<any> {
-  const res = await withRetry<any>(async () => {
-    const { data, error } = await supabase.rpc(name, args);
-    return { data: data == null ? null : [data], error };
-  });
-  if (res.error) console.error(`[data] rpc "${name}" failed: ${res.error.message}`);
+// `required: true` for a read whose caller cannot tell an empty result from a failed one: left
+// tolerant, a timeout resolves to null and `cached` memoises the emptiness for the whole window.
+async function rpcJson(
+  name: string,
+  args: Record<string, unknown>,
+  { required = false }: { required?: boolean } = {},
+): Promise<any> {
+  const res = await withRetry<any>(
+    async () => {
+      const { data, error } = await supabase.rpc(name, args);
+      return { data: data == null ? null : [data], error };
+    },
+    { timeoutRetries: required ? 1 : 0 },
+  );
+  if (res.error) {
+    console.error(`[data] rpc "${name}" failed: ${res.error.message}`);
+    if (required) throw new Error(`rpc "${name}" failed: ${res.error.message}`);
+  }
   return res.data?.[0] ?? null;
 }
 
@@ -122,15 +143,19 @@ async function loadPropertiesPage(
   page: number,
   pageSize: number,
 ): Promise<PropertyPage> {
-  const data = await rpcJson("property_list_page", {
-    p_filters: JSON.parse(filtersJson),
-    p_sort: sort,
-    p_offset: (page - 1) * pageSize,
-    p_limit: pageSize,
-  });
+  const data = await rpcJson(
+    "property_list_page",
+    {
+      p_filters: JSON.parse(filtersJson),
+      p_sort: sort,
+      p_offset: (page - 1) * pageSize,
+      p_limit: pageSize,
+    },
+    { required: true },
+  );
   return {
     total: data?.total ?? 0,
-    items: ((data?.items ?? []) as any[]).filter(isScored).map(mapListRow),
+    items: ((data?.items ?? []) as any[]).filter(isListableRow).map(mapListRow),
   };
 }
 
@@ -148,11 +173,12 @@ export function getPropertiesPage(
   return cachedPage(JSON.stringify(toRpcFilters(filters)), sort, Math.max(1, page), pageSize);
 }
 
-async function loadCount(filtersJson: string): Promise<number> {
-  const data = await rpcJson("property_list_page", {
-    p_filters: JSON.parse(filtersJson),
-    p_limit: 0,
-  });
+async function loadCount(filtersJson: string, required = false): Promise<number> {
+  const data = await rpcJson(
+    "property_list_page",
+    { p_filters: JSON.parse(filtersJson), p_limit: 0 },
+    { required },
+  );
   return data?.total ?? 0;
 }
 
@@ -213,7 +239,7 @@ async function loadGoalTop(goal: string, filtersJson: string, limit: number): Pr
     p_filters: JSON.parse(filtersJson),
     p_limit: limit,
   });
-  return ((data ?? []) as any[]).filter(isScored).map(mapListRow);
+  return ((data ?? []) as any[]).filter(isListableRow).map(mapListRow);
 }
 
 const cachedGoalTop = cached(loadGoalTop, "goal-top", SEARCH_REVALIDATE);
@@ -383,7 +409,7 @@ async function loadMapPoints(filtersJson: string): Promise<{ points: MapPoint[];
     p_filters: JSON.parse(filtersJson),
     p_limit: MAP_POINT_LIMIT,
   });
-  const points = ((data?.points ?? []) as any[]).filter(isScored).map((r): MapPoint => ({
+  const points = ((data?.points ?? []) as any[]).filter(isListableRow).map((r): MapPoint => ({
     id: r.property_id,
     lat: Number(r.lat),
     lon: Number(r.lon),
@@ -509,6 +535,39 @@ const cachedAnalysis = cached(loadAnalysis, "property-analysis");
 
 export function getAnalysis(filters: PropertyFilters): Promise<AnalysisData> {
   return cachedAnalysis(JSON.stringify(toRpcFilters(filters)));
+}
+
+// `loadCount`, not `countProperties`: unstable_cache skips a read nested inside another.
+// `required` so a failed bucket cannot draw as a truthful-looking zero.
+async function loadProximity(filtersJson: string): Promise<ProximityData> {
+  const filters = JSON.parse(filtersJson) as RpcFilters;
+  const radius = filters.poi_radius_m ?? POI_RADIUS_M;
+  const count = (patch: Partial<RpcFilters>) =>
+    loadCount(JSON.stringify({ ...filters, ...patch }), true);
+
+  const [cumulative, poiCounts] = await Promise.all([
+    Promise.all(
+      CENTER_EDGES.slice(1).map((e) => count({ max_center_m: Math.min(e, CENTER_MAX_M) })),
+    ),
+    // The counted category replaces any nearby-places filter in play.
+    Promise.all(PROXIMITY_POIS.map((cat) => count({ poi_cats: [cat], poi_radius_m: radius }))),
+  ]);
+
+  return {
+    // The counts are cumulative, so each bucket is the step between two of them.
+    center: cumulative.map((n, i) => Math.max(0, n - (cumulative[i - 1] ?? 0))),
+    pois: PROXIMITY_POIS.map((cat, i) => ({
+      label: POI_LABEL[cat] ?? cat,
+      value: poiCounts[i],
+    })).sort((a, b) => b.value - a.value),
+    poiRadiusM: radius,
+  };
+}
+
+const cachedProximity = cached(loadProximity, "property-proximity");
+
+export function getProximity(filters: PropertyFilters): Promise<ProximityData> {
+  return cachedProximity(JSON.stringify(toRpcFilters(filters)));
 }
 
 async function loadAuctionCalendar(filtersJson: string): Promise<Record<string, number>> {

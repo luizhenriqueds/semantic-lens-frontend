@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { criteriaToParams, parsePropertySearchParams, sortParam } from "./propertiesUrl";
+import {
+  criteriaToParams,
+  DEFAULT_SORT,
+  parsePropertySearchParams,
+  sortParam,
+} from "./propertiesUrl";
+import { toRpcFilters } from "./contract";
 import type { AlertCriteriaSet, PropertyFilters } from "@/lib/types";
 
 const parse = (qs: string) =>
@@ -119,5 +125,35 @@ describe("sort", () => {
   it("falls back to the default for anything else", () => {
     expect(parse("sort=nonsense").sort).toBe("desconto");
     expect(parse("").sort).toBe("desconto");
+    expect(sortParam(parse("").sort)).toBe(DEFAULT_SORT);
+  });
+});
+
+describe("criteria round-trip", () => {
+  // A key that does not survive the trip reads as an edit the user never made.
+  it("rebuilds the same criteria the alert stored", () => {
+    const stored: AlertCriteriaSet = {
+      q: "casa com quintal",
+      uf: "MT",
+      city: "Varzea Grande",
+      type: "Casa",
+      modalities: ["Venda Online"],
+      min_bedrooms: 2,
+      max_price: 300_000,
+      min_area: 50,
+      min_discount: 20,
+      min_investment: 70,
+      poi_cats: ["restaurant"],
+      poi_radius_m: 2000,
+      max_center_m: 1000,
+      score_key: "flip",
+      score_min: 60,
+      financing: true,
+      fgts: true,
+      auction_within_days: 30,
+    };
+    const sp = Object.fromEntries(new URLSearchParams(criteriaToParams(stored)));
+    const back = toRpcFilters(parsePropertySearchParams(sp).filters);
+    expect(back).toEqual(stored);
   });
 });

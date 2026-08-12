@@ -125,7 +125,8 @@
   display: flex;
   align-items: center;
   gap: 20px;
-  height: 72px;
+  /* Not `height`: a definite one lets the row overflow the frosted bar instead of growing it. */
+  min-height: 72px;
 }
 .lp-brand {
   display: flex;
@@ -220,6 +221,9 @@
   .lp-nav {
     background: var(--bg);
   }
+}
+/* The full row needs ~1050px of content, so it folds well before the phone breakpoint. */
+@media (max-width: 1100px) {
   .lp-navtoggle {
     display: grid;
   }

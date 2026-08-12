@@ -22,6 +22,16 @@ export function streetOf(rawAddress: string | null | undefined): string | null {
   return abbr ? [abbr, ...rest].join(" ") : cased;
 }
 
+const CEP = /\bcep:?\s*\d{5}-?\d{3}/i;
+
+/** Every address ends "- CEP: nnnnn-nnn, CIDADE - ESTADO"; the city already has its own line. */
+export function addressLine(rawAddress: string | null | undefined): string | null {
+  if (!rawAddress) return null;
+  const cased = titleCase(rawAddress).replace(/\bCep\b/g, "CEP");
+  const cep = CEP.exec(cased);
+  return cep ? cased.slice(0, cep.index + cep[0].length) : cased;
+}
+
 // Most common street among a cell's properties, to disambiguate same-named regions.
 export function dominantStreet(properties: { rawAddress: string | null }[]): string | null {
   const counts = new Map<string, number>();

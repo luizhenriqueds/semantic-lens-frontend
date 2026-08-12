@@ -10,6 +10,7 @@ import {
 } from "@/lib/format";
 import PropertyPhoto from "@/components/property/PropertyPhoto";
 import FavoriteButton from "@/components/property/FavoriteButton";
+import PayBadges from "@/components/property/PayBadges";
 import Ring from "@/components/ui/Ring";
 
 export default function PropertyCard({
@@ -63,6 +64,7 @@ export default function PropertyCard({
           )}
           {p.modality && <span>{p.modality}</span>}
         </div>
+        <PayBadges p={p} />
         <div className="pricebox">
           <div>
             <div className="now">{money(p.saleValue)}</div>

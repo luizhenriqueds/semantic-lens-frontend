@@ -85,6 +85,16 @@
 .report .angrid.an3 {
   grid-template-columns: 1fr 1fr 1fr;
 }
+/* Print drops the scatter, leaving its row one card: full width, or it prints as a half-empty band. */
+.report .angrid > .ancard:only-child {
+  grid-column: 1 / -1;
+}
+/* Full width, the eight goal bars are a tall single column for no reason. */
+.report .angrid > .ancard:only-child .anscores {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 9px 22px;
+}
 .report .statgrid,
 .report .antiles,
 .report .insights,
@@ -134,7 +144,28 @@
   font-size: 8.5px;
 }
 .report .histo-bars {
-  height: 78px;
+  height: 70px;
+}
+/* A few px per row is what keeps the third chart row on the same sheet as the first two. */
+.report .rankbars {
+  gap: 7px;
+}
+/* On paper the name is the information: the screen's split truncates almost every city. */
+.report .rankrow {
+  grid-template-columns: minmax(0, 1.7fr) 1fr auto;
+  gap: 7px;
+}
+.report .rk-label,
+.report .rk-val {
+  font-size: 10.5px;
+}
+/* Paper has no tooltip, so a clipped "Jardim Deo…" is simply lost. Wrap instead. */
+.report .rk-label {
+  white-space: normal;
+  line-height: 1.25;
+}
+.report .rk-track {
+  height: 6px;
 }
 .report .market .bars {
   height: 112px;
@@ -272,8 +303,8 @@
   color: var(--ink-soft);
 }
 
+/* No `size`: the grids are fluid, and pinning A4 clips the right edge on a Letter or A5 sheet. */
 @page {
-  size: A4;
   margin: 14mm 12mm 16mm;
 }
 
