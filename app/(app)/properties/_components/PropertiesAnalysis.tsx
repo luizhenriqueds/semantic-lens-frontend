@@ -8,10 +8,20 @@ import {
   CENTER_EDGES,
   type AnalysisData,
   type ProximityData,
+  type RankRow,
 } from "@/lib/facets/analysis";
 import { fmtDist, money, moneyShort, SCORE_LABEL } from "@/lib/format";
 import { moneyM2 } from "@/lib/market";
 import { IconBuilding } from "@/lib/icons";
+
+/** Drill-down for a chart the `range` contract cannot express - see the centre histogram. */
+type BarPick = {
+  /** `null` for a bucket no filter can express, which then draws as a plain bar. */
+  href: (from: number, to: number) => string | null;
+  onPick: (from: number, to: number) => void;
+  /** Replaces the default "ver na lista" tail of the tooltip. */
+  hint?: (from: number, to: number) => string;
+};
 
 // Histogram over fixed `edges` (length = bins + 1); last bucket open-ended when its edge is Infinity.
 function Histogram({
@@ -21,6 +31,7 @@ function Histogram({
   unit = "imóveis",
   dim,
   onPick,
+  pick,
 }: {
   counts: number[];
   edges: number[];
@@ -29,6 +40,8 @@ function Histogram({
   /** Omitted for a dimension the list cannot be filtered on. */
   dim?: RangeDim;
   onPick?: (dim: RangeDim, from: number, to: number) => void;
+  /** Alternative to `dim`/`onPick`, for a chart outside the range contract. */
+  pick?: BarPick;
 }) {
   const bars = counts.map((c, i) => ({ c, from: edges[i], to: edges[i + 1] ?? Infinity }));
   const max = Math.max(...counts, 1);
@@ -39,30 +52,35 @@ function Histogram({
       : to === Infinity
         ? `${tick(from)} ou mais`
         : `${tick(from)} - ${tick(to)}`;
+  const hrefFor = (from: number, to: number) =>
+    dim && onPick ? rangeHref(dim, from, to) : (pick?.href(from, to) ?? null);
+  const fire = (from: number, to: number) =>
+    dim && onPick ? onPick(dim, from, to) : pick?.onPick(from, to);
 
   return (
     <div className="histo">
       <div className="histo-bars">
         {bars.map((b, i) => {
           const title = `${bucket(b.from, b.to)}: ${b.c} ${unit}`;
+          const href = b.c ? hrefFor(b.from, b.to) : null;
           const bar = (
             <>
               <span className="hb-count">{b.c || ""}</span>
               <i style={{ height: `${(b.c / max) * 100}%` }} />
             </>
           );
-          return b.c && dim && onPick ? (
+          return href ? (
             <Link
               key={i}
               className="histo-bar link"
-              href={rangeHref(dim, b.from, b.to)}
-              title={`${title} - ver na lista`}
+              href={href}
+              title={`${title} - ${pick?.hint?.(b.from, b.to) ?? "ver na lista"}`}
               prefetch={false}
               onClick={(e) => {
                 // Plain clicks filter in place; the href stays real for new-tab/share.
                 if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
                 e.preventDefault();
-                onPick(dim, b.from, b.to);
+                fire(b.from, b.to);
               }}
             >
               {bar}
@@ -138,39 +156,76 @@ function Scatter({ pts }: { pts: { x: number; y: number; d: number }[] }) {
 function Rank({
   rows,
   fmt,
+  pick,
 }: {
-  rows: { label: string; value: number }[];
+  rows: RankRow[];
   fmt: (v: number) => string;
+  /** Rows carrying a `key` become drill-downs into the list. */
+  pick?: { href: (key: string) => string; onPick: (key: string) => void; hint: string };
 }) {
   if (!rows.length) return <div className="anempty">Sem dados</div>;
   const max = Math.max(...rows.map((r) => r.value), 1);
   return (
     <div className="rankbars">
-      {rows.map((r) => (
-        <div className="rankrow" key={r.label}>
-          <span className="rk-label" title={r.label}>
-            {r.label}
-          </span>
-          <div className="rk-track">
-            <i style={{ width: `${(r.value / max) * 100}%` }} />
+      {rows.map((r) => {
+        const body = (
+          <>
+            <span className="rk-label" title={r.label}>
+              {r.label}
+            </span>
+            <div className="rk-track">
+              <i style={{ width: `${(r.value / max) * 100}%` }} />
+            </div>
+            <span className="rk-val">{fmt(r.value)}</span>
+          </>
+        );
+        return pick && r.key && r.value ? (
+          <Link
+            className="rankrow link"
+            key={r.label}
+            href={pick.href(r.key)}
+            title={`${r.label}: ${fmt(r.value)} - ${pick.hint}`}
+            prefetch={false}
+            onClick={(e) => {
+              // Plain clicks filter in place; the href stays real for new-tab/share.
+              if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+              e.preventDefault();
+              pick.onPick(r.key!);
+            }}
+          >
+            {body}
+          </Link>
+        ) : (
+          <div className="rankrow" key={r.label}>
+            {body}
           </div>
-          <span className="rk-val">{fmt(r.value)}</span>
-        </div>
-      ))}
+        );
+      })}
     </div>
   );
 }
+
+// The centre bars are steps of a cumulative count, so "até X do centro" matches every bar below X.
+const upTo = (counts: number[], to: number) =>
+  counts
+    .filter((_, i) => (CENTER_EDGES[i + 1] ?? Infinity) <= to)
+    .reduce((s, n) => s + n, 0)
+    .toLocaleString("pt-BR");
 
 export default function PropertiesAnalysis({
   data,
   proximity,
   onPickRange,
+  onPickCenter,
+  onPickPoi,
   /** The scatter reads a point only on hover, so the printable report drops it. */
   hideScatter,
 }: {
   data: AnalysisData;
   proximity?: ProximityData;
   onPickRange: (dim: RangeDim, from: number, to: number) => void;
+  onPickCenter?: (maxM: number) => void;
+  onPickPoi?: (cat: string) => void;
   hideScatter?: boolean;
 }) {
   if (!data.count) {
@@ -277,14 +332,40 @@ export default function PropertiesAnalysis({
                 Quantos imóveis em cada faixa de distância do centro da cidade. Imóveis sem
                 coordenada ficam de fora.
               </p>
-              <Histogram counts={proximity.center} edges={CENTER_EDGES} tickFmt={fmtDist} />
+              <Histogram
+                counts={proximity.center}
+                edges={CENTER_EDGES}
+                tickFmt={fmtDist}
+                pick={
+                  onPickCenter && {
+                    // The list only takes a ceiling, so a bar filters everything up to its
+                    // upper edge - which is also why the open last bucket stays unclickable.
+                    href: (_from, to) =>
+                      to === Infinity ? null : `/properties?max_center_m=${to}&view=list`,
+                    onPick: (_from, to) => onPickCenter(to),
+                    hint: (_from, to) =>
+                      `ver os ${upTo(proximity.center, to)} até ${fmtDist(to)} na lista`,
+                  }
+                }
+              />
             </div>
             <div className="ancard">
               <h3>Lugares próximos</h3>
               <p className="ansub">
                 Quantos imóveis têm cada tipo de lugar num raio de {fmtDist(proximity.poiRadiusM)}.
               </p>
-              <Rank rows={proximity.pois} fmt={(v) => v.toLocaleString("pt-BR")} />
+              <Rank
+                rows={proximity.pois}
+                fmt={(v) => v.toLocaleString("pt-BR")}
+                pick={
+                  onPickPoi && {
+                    href: (cat) =>
+                      `/properties?poi_cats=${cat}&poi_radius_m=${proximity.poiRadiusM}&view=list`,
+                    onPick: onPickPoi,
+                    hint: "ver na lista",
+                  }
+                }
+              />
             </div>
           </>
         )}

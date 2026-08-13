@@ -8,6 +8,7 @@ import SaveButton from "./_components/SaveButton";
 import ScoreBars from "./_components/ScoreBars";
 import VisualScore from "./_components/VisualScore";
 import PropertyRanks from "./_components/PropertyRanks";
+import PayCards from "./_components/PayCards";
 import Ring from "@/components/ui/Ring";
 import {
   BlockSkeleton,
@@ -169,6 +170,8 @@ export default async function PropertyPage({ params }: { params: Promise<{ id: s
             </div>
           </div>
 
+          <PayCards p={p} />
+
           <PropertyRanks p={p} />
 
           <div className="infoblock">
@@ -324,7 +327,7 @@ export default async function PropertyPage({ params }: { params: Promise<{ id: s
       </div>
 
       <Suspense fallback={null}>
-        <RecommendationsSlot id={p.id} />
+        <RecommendationsSlot p={p} />
       </Suspense>
     </section>
   );

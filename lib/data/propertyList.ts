@@ -557,6 +557,7 @@ async function loadProximity(filtersJson: string): Promise<ProximityData> {
     // The counts are cumulative, so each bucket is the step between two of them.
     center: cumulative.map((n, i) => Math.max(0, n - (cumulative[i - 1] ?? 0))),
     pois: PROXIMITY_POIS.map((cat, i) => ({
+      key: cat,
       label: POI_LABEL[cat] ?? cat,
       value: poiCounts[i],
     })).sort((a, b) => b.value - a.value),

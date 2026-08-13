@@ -24,7 +24,8 @@ export const PROXIMITY_POIS = [
   "park",
 ] as const;
 
-export type RankRow = { label: string; value: number };
+/** `key` carries whatever the row can be filtered by (a POI category, today). */
+export type RankRow = { label: string; value: number; key?: string };
 
 export type ProximityData = {
   /** One count per `CENTER_EDGES` bucket. */

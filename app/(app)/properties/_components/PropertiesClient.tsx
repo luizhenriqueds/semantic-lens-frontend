@@ -409,6 +409,18 @@ export default function PropertiesClient({
     [patch],
   );
 
+  // The proximity charts count one dimension at a time, so a click sets it rather than adding to
+  // whatever nearby-places filter is already in play - otherwise the list undercuts the bar.
+  const pickCenter = useCallback(
+    (maxM: number) => patch({ max_center_m: String(maxM), view: "list" }),
+    [patch],
+  );
+  const pickPoiCat = useCallback(
+    (cat: string) =>
+      patch({ poi_cats: cat, poi_ids: null, poi_radius_m: String(poiRadius), view: "list" }),
+    [patch, poiRadius],
+  );
+
   const setPreco = (v: number) => {
     setPrecoInput(v ? String(v) : "");
     patch({ max_price: v ? String(v) : null });
@@ -1270,7 +1282,13 @@ export default function PropertiesClient({
             )
           ) : view === "analysis" ? (
             analysis && (
-              <PropertiesAnalysis data={analysis} proximity={proximity} onPickRange={pickRange} />
+              <PropertiesAnalysis
+                data={analysis}
+                proximity={proximity}
+                onPickRange={pickRange}
+                onPickCenter={pickCenter}
+                onPickPoi={pickPoiCat}
+              />
             )
           ) : view === "calendar" ? (
             calendar && (
