@@ -47,7 +47,6 @@ export const SHOWCASE: ShowcaseProperty[] = [
       { k: "Moradia familiar", v: 97 },
       { k: "Aluguel por temporada", v: 99 },
       { k: "Comercial", v: 97 },
-      { k: "Liquidez na revenda", v: 89 },
     ],
     why: "fica a 153 m de parque e 199 m de restaurante, com farmácia a menos de 600 m - região completa que sustenta tanto moradia quanto renda.",
   },
@@ -70,7 +69,6 @@ export const SHOWCASE: ShowcaseProperty[] = [
     uses: [
       { k: "Aluguel por temporada", v: 100 },
       { k: "Comercial", v: 92 },
-      { k: "Liquidez na revenda", v: 81 },
       { k: "Moradia familiar", v: 72 },
     ],
     why: "64% abaixo da avaliação, com escola a 271 m, shopping a 273 m e universidade a 275 m.",
@@ -143,7 +141,6 @@ export const SHOWCASE: ShowcaseProperty[] = [
       { k: "Aluguel por temporada", v: 100 },
       { k: "Comercial", v: 92 },
       { k: "Moradia familiar", v: 75 },
-      { k: "Liquidez na revenda", v: 74 },
     ],
     why: "escola a 271 m, shopping a 273 m e universidade a 275 m, com 42% de desconto sobre a avaliação.",
   },
@@ -166,7 +163,6 @@ export const SHOWCASE: ShowcaseProperty[] = [
     uses: [
       { k: "Moradia familiar", v: 76 },
       { k: "Reforma e revenda", v: 71 },
-      { k: "Liquidez na revenda", v: 66 },
       { k: "Aluguel por temporada", v: 63 },
     ],
     why: "parque a 488 m e hospital a 835 m; nota menor que a dos vizinhos de lista - útil para ver a escala funcionando.",

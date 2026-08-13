@@ -86,7 +86,7 @@
 - [ ] pt-BR user-facing, English identifiers; no placeholders
 - [ ] Upsell copy names the correct minimum plan
 - [ ] Terms, privacy/LGPD, cookie notice, contact
-- [ ] Brand consistent (`lavra.app` vs "semantic-lens")
+- [ ] Brand consistent (`leilaoindex.com.br` vs "semantic-lens")
 
 ## Security
 

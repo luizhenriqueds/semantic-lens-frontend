@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
+import BrandLogo from "@/components/brand/BrandLogo";
 import { joinApiWaitlist } from "@/app/actions/waitlist";
 
 const SOURCES = [
@@ -161,7 +162,7 @@ export default function ApiWaitlist() {
                       <span className="lp-soon">Em breve</span>
                       <h3>Sua base de leilões, dentro do seu próprio produto</h3>
                       <p className="lp-hub-lede">
-                        A mesma nota, região e recomendação que você vê na Lavra - via chamada de
+                        A mesma nota, região e recomendação que você vê no painel - via chamada de
                         API, plugada onde seu time já trabalha.
                       </p>
 
@@ -186,24 +187,9 @@ export default function ApiWaitlist() {
 
                         <div className="lp-hub-center">
                           <span className="lp-hub-badge">
-                            <svg viewBox="0 0 48 48" fill="none" aria-hidden="true">
-                              <circle cx="14" cy="9" r="3" fill="currentColor" />
-                              <path
-                                d="M14 15v15a4 4 0 0 0 4 4h13"
-                                stroke="currentColor"
-                                strokeWidth="4"
-                                strokeLinecap="round"
-                              />
-                              <path
-                                d="M27 27.5 34 34l-7 6.5"
-                                stroke="currentColor"
-                                strokeWidth="4"
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                              />
-                            </svg>
+                            <BrandLogo />
                           </span>
-                          <span className="lp-hub-label">API Lavra</span>
+                          <span className="lp-hub-label">API Leilão Index</span>
                         </div>
 
                         {USES.map((u) => (
@@ -248,7 +234,7 @@ export default function ApiWaitlist() {
                       </label>
 
                       <label className="lp-field">
-                        <span>Onde você ouviu falar da Lavra?</span>
+                        <span>Onde você ouviu falar do Leilão Index?</span>
                         <select required value={source} onChange={(e) => setSource(e.target.value)}>
                           <option value="" disabled>
                             Selecione…

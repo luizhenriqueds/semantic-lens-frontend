@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { matchesWebhookSecret } from "./secret";
 
 const SECRET = "s3cr3t-do-webhook";
-const url = (qs = "") => new URL(`https://lavra.app/api/webhooks/abacatepay${qs}`);
+const url = (qs = "") => new URL(`https://leilaoindex.com.br/api/webhooks/abacatepay${qs}`);
 const headers = (init: Record<string, string> = {}) => new Headers(init);
 
 describe("matchesWebhookSecret", () => {

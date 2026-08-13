@@ -12,6 +12,9 @@ export function GET(request: NextRequest) {
     return new Response(`Templates: ${Object.keys(TEMPLATES).join(", ")}`, { status: 400 });
   }
 
-  const { html } = template({ name: "Ana Souza", url: "https://lavra.app/exemplo-de-link" });
+  const { html } = template({
+    name: "Ana Souza",
+    url: "https://leilaoindex.com.br/exemplo-de-link",
+  });
   return new Response(html, { headers: { "Content-Type": "text/html; charset=utf-8" } });
 }

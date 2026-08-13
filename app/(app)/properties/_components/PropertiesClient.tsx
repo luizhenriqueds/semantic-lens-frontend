@@ -17,7 +17,7 @@ import { exportPropertiesCsv } from "@/app/actions/export";
 import AuctionCalendar from "./AuctionCalendar";
 import PropertiesAnalysis from "./PropertiesAnalysis";
 import { useToast } from "@/components/ui/Toaster";
-import { fmtDist, moneyShort, SCORE_LABEL } from "@/lib/format";
+import { fmtDist, moneyShort, nImoveis, SCORE_LABEL } from "@/lib/format";
 import {
   alertError,
   criteriaLabels,
@@ -103,8 +103,6 @@ const PRAZOS: { days: number; label: string }[] = [
   { days: 30, label: "Próximos 30 dias" },
   { days: 60, label: "Próximos 60 dias" },
 ];
-
-const nImoveis = (n: number) => `${n.toLocaleString("pt-BR")} ${n === 1 ? "imóvel" : "imóveis"}`;
 
 function Chip({
   active,
@@ -260,6 +258,8 @@ export default function PropertiesClient({
   proximity,
   calendar,
   map,
+  heading,
+  exitTo,
 }: {
   clusters: Cluster[];
   filterOptions: FilterOptions;
@@ -284,6 +284,11 @@ export default function PropertiesClient({
     dayTotal: number;
   };
   map?: { points: MapPoint[]; total: number };
+  /** Composed server-side by an SEO landing so the crawler sees the final h1 and lead. */
+  heading?: { h1: string; lead: string };
+  /** An SEO landing fixes its filters, so the first edit has to leave it - otherwise the fixed
+   *  filter fights the control the visitor just moved. */
+  exitTo?: { path: string; query: string };
 }) {
   const router = useRouter();
   const { can, require, role, trial } = usePlan();
@@ -310,10 +315,29 @@ export default function PropertiesClient({
     [router],
   );
 
-  // Filter mutations reset pagination.
+  // Filter mutations reset pagination. On an SEO landing the first one also hops to the real list
+  // view, carrying the landing's own filters over as ordinary query params.
   const patch = useCallback(
-    (p: Record<string, string | null>) => setParams({ ...p, page: null }),
-    [setParams],
+    (p: Record<string, string | null>) => {
+      if (!exitTo || window.location.pathname === exitTo.path) {
+        return setParams({ ...p, page: null });
+      }
+      const sp = new URLSearchParams(exitTo.query);
+      const current = new URLSearchParams(window.location.search);
+      for (const k of ["sort", "view"]) {
+        const v = current.get(k);
+        if (v) sp.set(k, v);
+      }
+      for (const [k, v] of Object.entries({ ...p, page: null })) {
+        if (v == null) sp.delete(k);
+        else sp.set(k, v);
+      }
+      const qs = sp.toString();
+      startTransition(() =>
+        router.push(qs ? `${exitTo.path}?${qs}` : exitTo.path, { scroll: false }),
+      );
+    },
+    [setParams, exitTo, router],
   );
 
   // Display only, and only when the name is unambiguous: a city in several states really does
@@ -634,9 +658,11 @@ export default function PropertiesClient({
     modalidade.length > 0 ||
     !!filters.q?.trim() ||
     advActive;
-  const title = h3Label
-    ? `Imóveis em ${h3Label}`
-    : (clusterLabel ?? (filtered ? `${nImoveis(resultTotal)} encontrados` : "Todos os imóveis"));
+  const title =
+    heading?.h1 ??
+    (h3Label
+      ? `Imóveis em ${h3Label}`
+      : (clusterLabel ?? (filtered ? `${nImoveis(resultTotal)} encontrados` : "Todos os imóveis")));
 
   const VIEWS: { key: PropertiesView; label: string }[] = [
     { key: "list", label: "Lista" },
@@ -665,9 +691,10 @@ export default function PropertiesClient({
         <div>
           <h1>{title}</h1>
           <p>
-            {clusterLabel
-              ? "Coleção com imóveis parecidos entre si. Clique em um imóvel para ver os detalhes."
-              : "Lista de imóveis em leilão que estamos acompanhando. Clique em um imóvel para ver os detalhes."}
+            {heading?.lead ??
+              (clusterLabel
+                ? "Coleção com imóveis parecidos entre si. Clique em um imóvel para ver os detalhes."
+                : "Lista de imóveis em leilão que estamos acompanhando. Clique em um imóvel para ver os detalhes.")}
           </p>
         </div>
         {canAlert && alertChanged && (

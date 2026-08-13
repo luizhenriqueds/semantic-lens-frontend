@@ -14,10 +14,18 @@ export const T = {
   mono: "'JetBrains Mono', ui-monospace, 'SF Mono', Menlo, monospace",
 };
 
+// Uma cor só: sobre o tile verde o neutro do dois-tons não teria contraste. O translate
+// em y centra a tinta da marca, cujo centro é 21.375 e não 24.
 const LOGO = `<svg viewBox="0 0 48 48" width="22" height="22" style="display:block">
-  <circle cx="14" cy="9" r="3" fill="${T.surface}"/>
-  <path d="M14 15v15a4 4 0 0 0 4 4h13" stroke="${T.surface}" stroke-width="4" stroke-linecap="round" fill="none"/>
-  <path d="M27 27.5 34 34l-7 6.5" stroke="${T.surface}" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+  <g transform="translate(0 2.625)" fill="${T.surface}">
+    <g fill="none" stroke="${T.surface}" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M11 11H6v26h5"/>
+      <path d="M37 11h5v26h-5"/>
+    </g>
+    <rect x="14.5" y="26" width="5" height="7" rx="2.5"/>
+    <rect x="21.5" y="21" width="5" height="12" rx="2.5"/>
+    <rect x="28.5" y="4" width="5" height="29" rx="2.5"/>
+  </g>
 </svg>`;
 
 export function button(href: string, label: string) {
@@ -81,7 +89,7 @@ export function shell({
             <td style="width:36px;height:36px;background:${T.primary};border-radius:10px;text-align:center;vertical-align:middle">
               <div style="padding:7px">${LOGO}</div>
             </td>
-            <td style="padding-left:11px;font-family:${T.font};font-size:18px;font-weight:700;letter-spacing:-0.01em;color:${T.ink}">Lavra</td>
+            <td style="padding-left:11px;font-family:${T.font};font-size:18px;font-weight:700;letter-spacing:-0.01em;color:${T.ink}">Leilão Index</td>
           </tr>
         </table>
       </td></tr>
@@ -90,8 +98,8 @@ export function shell({
         ${body}
       </td></tr>
       <tr><td style="padding:20px 8px 0;font-family:${T.font};font-size:12px;line-height:1.7;color:${T.inkFaint}">
-        Lavra · leilões de imóveis com dados de editais públicos<br>
-        Você recebeu este e-mail porque tem uma conta na Lavra.
+        Leilão Index · leilões de imóveis com dados de editais públicos<br>
+        Você recebeu este e-mail porque tem uma conta no Leilão Index.
       </td></tr>
     </table>
   </td></tr>

@@ -14,7 +14,7 @@ Dashboard → **Nova chave**:
 | ------------- | ------------------------------------------------------------------- |
 | Versão da API | **API v2** — `lib/billing/abacate.ts` calls `api.abacatepay.com/v2` |
 | Escopo        | **Leitura e escrita** — we create and cancel subscriptions          |
-| Descrição     | `lavra-api-key-dev` / `lavra-api-key-prod`                          |
+| Descrição     | `leilao-index-api-key-dev` / `leilao-index-api-key-prod`            |
 
 **Permissões.** The integration only ever calls four endpoints:
 
@@ -48,11 +48,11 @@ sellable plan, prices in **cents**, matching `PLANS[*].price` in `lib/entitlemen
 ```sh
 curl -X POST https://api.abacatepay.com/v2/products/create \
   -H "Authorization: Bearer $ABACATEPAY_API_KEY" -H "Content-Type: application/json" \
-  -d '{"externalId":"plan_investor","name":"Lavra Investidor","price":3900,"currency":"BRL","cycle":"MONTHLY"}'
+  -d '{"externalId":"plan_investor","name":"Leilão Index Investidor","price":3900,"currency":"BRL","cycle":"MONTHLY"}'
 
 curl -X POST https://api.abacatepay.com/v2/products/create \
   -H "Authorization: Bearer $ABACATEPAY_API_KEY" -H "Content-Type: application/json" \
-  -d '{"externalId":"plan_professional","name":"Lavra Profissional","price":7900,"currency":"BRL","cycle":"MONTHLY"}'
+  -d '{"externalId":"plan_professional","name":"Leilão Index Profissional","price":7900,"currency":"BRL","cycle":"MONTHLY"}'
 ```
 
 Copy each `data.id` (`prod_...`) into `ABACATEPAY_PRODUCT_INVESTOR` / `ABACATEPAY_PRODUCT_PROFESSIONAL`.
@@ -104,7 +104,7 @@ Dashboard → **Criar webhook**, version **Webhook v2**, or by curl:
 curl -X POST https://api.abacatepay.com/v2/webhooks/create \
   -H "Authorization: Bearer $ABACATEPAY_API_KEY" -H "Content-Type: application/json" \
   -d '{
-    "name": "lavra-dev-webhook",
+    "name": "leilao-index-dev-webhook",
     "endpoint": "https://<host>/api/webhooks/abacatepay?webhookSecret=<secret>",
     "secret": "<secret>",
     "events": ["checkout.completed","checkout.refunded","checkout.disputed","checkout.lost",

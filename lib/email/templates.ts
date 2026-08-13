@@ -9,14 +9,14 @@ export function signupVerification({ name, url }: { name?: string; url: string }
   return {
     subject: "Confirme seu e-mail para concluir o cadastro",
     html: shell({
-      preheader: "Falta só um passo para ativar sua conta na Lavra.",
+      preheader: "Falta só um passo para ativar sua conta no Leilão Index.",
       title: "Confirme seu e-mail",
       body: [
-        p(`${hi(name)} Sua conta na Lavra está quase pronta.`),
+        p(`${hi(name)} Sua conta no Leilão Index está quase pronta.`),
         p("Clique no botão abaixo para validar seu e-mail e concluir o cadastro."),
         button(url, "Confirmar e-mail"),
         note(
-          `O link vale por <b>24 horas</b> e pode ser usado uma única vez. Se você não criou uma conta na Lavra, é só ignorar esta mensagem - nada será ativado.`,
+          `O link vale por <b>24 horas</b> e pode ser usado uma única vez. Se você não criou uma conta no Leilão Index, é só ignorar esta mensagem - nada será ativado.`,
         ),
         `<div style="margin:24px 0 0">${fallbackLink(url)}</div>`,
       ].join(""),
@@ -26,12 +26,12 @@ export function signupVerification({ name, url }: { name?: string; url: string }
 
 export function welcome({ name, url }: { name?: string; url: string }): Email {
   return {
-    subject: "Bem-vindo à Lavra 🌿",
+    subject: "Bem-vindo ao Leilão Index",
     html: shell({
       preheader: "Sua conta está ativa. Veja por onde começar.",
       title: "Sua conta está ativa",
       body: [
-        p(`${hi(name)} Tudo certo com seu e-mail - sua conta na Lavra já está liberada.`),
+        p(`${hi(name)} Tudo certo com seu e-mail - sua conta no Leilão Index já está liberada.`),
         p(
           "Reunimos milhares de leilões em um painel só, com notas fáceis de comparar. Um bom começo:",
         ),
@@ -68,10 +68,10 @@ export function welcome({ name, url }: { name?: string; url: string }): Email {
 
 export function signin({ name, url }: { name?: string; url: string }): Email {
   return {
-    subject: "Seu link de acesso à Lavra",
+    subject: "Seu link de acesso ao Leilão Index",
     html: shell({
       preheader: "Entre na sua conta com um clique. O link expira em 1 hora.",
-      title: "Entrar na Lavra",
+      title: "Entrar no Leilão Index",
       body: [
         p(`${hi(name)} Use o botão abaixo para acessar sua conta.`),
         button(url, "Entrar na minha conta"),
@@ -86,12 +86,12 @@ export function signin({ name, url }: { name?: string; url: string }): Email {
 
 export function passwordReset({ name, url }: { name?: string; url: string }): Email {
   return {
-    subject: "Redefinir sua senha da Lavra",
+    subject: "Redefinir sua senha do Leilão Index",
     html: shell({
       preheader: "Crie uma nova senha. O link expira em 1 hora.",
       title: "Redefinir sua senha",
       body: [
-        p(`${hi(name)} Recebemos um pedido para redefinir a senha da sua conta na Lavra.`),
+        p(`${hi(name)} Recebemos um pedido para redefinir a senha da sua conta no Leilão Index.`),
         button(url, "Criar nova senha"),
         p("Sua senha atual continua valendo até você concluir esse passo.", `color:${T.inkFaint}`),
         note(

@@ -12,8 +12,8 @@ import { PLANS } from "@/lib/entitlements";
 const INPUT = {
   productId: "prod_abc",
   externalId: "ext-1",
-  completionUrl: "https://lavra.app/ok",
-  returnUrl: "https://lavra.app/back",
+  completionUrl: "https://leilaoindex.com.br/ok",
+  returnUrl: "https://leilaoindex.com.br/back",
 };
 
 const ok = (data: unknown) =>

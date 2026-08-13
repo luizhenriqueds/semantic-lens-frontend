@@ -12,10 +12,15 @@ import { accountFrom } from "@/lib/account";
 import { getEntitlements } from "@/lib/entitlements/server";
 import { getUser } from "@/lib/supabase/server";
 
+// noindex covers every faceted permutation of /properties, /search and the rest in one stroke, so
+// the /leilao-de-imoveis landings are the only indexable representation. follow keeps link equity
+// flowing. The two pages under here that must be indexed - /property/[id] and the landings -
+// re-assert index:true at page level, which wins over the layout.
 export const metadata: Metadata = {
-  title: "Lavra - Painel de leilões",
+  title: { default: "Painel de leilões", template: "%s | Leilão Index" },
   description:
     "Compare milhares de imóveis de leilão e encontre a melhor oportunidade para o seu objetivo.",
+  robots: { index: false, follow: true },
 };
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {

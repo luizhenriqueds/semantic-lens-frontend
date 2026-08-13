@@ -1,4 +1,4 @@
-import LavraLogo from "@/components/brand/LavraLogo";
+import BrandLogo from "@/components/brand/BrandLogo";
 import PrintBar from "./PrintBar";
 import { fmtDay } from "@/lib/format";
 
@@ -20,8 +20,8 @@ export default function ReportShell({
     <>
       <header className="report-head">
         <div className="report-brand">
-          <LavraLogo size={26} />
-          <span>Lavra</span>
+          <BrandLogo size={26} />
+          <span>Leilão Index</span>
           <small>Relatório</small>
         </div>
         <h1>{title}</h1>
@@ -39,8 +39,8 @@ export default function ReportShell({
       {children}
 
       <footer className="report-foot">
-        Lavra · Dados públicos dos editais da Caixa Econômica Federal. Relatório informativo; não
-        constitui recomendação de investimento. Confira sempre o edital antes de dar um lance.
+        Leilão Index · Dados públicos dos editais da Caixa Econômica Federal. Relatório informativo;
+        não constitui recomendação de investimento. Confira sempre o edital antes de dar um lance.
       </footer>
     </>
   );

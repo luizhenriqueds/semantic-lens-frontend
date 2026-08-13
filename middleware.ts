@@ -25,6 +25,8 @@ export const PUBLIC = [
   "/property",
   "/alerts",
   "/portfolio",
+  // The indexable SEO landings. Matched segment-wise, so every /leilao-de-imoveis/<slug> is covered.
+  "/leilao-de-imoveis",
 ];
 
 // Segment-wise, so a later /search-admin is not matched by /search.
@@ -111,8 +113,11 @@ export async function middleware(request: NextRequest) {
   return response;
 }
 
+// The crawler surface is excluded here rather than added to PUBLIC: a .txt or .xml request would
+// otherwise fall through to the auth branch and redirect to /login, and this way the rate limiter
+// is never charged for robots.txt or a sitemap fetch either.
 export const config = {
   matcher: [
-    "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|avif|ico)$).*)",
+    "/((?!_next/static|_next/image|favicon\\.ico|robots\\.txt|sitemap|manifest\\.webmanifest|opengraph-image|twitter-image|.*\\.(?:svg|png|jpg|jpeg|gif|webp|avif|ico)$).*)",
   ],
 };
