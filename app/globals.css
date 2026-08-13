@@ -2277,6 +2277,51 @@ select.selectish {
   font-weight: 700;
   margin-top: 3px;
 }
+.paycards {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 14px;
+  /* The factgrid above already carries the 22px gap. */
+  margin: -8px 0 22px;
+}
+.paycard {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 13px;
+  padding: 12px 16px;
+}
+.paycard .pc-ic {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 32px;
+  height: 32px;
+  border-radius: 9px;
+  background: var(--surface-2);
+  color: var(--ink-faint);
+}
+.paycard.on .pc-ic {
+  background: var(--primary-wash);
+  color: var(--primary);
+}
+.paycard .pc-k {
+  font-size: 12px;
+  color: var(--ink-faint);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.paycard .pc-v {
+  font-size: 16px;
+  font-weight: 700;
+  margin-top: 2px;
+}
+.paycard:not(.on) .pc-v {
+  color: var(--ink-soft);
+}
 .infoblock {
   background: var(--surface);
   border: 1px solid var(--line);
@@ -5064,6 +5109,22 @@ select.selectish {
   grid-template-columns: minmax(0, 1fr) 1.1fr auto;
   align-items: center;
   gap: 10px;
+}
+.rankrow.link {
+  cursor: pointer;
+  text-decoration: none;
+  color: inherit;
+}
+.rankrow.link:hover .rk-track i {
+  background: var(--primary-soft);
+}
+.rankrow.link:hover .rk-label {
+  color: var(--primary);
+}
+.rankrow.link:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 3px;
+  border-radius: 4px;
 }
 .rk-label {
   font-size: 13px;

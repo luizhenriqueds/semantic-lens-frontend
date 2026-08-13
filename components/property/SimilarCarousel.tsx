@@ -8,7 +8,8 @@ import { investmentScore, money } from "@/lib/format";
 import type { Property } from "@/lib/types";
 import { IconBack } from "@/lib/icons";
 
-export type RecItem = { p: Property; match: number };
+/** `match` only on the similarity rails - the region and price ones have no score to show. */
+export type RecItem = { p: Property; match?: number };
 
 export default function SimilarCarousel({
   title,
@@ -52,7 +53,7 @@ export default function SimilarCarousel({
             <Link className="reccard" href={`/property/${p.id}`} key={p.id}>
               <div className="recphoto">
                 <PropertyPhoto src={p.image} alt={`Foto do imóvel: ${p.title}`} sizes="220px" />
-                <span className="recmatch">{match}% parecido</span>
+                {match != null && <span className="recmatch">{match}% parecido</span>}
                 {p.inactive && <span className="statuspill">Inativo</span>}
               </div>
               <div className="recbody">
