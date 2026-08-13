@@ -6,14 +6,16 @@ import { Fragment } from "react";
 
 type Crumb = { label: string; href?: string };
 
+// Mirrors NAV in components/layout/navItems.ts - a breadcrumb is navigation, so it uses the same
+// short labels the sidebar does.
 const SECTION: Record<string, string> = {
-  search: "Explorar imóveis",
+  search: "Buscar",
   properties: "Imóveis",
-  market: "Painel de mercado",
+  market: "Mercado",
   groups: "Coleções",
   regions: "Regiões",
-  alerts: "Meus alertas",
-  portfolio: "Minha carteira",
+  alerts: "Alertas",
+  portfolio: "Carteira",
   settings: "Configurações",
 };
 

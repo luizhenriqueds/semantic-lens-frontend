@@ -94,7 +94,7 @@ export default function ShowcaseGallery() {
             </svg>
             <div>
               <b className="lp-sc-scorelabel">
-                Nota geral de investimento
+                Nota de Investimento
                 <Hint title="Como a nota é calculada" align="left" size={15}>
                   Combina desconto sobre a avaliação, preço frente ao mercado do bairro, qualidade
                   da região e facilidade de revenda. É comparativa: posiciona o imóvel em relação
@@ -177,7 +177,7 @@ export default function ShowcaseGallery() {
                     Fachada <b>{p.visualScore}</b>
                   </span>
                   <span>
-                    Melhor uso: <b>{p.uses[0].k.toLowerCase()}</b>
+                    Tese de investimento: <b>{p.uses[0].k.toLowerCase()}</b>
                   </span>
                 </span>
               </span>

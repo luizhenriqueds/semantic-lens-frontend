@@ -9,7 +9,7 @@ export type RegisterError = {
   hint?: string;
 };
 
-const EXISTS = "Este e-mail já tem uma conta na Lavra.";
+const EXISTS = "Este e-mail já tem uma conta no Leilão Index.";
 const GENERIC = "Não foi possível criar a conta agora. Tente novamente em instantes.";
 const INVALID_EMAIL = "Confira o e-mail informado: o formato parece inválido.";
 
@@ -41,7 +41,7 @@ const RECOVER_HINT =
 export function signInError(raw?: { code?: string; message?: string } | null): string {
   const text = raw?.message ?? "";
   if (raw?.code === "email_not_confirmed" || /not confirmed/i.test(text))
-    return `Sua conta ainda não foi confirmada. Procure o e-mail da Lavra na caixa de entrada e no spam. ${RECOVER_HINT}`;
+    return `Sua conta ainda não foi confirmada. Procure o e-mail do Leilão Index na caixa de entrada e no spam. ${RECOVER_HINT}`;
   return "E-mail ou senha inválidos.";
 }
 

@@ -133,27 +133,25 @@
   align-items: center;
   gap: 12px;
 }
+/* Sem tile: o lockup mostra a marca em dois tons sobre o próprio fundo. */
 .lp-brand .lp-mark {
-  width: 40px;
-  height: 40px;
-  border-radius: 11px;
-  background: var(--primary);
-  color: var(--surface);
   display: grid;
   place-items: center;
   flex-shrink: 0;
+  --brand-tone-a: var(--primary);
+  --brand-tone-b: var(--ink-soft);
 }
 .lp-brand b {
   font-weight: 700;
   font-size: 18px;
-  letter-spacing: -0.01em;
+  letter-spacing: -0.028em;
   display: block;
   line-height: 1.1;
+  color: var(--ink);
 }
-.lp-brand small {
-  color: var(--ink-faint);
-  font-size: 11.5px;
+.lp-brand b span {
   font-weight: 500;
+  color: var(--ink-soft);
 }
 .lp-navmenu {
   display: flex;
@@ -171,9 +169,15 @@
   color: var(--ink-soft);
   padding: 8px 13px;
   border-radius: 9px;
+  /* Without this a cramped row wraps mid-label and the bar grows to two lines. */
+  white-space: nowrap;
   transition:
     background 0.15s,
     color 0.15s;
+}
+.lp-nav .lp-brand b,
+.lp-navcta .lp-btn {
+  white-space: nowrap;
 }
 .lp-nav nav a:hover {
   background: var(--surface-2);
@@ -222,8 +226,8 @@
     background: var(--bg);
   }
 }
-/* The full row needs ~1050px of content, so it folds well before the phone breakpoint. */
-@media (max-width: 1100px) {
+/* With short labels the row needs ~850px, so laptops and landscape tablets keep it. */
+@media (max-width: 1000px) {
   .lp-navtoggle {
     display: grid;
   }
@@ -1085,6 +1089,7 @@ section.lp-deep + section.lp-band {
   font-size: 30px;
   font-weight: 800;
   letter-spacing: -0.02em;
+  white-space: nowrap;
 }
 .lp-marketviz .lp-med span {
   font-size: 14px;
@@ -1284,6 +1289,296 @@ section.lp-deep + section.lp-band {
   padding: 4px 10px;
 }
 
+.lp-notacaveat {
+  margin-top: 14px;
+  font-size: 13px;
+  color: var(--ink-faint);
+  line-height: 1.6;
+}
+.lp-notacaveat a {
+  color: var(--primary);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+/* ---------- ingestion diagram ----------
+   Named lp-dataflow, not lp-flow: .lp-persona .lp-flow already exists for the persona chips.
+   Three named stages with the nodes as real DOM text; the SVG only draws the connectors.
+
+   Alignment rule for the whole block: captions share grid row 1 and the three content cells share
+   row 2, so every column starts at the same y. Both node columns are three stretched rows, so a
+   connector that ends at 1/6, 3/6 or 5/6 of the height always meets a row centre - no pixel
+   guessing, and it survives a label wrapping to two lines. */
+.lp-dataflow {
+  margin-top: 30px;
+}
+.lp-df-stages {
+  display: grid;
+  grid-template-columns: 0.9fr 66px minmax(178px, 0.62fr) 66px 1.52fr;
+  grid-template-rows: auto 1fr;
+}
+.lp-df-cap-in {
+  grid-area: 1 / 1;
+}
+.lp-df-in {
+  grid-area: 2 / 1;
+}
+.lp-df-link-in {
+  grid-area: 2 / 2;
+}
+.lp-df-cap-mid {
+  grid-area: 1 / 3;
+  text-align: center;
+  color: var(--primary-soft);
+}
+.lp-df-mid {
+  grid-area: 2 / 3;
+}
+.lp-df-link-out {
+  grid-area: 2 / 4;
+}
+.lp-df-cap-out {
+  grid-area: 1 / 5;
+}
+.lp-df-out {
+  grid-area: 2 / 5;
+}
+.lp-df-cap {
+  font-family: var(--font-mono), ui-monospace, monospace;
+  font-size: 10.5px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  padding-bottom: 12px;
+}
+.lp-df-in,
+.lp-df-out {
+  display: grid;
+  grid-template-rows: repeat(3, 1fr);
+  gap: 9px;
+}
+.lp-df-out {
+  grid-template-columns: repeat(2, 1fr);
+  grid-auto-flow: row;
+}
+.lp-df-mid {
+  display: grid;
+  align-content: center;
+}
+.lp-df-node {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 13px;
+  padding: 11px 13px;
+}
+.lp-df-node i {
+  width: 30px;
+  height: 30px;
+  flex: 0 0 30px;
+  border-radius: 9px;
+  background: var(--primary-wash);
+  display: grid;
+  place-items: center;
+}
+.lp-df-node svg {
+  width: 20px;
+  height: 20px;
+  overflow: visible;
+}
+.lp-df-node span {
+  font-size: 13.5px;
+  font-weight: 500;
+  color: var(--ink-soft);
+  letter-spacing: -0.01em;
+  line-height: 1.35;
+}
+.lp-df-out .lp-df-node span {
+  font-weight: 600;
+  color: var(--ink);
+}
+
+/* the engine: three plates fusing into one, crossed by a sweep */
+.lp-df-engine {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  padding: 20px 16px 18px;
+  text-align: center;
+  box-shadow: 0 16px 40px -26px rgba(var(--shadow), 0.6);
+}
+.lp-df-engine svg {
+  width: 100%;
+  max-width: 140px;
+  height: auto;
+  display: block;
+  margin: 0 auto;
+}
+.lp-df-engine b {
+  display: block;
+  font-family: var(--font-mono), ui-monospace, monospace;
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  color: var(--ink-soft);
+  margin-top: 12px;
+}
+.lp-dataflow [class^="e-"],
+.lp-dataflow [class^="f-"],
+.lp-dataflow [class^="g-"] {
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.lp-dataflow .e-plate {
+  fill: var(--primary-wash);
+  stroke: var(--primary-soft);
+  stroke-width: 1.6;
+}
+.lp-dataflow .e-plate-top {
+  fill: var(--primary);
+  stroke: none;
+}
+.lp-dataflow .e-edge {
+  fill: none;
+  stroke: var(--surface);
+  stroke-width: 1.6;
+  opacity: 0.7;
+}
+.lp-dataflow .e-sweep {
+  fill: none;
+  stroke: var(--surface);
+  stroke-width: 2.4;
+  opacity: 0.9;
+  animation: lp-df-sweep 2.6s ease-in-out infinite;
+}
+@keyframes lp-df-sweep {
+  0% {
+    transform: translateY(-9px);
+    opacity: 0;
+  }
+  25%,
+  75% {
+    opacity: 0.9;
+  }
+  100% {
+    transform: translateY(9px);
+    opacity: 0;
+  }
+}
+
+/* connectors: a dim rail with a short dash running along it */
+.lp-df-link {
+  display: grid;
+  place-items: center;
+}
+.lp-df-wire {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+.lp-df-arrow {
+  display: none;
+  width: 22px;
+  height: 22px;
+  color: var(--primary-soft);
+  stroke-width: 2;
+}
+.lp-dataflow .f-rail {
+  fill: none;
+  stroke: var(--primary-soft);
+  stroke-width: 1.6;
+  opacity: 0.42;
+}
+.lp-dataflow .f-live {
+  fill: none;
+  stroke: var(--primary-soft);
+  stroke-width: 1.6;
+  stroke-dasharray: 6 12;
+  animation: lp-df-flow 1.4s linear infinite;
+}
+@keyframes lp-df-flow {
+  to {
+    stroke-dashoffset: -18;
+  }
+}
+
+/* node glyphs. Sheets are filled so the stack occludes; stroke-only turns to mud at chip size. */
+.lp-dataflow .g-sheet {
+  fill: var(--surface);
+  stroke: var(--primary-soft);
+  stroke-width: 1.8;
+}
+.lp-dataflow .g-sheet-front {
+  fill: var(--surface);
+  stroke: var(--primary);
+  stroke-width: 1.8;
+}
+.lp-dataflow .g-line {
+  fill: none;
+  stroke: var(--primary);
+  stroke-width: 2;
+}
+.lp-dataflow .g-soft {
+  fill: none;
+  stroke: var(--primary-soft);
+  stroke-width: 2;
+}
+.lp-dataflow .g-solid {
+  fill: var(--primary);
+  stroke: none;
+}
+.lp-dataflow .g-mark {
+  fill: none;
+  stroke: var(--warn);
+  stroke-width: 2;
+}
+
+/* Five columns in one band stop fitting well before the phone breakpoint: the stages stack in DOM
+   order and the wires give way to a plain arrow, which survives any width. */
+@media (max-width: 980px) {
+  .lp-df-stages {
+    grid-template-columns: 1fr;
+    grid-template-rows: none;
+    gap: 8px;
+    max-width: 460px;
+    margin: 0 auto;
+  }
+  .lp-df-cap-in,
+  .lp-df-in,
+  .lp-df-link-in,
+  .lp-df-cap-mid,
+  .lp-df-mid,
+  .lp-df-link-out,
+  .lp-df-cap-out,
+  .lp-df-out {
+    grid-area: auto;
+  }
+  .lp-df-cap-mid {
+    text-align: left;
+  }
+  .lp-df-in,
+  .lp-df-out {
+    grid-template-rows: none;
+    grid-template-columns: 1fr;
+  }
+  .lp-df-link {
+    padding: 6px 0;
+  }
+  .lp-df-wire {
+    display: none;
+  }
+  .lp-df-arrow {
+    display: block;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .lp-dataflow .f-live,
+  .lp-dataflow .e-sweep {
+    animation: none;
+  }
+}
+
 /* ============================================================
      FAQ
      ============================================================ */
@@ -1423,6 +1718,16 @@ footer.lp-foot .lp-fine {
   font-size: 11px;
   color: var(--ink-faint);
   letter-spacing: 0.04em;
+}
+/* The brand row is a space-between flex; the link grid needs its own wrap above it. */
+footer.lp-foot .lp-footlinks {
+  display: block;
+  padding-bottom: 8px;
+}
+footer.lp-foot .seolinks {
+  margin-top: 0;
+  padding-top: 0;
+  border-top: 0;
 }
 
 /* ============================================================
@@ -1655,8 +1960,10 @@ footer.lp-foot .lp-fine {
   font-size: 13px;
   font-family: var(--font-sans), system-ui, sans-serif;
 }
+/* Sized below the section h2: these are step titles inside a card, and the longer
+   ones wrapped to three lines at the old size. */
 .lp-lcard h3 {
-  font-size: clamp(22px, 2.6vw, 29px);
+  font-size: clamp(19px, 2.1vw, 24px);
   font-weight: 800;
   letter-spacing: -0.02em;
   margin: 0 0 12px;
@@ -2205,11 +2512,19 @@ footer.lp-foot .lp-fine {
   height: 17px;
   stroke-width: 2;
 }
+.lp-plans-anchor {
+  text-align: center;
+  max-width: 62ch;
+  margin: 26px auto 0;
+  font-size: 14px;
+  line-height: 1.65;
+  color: var(--ink-soft);
+}
 .lp-plans-note {
   text-align: center;
   font-size: 12.5px;
   color: var(--ink-faint);
-  margin: 22px auto 0;
+  margin: 10px auto 0;
 }
 @media (max-width: 760px) {
   .lp-apiplan {
@@ -2770,10 +3085,6 @@ footer.lp-foot .lp-fine {
 
 /* ---------- mobile: hide heavy product mocks, cards become sliders ---------- */
 @media (max-width: 760px) {
-  .lp-m-hide {
-    display: none;
-  }
-
   .lp-m-slide {
     display: grid;
     grid-template-columns: none;

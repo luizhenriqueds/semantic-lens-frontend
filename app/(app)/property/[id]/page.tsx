@@ -1,4 +1,5 @@
 import { Suspense } from "react";
+import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import PropertyPhoto from "@/components/property/PropertyPhoto";
@@ -18,13 +19,17 @@ import {
   ScoreBreakdownSlot,
   ScoreWeightsSlot,
 } from "./_components/sections";
-import { getPropertyById, getPropertyDetailText } from "@/lib/data";
+import JsonLd from "@/components/seo/JsonLd";
+import { getPropertyById, getPropertyDetailText, isListable } from "@/lib/data";
+import { breadcrumbLd, realEstateListingLd } from "@/lib/seo/jsonLd";
+import { slugify } from "@/lib/seo/slug";
 import Hint from "@/components/ui/Hint";
 import {
   fmtDate,
   fmtDay,
   fmtDist,
   money,
+  titleCase,
   PROFILE_LABEL,
   SCORE_EXPLAIN,
   SCORE_FIELD,
@@ -35,6 +40,44 @@ import { addressLine } from "@/lib/geo";
 
 // Dynamic: the app layout reads the auth cookie, so this route can't be static.
 export const dynamic = "force-dynamic";
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}): Promise<Metadata> {
+  const { id } = await params;
+  // `cached()`, so the page body's own call below is the same read.
+  const p = await getPropertyById(id);
+  if (!p) return { title: "Imóvel não encontrado", robots: { index: false, follow: false } };
+
+  const city = titleCase(p.city);
+  const where = p.neighborhood
+    ? `${titleCase(p.neighborhood)}, ${city}/${p.uf}`
+    : `${city}/${p.uf}`;
+  const price = p.saleValue ? ` por ${money(p.saleValue)}` : "";
+  const off = p.discount ? `, ${Math.round(p.discount)}% abaixo da avaliação` : "";
+  const size = p.area ? `${p.area.toLocaleString("pt-BR")} m²` : null;
+  const rooms = p.bedrooms ? `${p.bedrooms} quarto${p.bedrooms > 1 ? "s" : ""}` : null;
+  const note =
+    p.scores.investment != null ? ` Nota de Investimento ${p.scores.investment}/100.` : "";
+
+  return {
+    title: `${p.title} em ${where} — leilão da Caixa${price}`,
+    description: `${p.propertyType} ${[size, rooms].filter(Boolean).join(", ")} em ${where}, ${
+      p.modality ?? "leilão"
+    } da Caixa${price}${off}.${note} Veja região, comparação de mercado e o porquê da nota.`,
+    alternates: { canonical: `/property/${id}` },
+    openGraph: {
+      url: `/property/${id}`,
+      type: "article",
+      title: `${p.title} em ${where} — leilão da Caixa${price}`,
+      images: p.image ? [p.image] : undefined,
+    },
+    // The (app) layout is noindex; sold and unscored listings stay that way.
+    robots: { index: isListable(p) && !p.inactive, follow: true },
+  };
+}
 
 export default async function PropertyPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -57,6 +100,20 @@ export default async function PropertyPage({ params }: { params: Promise<{ id: s
 
   return (
     <section className="view">
+      <JsonLd
+        data={[
+          realEstateListingLd(p),
+          breadcrumbLd([
+            { name: "Início", path: "/" },
+            { name: "Leilão de imóveis", path: "/leilao-de-imoveis" },
+            {
+              name: titleCase(p.city),
+              path: `/leilao-de-imoveis/${slugify(p.city)}-${p.uf.toLowerCase()}`,
+            },
+            { name: p.title, path: `/property/${p.id}` },
+          ]),
+        ]}
+      />
       <BackButton />
 
       <div className="dhead">

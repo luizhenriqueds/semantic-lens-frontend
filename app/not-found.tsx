@@ -1,15 +1,30 @@
 import Link from "next/link";
+import SeoLinks from "@/components/seo/SeoLinks";
 
+export const metadata = { title: "Página não encontrada" };
+
+// Reached often on purpose: property/[id] calls notFound() whenever a listing is withdrawn, which
+// on a base this size is a steady trickle of crawler hits. The link block recycles that budget.
 export default function NotFound() {
   return (
-    <section className="view">
-      <div className="pagehead">
-        <h1>Página não encontrada</h1>
-        <p>O conteúdo que você procura não existe ou foi removido.</p>
+    <main className="nf">
+      <h1>Página não encontrada</h1>
+      <p>
+        O conteúdo que você procura não existe, saiu do ar ou já foi arrematado. A oferta da Caixa
+        muda todo dia — abaixo estão os caminhos mais usados.
+      </p>
+      <div className="nf-actions">
+        <Link className="btn solid" href="/leilao-de-imoveis">
+          Ver leilões da Caixa
+        </Link>
+        <Link className="btn" href="/properties">
+          Buscar imóveis
+        </Link>
+        <Link className="btn" href="/">
+          Voltar ao início
+        </Link>
       </div>
-      <Link className="btn solid" href="/" style={{ display: "inline-flex" }}>
-        Voltar ao início
-      </Link>
-    </section>
+      <SeoLinks />
+    </main>
   );
 }

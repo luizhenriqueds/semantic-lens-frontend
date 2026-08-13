@@ -1,4 +1,4 @@
-const FROM = process.env.EMAIL_FROM || "Lavra <nao-responda@lavra.app>";
+const FROM = process.env.EMAIL_FROM || "Leilão Index <nao-responda@leilaoindex.com.br>";
 
 export async function sendEmail({
   to,

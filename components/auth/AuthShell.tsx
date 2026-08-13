@@ -1,4 +1,4 @@
-import LavraLogo from "@/components/brand/LavraLogo";
+import BrandLogo from "@/components/brand/BrandLogo";
 import AuthDemo from "./AuthDemo";
 
 export default function AuthShell({ children }: { children: React.ReactNode }) {
@@ -23,9 +23,9 @@ export default function AuthShell({ children }: { children: React.ReactNode }) {
 
         <div className="au-demo-head">
           <span className="au-brand">
-            <LavraLogo size={30} />
+            <BrandLogo size={30} />
             <span>
-              lavra<i>.</i>
+              leilão index<i>.</i>
             </span>
           </span>
 
@@ -44,9 +44,9 @@ export default function AuthShell({ children }: { children: React.ReactNode }) {
 
       <section className="au-form-pane">
         <span className="au-mobilebrand">
-          <LavraLogo size={26} />
+          <BrandLogo size={26} />
           <span>
-            lavra<i>.</i>
+            leilão index<i>.</i>
           </span>
         </span>
         {children}

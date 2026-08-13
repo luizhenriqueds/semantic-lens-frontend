@@ -39,15 +39,17 @@ describe("exportFilename", () => {
 
   it("composes base, slug and UTC date", () => {
     expect(exportFilename("imoveis", { label: "Casa · em São Paulo/SP", date, ext: "csv" })).toBe(
-      "lavra-imoveis-casa-em-sao-paulo-sp-2026-07-30.csv",
+      "leilao-index-imoveis-casa-em-sao-paulo-sp-2026-07-30.csv",
     );
   });
 
   it("drops the slug when there is no label", () => {
     expect(exportFilename("imoveis", { label: null, date, ext: "csv" })).toBe(
-      "lavra-imoveis-2026-07-30.csv",
+      "leilao-index-imoveis-2026-07-30.csv",
     );
-    expect(exportFilename("mercado", { date, ext: "pdf" })).toBe("lavra-mercado-2026-07-30.pdf");
+    expect(exportFilename("mercado", { date, ext: "pdf" })).toBe(
+      "leilao-index-mercado-2026-07-30.pdf",
+    );
   });
 
   it("uses the UTC day, so a UTC-3 evening does not roll back", () => {

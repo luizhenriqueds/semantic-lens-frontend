@@ -57,12 +57,12 @@ describe("propertyColumns", () => {
 
   it("appends the ficha column only when an origin is supplied", () => {
     expect(headers()).toHaveLength(39);
-    expect(headers("https://lavra.app")).toHaveLength(40);
-    const row = cells(makeProperty({ id: "abc" }), "https://lavra.app");
-    expect(row[row.length - 1]).toBe("https://lavra.app/property/abc");
+    expect(headers("https://leilaoindex.com.br")).toHaveLength(40);
+    const row = cells(makeProperty({ id: "abc" }), "https://leilaoindex.com.br");
+    expect(row[row.length - 1]).toBe("https://leilaoindex.com.br/property/abc");
     // A trailing slash on the origin must not double up.
-    expect(cells(makeProperty({ id: "abc" }), "https://lavra.app/").pop()).toBe(
-      "https://lavra.app/property/abc",
+    expect(cells(makeProperty({ id: "abc" }), "https://leilaoindex.com.br/").pop()).toBe(
+      "https://leilaoindex.com.br/property/abc",
     );
   });
 

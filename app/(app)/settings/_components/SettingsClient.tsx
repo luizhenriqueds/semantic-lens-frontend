@@ -270,8 +270,8 @@ export default function SettingsClient({
             <div className="setblock-head">
               <h2>Alertas automáticos</h2>
               <p>
-                Seleções que a Lavra monta e envia toda semana - você não precisa criar nenhuma
-                regra. Desative as que não interessam. Para alertas com seus próprios filtros, use{" "}
+                Seleções que montamos e enviamos toda semana - você não precisa criar nenhuma regra.
+                Desative as que não interessam. Para alertas com seus próprios filtros, use{" "}
                 <Link href="/alerts">Meus alertas</Link>.
               </p>
             </div>

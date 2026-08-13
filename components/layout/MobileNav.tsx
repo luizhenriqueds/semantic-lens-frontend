@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
-import LavraLogo from "@/components/brand/LavraLogo";
+import BrandLogo from "@/components/brand/BrandLogo";
 import NavLink from "@/components/layout/NavLink";
 import { NAV } from "@/components/layout/navItems";
 import { IconClose, IconMenu } from "@/lib/icons";
@@ -38,11 +38,12 @@ export default function MobileNav() {
         <div className="drawer-head">
           <Link href="/dashboard" className="brand" onClick={() => setOpen(false)}>
             <div className="mark">
-              <LavraLogo size={26} />
+              <BrandLogo size={30} />
             </div>
             <div>
-              <b>Lavra</b>
-              <small>Leilões inteligentes</small>
+              <b>
+                Leilão <span>Index</span>
+              </b>
             </div>
           </Link>
           <button className="iconbtn" aria-label="Fechar menu" onClick={() => setOpen(false)}>

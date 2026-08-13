@@ -1,19 +1,27 @@
+import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
+import BrandLogo from "@/components/brand/BrandLogo";
+import JsonLd from "@/components/seo/JsonLd";
+import { FAQ } from "@/app/(marketing)/_data/faq";
+import { faqLd } from "@/lib/seo/jsonLd";
+import { SITE_DESCRIPTION, SITE_TITLE } from "@/lib/seo/site";
 import LandingEffects from "@/app/(marketing)/_components/LandingEffects";
 import ApiWaitlist from "@/app/(marketing)/_components/ApiWaitlist";
 import PlanCta from "@/components/plan/PlanCta";
+import SeoLinks from "@/components/seo/SeoLinks";
+import SocialRow from "@/components/seo/SocialRow";
 import {
   SpotCommercial,
   SpotFamily,
   SpotFlip,
-  SpotLiquidity,
   SpotSeason,
   SpotStudent,
 } from "@/app/(marketing)/_components/UseSpots";
 import { IconCalendar, IconChart, IconHouse, IconSliders } from "@/lib/icons";
 import Rail from "@/components/ui/Rail";
 import ShowcaseGallery from "@/app/(marketing)/_components/ShowcaseGallery";
+import DataFlow from "@/app/(marketing)/_components/DataFlow";
 import { SIMILAR, SIMILAR_SEED } from "@/app/(marketing)/_data/similar";
 import { getLandingStats } from "@/lib/data/landingStats";
 import { PLANS, TRIAL_DAYS, type Role } from "@/lib/entitlements";
@@ -22,6 +30,17 @@ import { getEntitlements } from "@/lib/entitlements/server";
 import { countShort, money } from "@/lib/format";
 import { POI_LABEL, POI_ORDER } from "@/lib/pois";
 import { getUser } from "@/lib/supabase/server";
+
+export const metadata: Metadata = {
+  title: { absolute: SITE_TITLE },
+  description: SITE_DESCRIPTION,
+  alternates: { canonical: "/" },
+  openGraph: {
+    url: "/",
+    title: SITE_TITLE,
+    description: SITE_DESCRIPTION,
+  },
+};
 
 function ScoreBars({ items }: { items: { k: string; v: number }[] }) {
   return (
@@ -50,17 +69,17 @@ const PLAN_CARDS: {
   trialOver?: string;
   subnote?: string;
   popular?: boolean;
-  features: { lead?: string; text: string }[];
+  features: { lead?: string; text: string; joiner?: string }[];
 }[] = [
   {
     role: "basic",
     trial: "Explore sem criar conta",
     features: [
       { text: "Busca por texto, por região e por proximidade de lugares" },
-      { text: "Lista, mapa, filtros básicos e a página completa de cada imóvel" },
+      { text: "Lista, mapa, filtros básicos e a página de cada imóvel, com todas as notas" },
       {
-        lead: `${PLANS.basic.limits.favorites} favoritos`,
-        text: `${PLANS.basic.limits.savedSearches} alertas salvos, com aviso diário ou semanal por e-mail`,
+        lead: "Com conta grátis",
+        text: `${PLANS.basic.limits.favorites} favoritos e ${PLANS.basic.limits.savedSearches} alertas por e-mail, diários ou semanais`,
       },
     ],
   },
@@ -78,22 +97,23 @@ const PLAN_CARDS: {
       },
       {
         lead: "Filtros avançados",
-        text: "deságio, notas, financiamento, FGTS e lugares próximos",
+        text: "desconto, notas, financiamento, FGTS e lugares próximos",
       },
       { lead: "Coleções", text: "imóveis parecidos reunidos automaticamente para comparar" },
       {
         lead: "Análise de imóveis",
-        text: "distribuição de preço, deságio, área e nota do resultado",
+        text: "distribuição de preço, desconto, área e Nota de Investimento",
       },
       {
         lead: "Comparativo de mercado",
         text: "o lance contra anúncios reais do bairro, com o potencial de ganho",
       },
       {
-        lead: `Recomendações até ${PLANS.investor.limits.recommendations} imóveis`,
-        text: "semelhantes aos que você salvou",
+        lead: `Até ${PLANS.investor.limits.recommendations} recomendações`,
+        text: "de imóveis semelhantes",
+        joiner: " ",
       },
-      { lead: "Alertas automáticos", text: "seleções semanais montadas pela Lavra" },
+      { lead: "Alertas automáticos", text: "seleções semanais montadas para você" },
     ],
   },
   {
@@ -101,10 +121,10 @@ const PLAN_CARDS: {
     trial: "Para quem vive de leilão",
     subnote: `Tudo do ${PLANS.investor.label}, mais:`,
     features: [
-      { lead: "Vantagem de Largada", text: "seus alertas saem antes dos demais planos" },
+      { lead: "Alertas em primeira mão", text: "seus alertas saem antes dos demais planos" },
       {
         lead: "Todos os alertas automáticos",
-        text: "deságios, reduções de preço, mudanças de modalidade, coleções e regiões em destaque",
+        text: "descontos, reduções de preço, imóveis que migram de leilão para venda direta, coleções e regiões em destaque",
       },
       { lead: "Painel de mercado", text: "preço por m², tendências e comparáveis por cidade" },
       { lead: "Calendário de leilões", text: "a agenda das datas, dia a dia" },
@@ -113,8 +133,8 @@ const PLAN_CARDS: {
         text: "perfil e DNA de cada bairro, o que existe no entorno, preços de mercado e regiões semelhantes",
       },
       {
-        lead: `Recomendações até ${PLANS.professional.limits.recommendations} imóveis`,
-        text: "e envio por WhatsApp assim que estiver no ar",
+        lead: `Até ${PLANS.professional.limits.recommendations} recomendações`,
+        text: "e envio por WhatsApp (em breve)",
       },
       { lead: "Relatórios e exportação", text: "buscas, filtros e análises em CSV ou PDF" },
     ],
@@ -137,7 +157,7 @@ export default async function LandingPage() {
         },
         {
           v: countShort(stats.pois),
-          k: "pontos de referência",
+          k: "lugares próximos",
           note: `medidos em ${stats.poiCategories} categorias`,
         },
         {
@@ -166,32 +186,17 @@ export default async function LandingPage() {
 
   return (
     <>
+      <JsonLd data={faqLd(FAQ)} />
       <header className="lp-nav">
         <div className="lp-wrap">
-          <a className="lp-brand" href="#top" aria-label="Lavra - início">
+          <a className="lp-brand" href="#top" aria-label="Leilão Index — início">
             <span className="lp-mark">
-              <svg viewBox="0 0 48 48" width="24" height="24" aria-hidden="true">
-                <circle cx="14" cy="9" r="3" fill="currentColor" />
-                <path
-                  d="M14 15v15a4 4 0 0 0 4 4h13"
-                  stroke="currentColor"
-                  strokeWidth="4"
-                  strokeLinecap="round"
-                  fill="none"
-                />
-                <path
-                  d="M27 27.5 34 34l-7 6.5"
-                  stroke="currentColor"
-                  strokeWidth="4"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  fill="none"
-                />
-              </svg>
+              <BrandLogo size={28} />
             </span>
             <span>
-              <b>Lavra</b>
-              <small>Leilões inteligentes</small>
+              <b>
+                Leilão <span>Index</span>
+              </b>
             </span>
           </a>
           <button
@@ -211,9 +216,10 @@ export default async function LandingPage() {
           <div className="lp-navmenu" id="navmenu">
             <nav>
               <a href="#recursos">Como funciona</a>
-              <a href="#exemplo">Exemplo de análise</a>
-              <a href="#planos">Planos e preços</a>
-              <a href="#faq">Perguntas frequentes</a>
+              <a href="#exemplo">Exemplo real</a>
+              <a href="#casos">Objetivos</a>
+              <a href="#planos">Planos</a>
+              <a href="#faq">Dúvidas</a>
             </nav>
             {/* Browsing needs no account, so the primary CTA opens the app rather than signup. */}
             <div className="lp-navcta">
@@ -270,6 +276,8 @@ export default async function LandingPage() {
         </div>
         <div className="lp-wrap">
           <div>
+            {/* Only a short phrase gets .lp-u: it is white-space:nowrap so the underline can span
+                it, and anything long overflows the column. */}
             <h1>
               Saiba quais leilões
               <br />
@@ -282,8 +290,8 @@ export default async function LandingPage() {
               .
             </h1>
             <p className="lp-lede">
-              A Lavra analisa todo dia os imóveis de leilão da Caixa e dá uma nota de 0 a 100 a cada
-              um: preço, região e potencial de revenda, sempre com o porquê.
+              Analisamos diariamente imóveis de leilão para te ajudar a encontrar as melhores
+              oportunidades: preço, região, tese de investimento, potencial de revenda e muito mais!
             </p>
             <div className="lp-actions">
               <Link className="lp-btn lp-solid lp-big" href="/dashboard">
@@ -296,22 +304,14 @@ export default async function LandingPage() {
                 Ver uma análise real
               </a>
             </div>
-            <div className="lp-micro">
-              {stats
-                ? `${countShort(stats.activeProperties)} imóveis ativos${
-                    stats.discountMedian != null
-                      ? ` · ${stats.discountMedian.toLocaleString("pt-BR", { maximumFractionDigits: 1 })}% de desconto mediano`
-                      : ""
-                  } · sem cadastro`
-                : "Sem cadastro para explorar · base atualizada diariamente"}
-            </div>
+            <div className="lp-micro">Gratuita para testar. Sem cadastro ou cartão de crédito</div>
           </div>
 
           <div className="lp-heromock lp-reveal" aria-hidden="true">
             <div className="lp-photo">
               <Image
                 src="/showcase/apto-ribeirao-preto.jpg"
-                alt=""
+                alt="Fachada de apartamento de 64 m² no Jardim Palma Travassos, Ribeirão Preto/SP, em leilão da Caixa"
                 width={800}
                 height={500}
                 priority
@@ -338,9 +338,9 @@ export default async function LandingPage() {
             <div className="lp-mockbars">
               <ScoreBars
                 items={[
-                  { k: "Preço vs. mercado", v: 94 },
-                  { k: "Qualidade da região", v: 87 },
-                  { k: "Liquidez na revenda", v: 89 },
+                  { k: "Desconto sobre a avaliação", v: 92 },
+                  { k: "Preço vs. mercado", v: 84 },
+                  { k: "Qualidade da região", v: 88 },
                 ]}
               />
             </div>
@@ -363,7 +363,7 @@ export default async function LandingPage() {
                 </text>
               </svg>
               <div className="lp-lbl">
-                Nota de investimento<b>preço, região e revenda em um número só</b>
+                Nota de Investimento<b>preço, região e revenda em um número só</b>
               </div>
             </div>
           </div>
@@ -371,7 +371,7 @@ export default async function LandingPage() {
       </section>
 
       {stats && (
-        <section className="lp-statsband" aria-label="A base da Lavra hoje">
+        <section className="lp-statsband" aria-label="A base hoje">
           <div className="lp-wrap">
             <div className="lp-stats">
               {tiles.map((s) => (
@@ -386,20 +386,37 @@ export default async function LandingPage() {
               ))}
             </div>
             <p className="lp-stats-foot">
-              Sem cadastro para explorar · toda nota vem com o porquê, fator a fator
+              Sem cadastro para explorar · Nota de investimento explicada para você tomar as
+              melhores decisões
             </p>
           </div>
         </section>
       )}
 
+      {/* The groundwork, made literal: what the listing gives vs what the report returns. */}
+      <section className="lp-band lp-tint">
+        <div className="lp-wrap">
+          <div className="lp-sechead lp-reveal">
+            <span className="lp-seclabel">do dado bruto à tomada de decisão</span>
+            <h2>O anúncio do leilão traz o dado bruto. Nós te devolvemos o relatório.</h2>
+            <p>
+              As melhores oportunidades do Brasil, ordenadas por potencial de investimento. Um
+              relatório completo para te apoiar no processo de decisão.
+            </p>
+          </div>
+
+          <DataFlow />
+        </div>
+      </section>
+
       <section className="lp-band lp-chapter lp-alt lp-showband" id="exemplo">
         <div className="lp-wrap">
           <div className="lp-sechead lp-reveal">
             <span className="lp-seclabel">imóveis reais, notas reais</span>
-            <h2>Veja a Lavra analisando um imóvel de verdade</h2>
+            <h2>Veja a análise de um imóvel de verdade</h2>
             <p>
-              Nada de tela de exemplo. Abaixo está exatamente o que a plataforma mostra sobre um
-              imóvel da base: <b>nota, melhores usos e leitura da região</b>.
+              Exemplo de análise de um imóvel real da base:{" "}
+              <b>nota, melhores usos e análise de região</b>.
             </p>
           </div>
 
@@ -416,11 +433,8 @@ export default async function LandingPage() {
       <section className="lp-band lp-chapter" id="recursos">
         <div className="lp-wrap">
           <div className="lp-sechead lp-reveal">
-            <span className="lp-seclabel">o que a Lavra faz por você</span>
-            <h2>Da busca ao lance, com número em cada passo</h2>
-            <p>
-              Quatro coisas que a Lavra faz automaticamente, todo dia, em cima de toda a base ativa.
-            </p>
+            <span className="lp-seclabel">o que fazemos por você</span>
+            <h2>Da busca à tomada de decisão</h2>
           </div>
 
           <div className="lp-stack lp-m-slide">
@@ -432,23 +446,23 @@ export default async function LandingPage() {
                       <i>1</i> busca em português
                     </span>
                   </div>
-                  <h3>Descreva o imóvel; a gente encontra o leilão</h3>
+                  <h3>Descreva o que procura. Nós encontramos as melhores oportunidades.</h3>
                   <p>
-                    Fale como falaria com um corretor. A Lavra entende o seu objetivo - não só
-                    palavras-chave - e ordena por afinidade.
+                    Fale como falaria com um corretor. A busca entende o seu objetivo e ordena por
+                    relevância.
                   </p>
                   <ul className="lp-lpoints">
                     <li>
                       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
                         <path d="m5 13 4 4L19 7" />
                       </svg>
-                      Linguagem natural, sem dropdowns nem juridiquês
+                      Busque imóveis usando linguagem natural
                     </li>
                     <li>
                       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
                         <path d="m5 13 4 4L19 7" />
                       </svg>
-                      Resultados ranqueados pela afinidade com o objetivo
+                      Resultados ranqueados por relevância
                     </li>
                   </ul>
                 </div>
@@ -480,7 +494,7 @@ export default async function LandingPage() {
                     </span>
                     <div>
                       <b>Casa 110 m² · Saúde</b>
-                      <span className="lp-s">1ª praça em 12 dias · R$ 385.000</span>
+                      <span className="lp-s">1º Leilão em 12 dias · R$ 385.000</span>
                     </div>
                     <div className="lp-aff">
                       <div className="lp-pct">96%</div>
@@ -510,7 +524,7 @@ export default async function LandingPage() {
                     </span>
                     <div>
                       <b>Sobrado 96 m² · Jabaquara</b>
-                      <span className="lp-s">2ª praça em 20 dias · R$ 298.000</span>
+                      <span className="lp-s">2º Leilão em 20 dias · R$ 298.000</span>
                     </div>
                     <div className="lp-aff">
                       <div className="lp-pct">91%</div>
@@ -530,17 +544,16 @@ export default async function LandingPage() {
                         <rect x="4" y="10" width="16" height="11" rx="2" />
                         <path d="M8 10V7a4 4 0 0 1 8 0v3" />
                       </svg>{" "}
-                      Modelo próprio da Lavra
+                      Modelo próprio
                     </span>
                     <span className="lp-lindex">
                       <i>2</i> nota de investimento
                     </span>
                   </div>
-                  <h3>Uma nota de 0 a 100 - e o porquê dela</h3>
+                  <h3>Uma nota de 0 a 100 para rankear as melhores oportunidades</h3>
                   <p>
                     A nota combina desconto sobre a avaliação, preço frente ao mercado do bairro,
-                    serviços no entorno e facilidade de revenda. Os pesos mudam conforme o tipo -
-                    moradia, terreno ou comercial se valorizam de formas diferentes.
+                    serviços no entorno e facilidade de revenda.
                   </p>
                   <ul className="lp-lpoints">
                     <li>
@@ -583,7 +596,7 @@ export default async function LandingPage() {
                   </div>
                   <div className="lp-bar">
                     <div className="lp-t">
-                      <span>Desconto sobre avaliação</span>
+                      <span>Desconto sobre a avaliação</span>
                       <b>92</b>
                     </div>
                     <div className="lp-track">
@@ -632,8 +645,8 @@ export default async function LandingPage() {
                   </div>
                   <h3>A fachada do imóvel também vira nota</h3>
                   <p>
-                    A partir da foto do anúncio, a Lavra dá uma nota de 0 a 100 para{" "}
-                    <b>fachada, acabamento e estado de conservação</b> - um sinal a mais para
+                    A partir da foto do anúncio, damos uma nota de 0 a 100 para{" "}
+                    <b>fachada, acabamento e estado de conservação</b> — um sinal a mais para
                     dimensionar a reforma antes de visitar, que entra no cálculo da nota geral.
                   </p>
                   <ul className="lp-lpoints">
@@ -661,7 +674,7 @@ export default async function LandingPage() {
                     </span>
                     <Image
                       src="/showcase/apto-ribeirao-preto.jpg"
-                      alt=""
+                      alt="Fachada de apartamento em Ribeirão Preto/SP avaliada por visão computacional"
                       width={1200}
                       height={750}
                       loading="lazy"
@@ -675,7 +688,7 @@ export default async function LandingPage() {
                     <div className="lp-vs-stat">
                       <div className="lp-k">Qualidade da fachada</div>
                       <div className="lp-v">
-                        82<small>/100</small>
+                        81<small>/100</small>
                       </div>
                     </div>
                     <div className="lp-vs-stat">
@@ -700,8 +713,8 @@ export default async function LandingPage() {
                   <h3>A oportunidade chega no seu e-mail</h3>
                   <p>
                     Salve os critérios que você procura e escolha a frequência: <b>diária</b> ou{" "}
-                    <b>semanal</b>. A Lavra varre a base atualizada e manda por e-mail só o que
-                    combina - com a nota já calculada.
+                    <b>semanal</b>. Te notificamos sempre que um novo imóvel atender aos seus
+                    critérios.
                   </p>
                   <ul className="lp-lpoints">
                     <li>
@@ -714,7 +727,19 @@ export default async function LandingPage() {
                       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
                         <path d="m5 13 4 4L19 7" />
                       </svg>
-                      Datas de leilão dos seus favoritos na carteira
+                      Critérios avançados
+                    </li>
+                    <li>
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                        <path d="m5 13 4 4L19 7" />
+                      </svg>
+                      Salve buscas e filtros como alertas
+                    </li>
+                    <li>
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                        <path d="m5 13 4 4L19 7" />
+                      </svg>
+                      Recomendações e principais oportunidades
                     </li>
                   </ul>
                 </div>
@@ -761,7 +786,7 @@ export default async function LandingPage() {
         </div>
       </section>
 
-      <section className="lp-band lp-beat lp-tint lp-m-hide">
+      <section className="lp-band lp-beat lp-tint">
         <div className="lp-wrap">
           <div className="lp-breakdown">
             <div className="lp-txt lp-reveal">
@@ -780,7 +805,7 @@ export default async function LandingPage() {
                   </span>
                   <div>
                     <b>Desconto sobre a avaliação</b>
-                    <span>quanto o preço está abaixo do valor avaliado pela Caixa.</span>
+                    <span>quanto o preço está abaixo do valor de avaliação pelo banco.</span>
                   </div>
                 </li>
                 <li>
@@ -803,7 +828,10 @@ export default async function LandingPage() {
                   </span>
                   <div>
                     <b>Qualidade da região</b>
-                    <span>proximidade de mercados, hospitais, escolas, farmácias e parques.</span>
+                    <span>
+                      proximidade de mercados, hospitais, escolas, farmácias, parques e mais 20
+                      categorias de estabelecimentos.
+                    </span>
                   </div>
                 </li>
                 <li>
@@ -814,7 +842,7 @@ export default async function LandingPage() {
                   </span>
                   <div>
                     <b>Diversidade de serviços</b>
-                    <span>variedade de comércios e serviços por perto - uma região completa.</span>
+                    <span>variedade de comércios e serviços por perto — uma região completa.</span>
                   </div>
                 </li>
                 <li>
@@ -824,7 +852,7 @@ export default async function LandingPage() {
                     </svg>
                   </span>
                   <div>
-                    <b>Liquidez do tipo de imóvel</b>
+                    <b>Liquidez do tipo</b>
                     <span>
                       apartamentos e casas revendem mais fácil que salas, galpões ou terrenos.
                     </span>
@@ -837,8 +865,8 @@ export default async function LandingPage() {
                     </svg>
                   </span>
                   <div>
-                    <b>Melhor uso / potencial</b>
-                    <span>o ponto mais forte do imóvel - moradia, comércio, renda etc.</span>
+                    <b>Tese de investimento recomendada</b>
+                    <span>o ponto mais forte do imóvel e tese de investimento recomendada.</span>
                   </div>
                 </li>
               </ul>
@@ -848,6 +876,10 @@ export default async function LandingPage() {
                 <span className="lp-chip">Terreno</span>
                 <span className="lp-chip">Comercial</span>
               </div>
+              <p className="lp-notacaveat">
+                A nota compara oportunidades — ela não lê o edital nem garante bom negócio.{" "}
+                <a href="#faq-garantia">Por quê?</a>
+              </p>
             </div>
 
             <div className="lp-scorecard lp-reveal lp-d1">
@@ -934,8 +966,7 @@ export default async function LandingPage() {
             <span className="lp-seclabel">para o que o imóvel serve melhor</span>
             <h2>Notas de uso: o destaque de cada imóvel</h2>
             <p>
-              Além da nota principal, mostramos os melhores usos - e eles só aparecem quando o
-              imóvel realmente se sobressai.
+              Além da nota principal, mostramos a tese de investimento recomendada para o imóvel.
             </p>
           </div>
           <div className="lp-uses-grid">
@@ -953,17 +984,12 @@ export default async function LandingPage() {
               {
                 Spot: SpotStudent,
                 k: "Aluguel estudantil",
-                d: "universidades no entorno e imóvel compacto.",
+                d: "universidades e escolas no entorno e imóvel compacto.",
               },
               {
                 Spot: SpotFlip,
                 k: "Reforma e revenda",
                 d: "desconto, preço frente ao mercado e potencial de obra.",
-              },
-              {
-                Spot: SpotLiquidity,
-                k: "Liquidez na revenda",
-                d: "quanto tempo o imóvel leva para sair naquela região.",
               },
               {
                 Spot: SpotCommercial,
@@ -981,20 +1007,20 @@ export default async function LandingPage() {
         </div>
       </section>
 
-      <section className="lp-band lp-chapter lp-alt lp-m-hide">
+      <section className="lp-band lp-chapter lp-alt">
         <div className="lp-wrap">
           <div className="lp-region">
             <div className="lp-txt lp-reveal">
-              <span className="lp-seclabel">a região, medida</span>
+              <span className="lp-seclabel">análise da região</span>
               <h3>Você não compra só o imóvel. Compra a região.</h3>
               <p>
-                A Lavra divide o país em pequenas regiões e mede, em cada uma, a distância real até
-                centenas de milhares de pontos de referência - de escola e hospital a restaurante,
+                Dividimos o país em pequenas regiões e medimos, em cada uma, a distância real até
+                centenas de milhares de pontos de referência — de escola e hospital a restaurante,
                 shopping e ponto de ônibus.
               </p>
               <p>
                 Regiões mais completas puxam a nota para cima. No mapa, quanto mais escura a célula,
-                mais serviço por perto.
+                maior a densidade de serviços na região.
               </p>
               <div className="lp-legend">
                 <span>Menos serviços</span>
@@ -1132,19 +1158,16 @@ export default async function LandingPage() {
         </div>
       </section>
 
-      <section className="lp-band lp-m-hide">
+      <section className="lp-band">
         <div className="lp-wrap">
           <div className="lp-market">
             <div className="lp-txt lp-reveal">
               <span className="lp-seclabel">análise de preço de mercado</span>
-              <h3>O preço é bom mesmo? A gente compara com o mercado real.</h3>
-              <p>
-                Buscamos anúncios reais de imóveis semelhantes em portais consolidados - e ignoramos
-                portais de leilão, para comparar sempre com o mercado aberto.
-              </p>
+              <h3>O preço é bom mesmo? Comparamos com o mercado real.</h3>
+              <p>Buscamos anúncios reais de imóveis semelhantes em portais consolidados.</p>
               <div className="lp-sources">
-                <span className="lp-yes">✓ portais consolidados do mercado</span>
-                <span className="lp-no">portais de leilão</span>
+                <span className="lp-yes">✓ +10 portais de imóveis analisados em todo o Brasil</span>
+                <span className="lp-yes">✓ +300 mil imóveis comparados</span>
               </div>
               <p>
                 Calculamos o preço <b>mediano por m²</b> da região e refinamos para o imóvel
@@ -1195,9 +1218,8 @@ export default async function LandingPage() {
             <span className="lp-seclabel">coleções de imóveis</span>
             <h2>Coleções de imóveis, montadas automaticamente</h2>
             <p>
-              A Lavra agrupa imóveis parecidos entre si - tipo, tamanho, faixa de preço e perfil de
-              região - e dá um nome a cada coleção. Em vez de filtrar campo por campo, você entra
-              direto na coleção que combina com o seu plano.
+              Agrupamos imóveis parecidos entre si usando um algoritmo proprietário e de forma
+              automática para você encontrar as melhores oportunidades para o seu objetivo.
             </p>
           </div>
           <div className="lp-clusters lp-m-slide">
@@ -1224,7 +1246,7 @@ export default async function LandingPage() {
                     <span className="lp-clcell" key={n}>
                       <Image
                         src={`/showcase/clusters/${c.slug}-${n}.jpg`}
-                        alt=""
+                        alt={`${c.label} — imóvel ${n} da coleção`}
                         width={420}
                         height={420}
                         loading="lazy"
@@ -1248,12 +1270,11 @@ export default async function LandingPage() {
       <section className="lp-band lp-alt">
         <div className="lp-wrap">
           <div className="lp-sechead lp-reveal">
-            <span className="lp-seclabel">comparação lado a lado</span>
-            <h2>Nunca avalie um leilão sozinho</h2>
+            <span className="lp-seclabel">nunca deixe passar uma oportunidade</span>
+            <h2>Recomendações de imóveis para o seu perfil</h2>
             <p>
-              Para cada imóvel, a Lavra abre duas listas: <b>parecidos visualmente</b>, quando o
-              modelo reconhece fachadas quase idênticas, e <b>equivalentes</b>, de mesma região e
-              faixa de preço.
+              Para cada imóvel, sugerimos imóveis similares para que você possa considerar em sua
+              análise e tomada de decisão.
             </p>
           </div>
 
@@ -1261,7 +1282,7 @@ export default async function LandingPage() {
             <div className="lp-simseed-photo">
               <Image
                 src={SIMILAR_SEED.photo}
-                alt={`Fachada do condomínio - ${SIMILAR_SEED.location}`}
+                alt={`Fachada do condomínio — ${SIMILAR_SEED.location}`}
                 width={600}
                 height={420}
                 loading="lazy"
@@ -1298,7 +1319,7 @@ export default async function LandingPage() {
                 <div className="lp-simcard-photo">
                   <Image
                     src={p.photo}
-                    alt={`Fachada - ${p.title}, ${p.location}`}
+                    alt={`Fachada — ${p.title}, ${p.location}`}
                     width={600}
                     height={420}
                     loading="lazy"
@@ -1331,8 +1352,8 @@ export default async function LandingPage() {
 
           <p className="lp-simnote lp-reveal">
             Repare nos imóveis parecidos visualmente: fachadas praticamente idênticas e notas de{" "}
-            <b>85 a 47</b>. O que separa um do outro é o preço - o de nota 85 sai 59% abaixo da
-            avaliação; o de nota 52 só 41%, e custa quase o dobro.
+            <b>85 a 47</b>. O que separa um do outro é o preço — o de nota 85 sai 59% abaixo da
+            avaliação; o de nota 47, só 41%, e custa 70% a mais.
           </p>
         </div>
       </section>
@@ -1340,12 +1361,9 @@ export default async function LandingPage() {
       <section className="lp-band lp-tint" id="casos">
         <div className="lp-wrap">
           <div className="lp-sechead lp-reveal">
-            <span className="lp-seclabel">qual é o seu plano?</span>
-            <h2>Cada objetivo pede uma nota diferente</h2>
-            <p>
-              A Lavra calcula uma nota de uso para cada objetivo de investimento. Escolha o seu e a
-              lista inteira se reorganiza em volta dele.
-            </p>
+            <span className="lp-seclabel">qual é o seu objetivo?</span>
+            <h2>Cada objetivo possui uma tese de investimento diferente</h2>
+            <p>Calculamos uma nota de uso para cada tese de investimento de forma automática.</p>
           </div>
           <div className="lp-personas lp-m-slide">
             <div className="lp-persona lp-reveal">
@@ -1392,7 +1410,7 @@ export default async function LandingPage() {
                 <h3>“Quero uma renda de aluguel”</h3>
                 <p>
                   Compare a vocação de cada imóvel para temporada, aluguel estudantil ou moradia: a
-                  Lavra mede hotéis, restaurantes e universidades no entorno, além da distância do
+                  Medimos hotéis, restaurantes e universidades no entorno, além da distância do
                   centro.
                 </p>
                 <div className="lp-flow">
@@ -1427,8 +1445,11 @@ export default async function LandingPage() {
         <div className="lp-wrap">
           <div className="lp-sechead lp-reveal">
             <span className="lp-seclabel">planos</span>
-            <h2>Escolha o plano que combina com o seu jogo</h2>
-            <p>Comece de graça e evolua conforme suas oportunidades crescem.</p>
+            <h2>Escolha o plano para o seu objetivo</h2>
+            <p>
+              Comece a explorar as oportunidades agora mesmo, sem precisar criar conta. O plano
+              gratuito oferece uma análise completa para você começar a usar a plataforma.
+            </p>
           </div>
 
           <div className="lp-plans-grid lp-m-slide">
@@ -1462,7 +1483,7 @@ export default async function LandingPage() {
                         </svg>
                         <span>
                           {f.lead && <b>{f.lead}</b>}
-                          {f.lead ? ` - ${f.text}` : f.text}
+                          {f.lead ? `${f.joiner ?? " — "}${f.text}` : f.text}
                         </span>
                       </li>
                     ))}
@@ -1482,13 +1503,21 @@ export default async function LandingPage() {
                       </ul>
                     </>
                   )}
-                  <PlanCta
-                    target={card.role}
-                    role={ent.role}
-                    trial={ent.trial}
-                    celebrateAt="/dashboard"
-                    className={`lp-pbtn${card.popular ? " lp-solid" : ""}`}
-                  />
+                  {/* Básico asks for nothing here: the account decision belongs in the app, at
+                      the moment a favourite or an alert actually needs one. */}
+                  {card.role === "basic" ? (
+                    <Link className="lp-pbtn" href="/dashboard">
+                      Explorar sem cadastro
+                    </Link>
+                  ) : (
+                    <PlanCta
+                      target={card.role}
+                      role={ent.role}
+                      trial={ent.trial}
+                      celebrateAt="/dashboard"
+                      className={`lp-pbtn${card.popular ? " lp-solid" : ""}`}
+                    />
+                  )}
                 </div>
               );
             })}
@@ -1504,16 +1533,20 @@ export default async function LandingPage() {
                 Integração via API
               </h3>
               <p>
-                O plano <b>{PLANS.platform.label}</b> dá acesso programático à mesma base - imóveis,
-                notas, regiões e recomendações - por chave, para conectar a Lavra aos seus sistemas,
-                fluxos e planilhas. Entre na lista de espera e ajude a moldar o que vem por aí.
+                O plano <b>{PLANS.platform.label}</b> dá acesso programático à mesma base via API,
+                para conectar os nossos dados aos seus sistemas, fluxos e planilhas. Entre na lista
+                de espera e ajude a moldar o que vem por aí.
               </p>
             </div>
             <ApiWaitlist />
           </div>
 
+          <p className="lp-plans-anchor">
+            Pronto para dar o próximo passo? Teste as análises avançadas e relatórios completos por{" "}
+            {TRIAL_DAYS} dias gratuitamente. Sem fidelidade e sem cartão de crédito.
+          </p>
           <p className="lp-plans-note">
-            {PAYMENT_NOTE} Sem fidelidade. O plano {PLANS.basic.label} não expira.
+            {PAYMENT_NOTE} O plano {PLANS.basic.label} não expira.
           </p>
         </div>
       </section>
@@ -1523,7 +1556,7 @@ export default async function LandingPage() {
           <div className="lp-sechead lp-reveal">
             <span className="lp-seclabel">dúvidas</span>
             <h2>Perguntas frequentes</h2>
-            <p>Como a Lavra calcula, de onde vêm os dados e o que a Lavra não faz.</p>
+            <p>Como calculamos, de onde vêm os dados e o que não fazemos.</p>
           </div>
           <div className="lp-faq lp-reveal">
             <details id="faq-nota" open>
@@ -1537,18 +1570,17 @@ export default async function LandingPage() {
               </summary>
               <div className="lp-ans">
                 <p>
-                  Cada imóvel recebe notas de 0 a 100 a partir de quatro blocos de dados:{" "}
-                  <b>preço</b> (desconto sobre a avaliação da Caixa e preço por m² frente ao mercado
+                  Cada imóvel recebe notas de 0 a 100 a partir de quatro componentes: <b>preço</b>{" "}
+                  (desconto sobre a avaliação oficial do banco e preço por m² frente ao mercado
                   aberto na região), <b>região</b> (distância real até escolas, hospitais,
                   supermercados, parques e outras categorias de referência),{" "}
                   <b>características do imóvel</b> (tipo, área, quartos, vagas, situação de
                   ocupação) e <b>facilidade de revenda</b> daquele tipo naquela cidade.
                 </p>
                 <p>
-                  As notas são <b>comparativas</b> - um ranking, não um selo de aprovação -,{" "}
-                  <b>não são caixa-preta</b> - toda nota vem com a explicação fator a fator - e{" "}
-                  <b>os pesos mudam por tipo</b>: moradia, terreno e comercial se valorizam de
-                  formas diferentes.
+                  As notas são <b>comparativas</b>: um ranking, não um selo de aprovação. Toda nota
+                  vem com a explicação fator a fator e os pesos mudam por tipo: moradia, terreno e
+                  comercial se valorizam de formas diferentes.
                 </p>
               </div>
             </details>
@@ -1563,10 +1595,9 @@ export default async function LandingPage() {
               </summary>
               <div className="lp-ans">
                 <p>
-                  Que o imóvel está à frente da maioria dos concorrentes diretos dele - imóveis do
-                  mesmo tipo, na mesma cidade. As notas da Lavra são <b>relativas</b>: servem para
-                  ranquear e comparar rapidamente, não para dizer que um negócio é bom em termos
-                  absolutos.
+                  Que o imóvel está à frente da maioria dos concorrentes diretos dele — imóveis do
+                  mesmo tipo, na mesma cidade. As notas são <b>relativas</b>: servem para ranquear e
+                  comparar rapidamente, não para dizer que um negócio é bom em termos absolutos.
                 </p>
               </div>
             </details>
@@ -1582,7 +1613,7 @@ export default async function LandingPage() {
               <div className="lp-ans">
                 <p>
                   Não, e nunca vai ser. A nota olha preço, região e características do imóvel a
-                  partir de dados públicos - ela não lê o edital, não avalia a situação jurídica e
+                  partir de dados públicos — ela não lê o edital, não avalia a situação jurídica e
                   não sabe de dívida de condomínio, ação judicial ou custo de desocupação. Antes de
                   dar lance, leia o edital e, se possível, consulte um advogado: a decisão continua
                   sendo sua.
@@ -1591,7 +1622,7 @@ export default async function LandingPage() {
             </details>
             <details id="faq-caixa">
               <summary>
-                A Lavra é ligada à Caixa?
+                O Leilão Index é ligado à Caixa?
                 <span className="lp-chev">
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
                     <path d="m6 9 6 6 6-6" />
@@ -1600,10 +1631,10 @@ export default async function LandingPage() {
               </summary>
               <div className="lp-ans">
                 <p>
-                  Não. A Lavra é independente: coletamos, organizamos e analisamos a base pública de
-                  leilões e venda direta da Caixa Econômica Federal. Não somos afiliados,
+                  Não. O Leilão Index é independente: coletamos, organizamos e analisamos a base
+                  pública de leilões e venda direta da Caixa Econômica Federal. Não somos afiliados,
                   patrocinados nem endossados pela Caixa, não intermediamos lances nem recebemos
-                  comissão sobre arremates - o lance é sempre dado no canal oficial da Caixa.
+                  comissão sobre arremates — o lance é sempre dado no canal oficial da Caixa.
                 </p>
               </div>
             </details>
@@ -1622,7 +1653,7 @@ export default async function LandingPage() {
                   vêm da base de leilões e venda direta da Caixa;{" "}
                   <b>pontos de referência e distâncias</b>, de bases abertas de mapas; e{" "}
                   <b>preço de mercado</b>, de anúncios reais de imóveis parecidos em portais do
-                  mercado aberto - portais de leilão ficam de fora de propósito, para a comparação
+                  mercado aberto — portais de leilão ficam de fora de propósito, para a comparação
                   ser sempre com o mercado normal.
                 </p>
               </div>
@@ -1645,7 +1676,7 @@ export default async function LandingPage() {
                 </p>
                 <p>
                   Para cada imóvel, calculamos a <b>distância real até o mais próximo</b> de cada
-                  categoria - não apenas quantos existem no bairro. É isso que alimenta a nota da
+                  categoria — não apenas quantos existem no bairro. É isso que alimenta a nota da
                   região e as notas de uso: uma universidade a 700 m pesa no aluguel estudantil, um
                   parque a 200 m pesa na moradia familiar.
                 </p>
@@ -1663,7 +1694,7 @@ export default async function LandingPage() {
               <div className="lp-ans">
                 <p>
                   O desconto sobre a avaliação é só metade da história: ele compara o lance com o
-                  valor que a Caixa avaliou. A outra metade é o mercado - calculamos o preço{" "}
+                  valor que a Caixa avaliou. A outra metade é o mercado — calculamos o preço{" "}
                   <b>mediano</b> por m² de imóveis parecidos anunciados na mesma região e refinamos
                   comparando só área e número de quartos semelhantes. Quando há poucos anúncios, a
                   estimativa se apoia numa área maior e reduzimos a confiança daquele número.
@@ -1700,7 +1731,7 @@ export default async function LandingPage() {
                 <p>
                   Porque a oferta da Caixa muda todo dia. Um imóvel pode ser arrematado, ter o
                   leilão suspenso, mudar de modalidade ou simplesmente sair da lista entre uma
-                  atualização e outra - quando isso acontece, marcamos o anúncio como inativo em vez
+                  atualização e outra — quando isso acontece, marcamos o anúncio como inativo em vez
                   de apagá-lo.
                 </p>
               </div>
@@ -1717,9 +1748,9 @@ export default async function LandingPage() {
               <div className="lp-ans">
                 <p>
                   Nas notas de uso (moradia, temporada, estudantil, reforma, comercial, liquidez),
-                  um dado que falta é simplesmente ignorado - ele não vira ponto negativo. Já na{" "}
-                  <b>nota geral de investimento</b>, faltar informação reduz a nota: com menos
-                  dados, há menos certeza sobre o imóvel.
+                  um dado que falta é simplesmente ignorado — ele não vira ponto negativo. Já na{" "}
+                  <b>Nota de Investimento</b>, faltar informação reduz a nota: com menos dados, há
+                  menos certeza sobre o imóvel.
                 </p>
               </div>
             </details>
@@ -1734,10 +1765,10 @@ export default async function LandingPage() {
               </summary>
               <div className="lp-ans">
                 <p>
-                  Não. Você descreve o que procura em linguagem natural - “apartamento de 2 quartos
-                  até R$ 150 mil no Rio, perto de metrô” - e a Lavra traduz isso em filtros e notas.
-                  Para dar o lance, aí sim vale estudar o edital: é lá que estão as regras de
-                  pagamento, as dívidas do imóvel e a situação de ocupação.
+                  Não. Você descreve o que procura em linguagem natural — “apartamento de 2 quartos
+                  até R$ 150 mil no Rio, perto de metrô” e traduzimos isso em filtros e notas. Para
+                  dar o lance, aí sim vale estudar o edital: é lá que estão as regras de pagamento,
+                  as dívidas do imóvel e a situação de ocupação.
                 </p>
               </div>
             </details>
@@ -1802,66 +1833,60 @@ export default async function LandingPage() {
                 </g>
               </svg>
             </div>
-            <h2>Descreva o imóvel dos seus planos. Nós achamos o leilão.</h2>
+            <h2>Arremate com confiança.</h2>
             <p>
-              Explore milhares de leilões já analisados por preço, região e potencial - e decida com
-              números claros do seu lado.
+              Te ajudamos a economizar horas de busca por imóveis de leilão ao recomendar as
+              melhores oportunidades.
             </p>
+            {/* Trial primary here: at the bottom of the page the free-browse CTA competes with the
+                only conversion this band exists for. */}
             <div className="lp-row">
-              <Link className="lp-btn lp-solid lp-big" href="/dashboard">
-                Explorar imóveis
+              <a className="lp-btn lp-solid lp-big" href="#planos">
+                Testar {TRIAL_DAYS} dias sem cartão
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
                   <path d="M5 12h14m0 0-6-6m6 6-6 6" />
                 </svg>
-              </Link>
-              <a className="lp-btn lp-ghost lp-big" href="#faq-nota">
-                Como a nota é calculada
               </a>
+              <Link className="lp-btn lp-ghost lp-big" href="/dashboard">
+                Explorar imóveis
+              </Link>
             </div>
-            <div className="lp-fine">Acesso aberto durante a fase experimental - sem cadastro.</div>
+            <div className="lp-fine">
+              O plano {PLANS.investor.label} tem {TRIAL_DAYS} dias grátis, sem cartão e sem cobrança
+              automática.
+            </div>
           </div>
         </div>
       </section>
 
       <footer className="lp-foot">
+        <div className="lp-wrap lp-footlinks">
+          <SeoLinks />
+        </div>
         <div className="lp-wrap">
           <a className="lp-brand" href="#top">
             <span className="lp-mark">
-              <svg viewBox="0 0 48 48" width="24" height="24" aria-hidden="true">
-                <circle cx="14" cy="9" r="3" fill="currentColor" />
-                <path
-                  d="M14 15v15a4 4 0 0 0 4 4h13"
-                  stroke="currentColor"
-                  strokeWidth="4"
-                  strokeLinecap="round"
-                  fill="none"
-                />
-                <path
-                  d="M27 27.5 34 34l-7 6.5"
-                  stroke="currentColor"
-                  strokeWidth="4"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  fill="none"
-                />
-              </svg>
+              <BrandLogo size={28} />
             </span>
             <span>
-              <b>Lavra</b>
-              <small>Leilões inteligentes</small>
+              <b>
+                Leilão <span>Index</span>
+              </b>
             </span>
           </a>
           <div className="lp-links">
             <a href="#recursos">Como funciona</a>
-            <a href="#exemplo">Exemplo de análise</a>
-            <a href="#casos">Casos de uso</a>
-            <a href="#faq">Perguntas frequentes</a>
+            <a href="#exemplo">Exemplo real</a>
+            <a href="#casos">Objetivos</a>
+            <a href="#planos">Planos</a>
+            <a href="#faq">Dúvidas</a>
           </div>
+          <SocialRow />
           <span className="lp-fine">
-            © 2026 Lavra · Dados da base pública de imóveis da Caixa Econômica Federal, atualizados
-            diariamente. A Lavra não é afiliada, patrocinada nem endossada pela Caixa e não
-            intermedeia lances. As notas são estimativas comparativas, não recomendação de
-            investimento.
+            © 2026 Leilão Index · Dados da base pública de imóveis da Caixa Econômica Federal,
+            atualizados diariamente. O Leilão Index não é afiliado, patrocinado nem endossado pela
+            Caixa e não intermedeia lances. As notas são estimativas comparativas, não recomendação
+            de investimento.
           </span>
         </div>
       </footer>

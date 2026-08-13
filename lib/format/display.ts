@@ -24,6 +24,10 @@ export function countShort(n: number | null | undefined): string {
   return n.toLocaleString("pt-BR");
 }
 
+/** "3.360 imóveis". Shared so the server-rendered SEO heading and the client list agree. */
+export const nImoveis = (n: number) =>
+  `${n.toLocaleString("pt-BR")} ${n === 1 ? "imóvel" : "imóveis"}`;
+
 export function titleCase(s: string): string {
   return s
     .toLowerCase()

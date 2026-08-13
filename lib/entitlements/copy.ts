@@ -28,11 +28,11 @@ export const FEATURE_COPY: Record<Feature, { label: string; blurb: string; quota
   },
   advancedFilters: {
     label: "Filtros avançados",
-    blurb: "Filtre por deságio, notas de investimento, avaliação da fachada e lugares próximos.",
+    blurb: "Filtre por desconto, notas de investimento, avaliação da fachada e lugares próximos.",
   },
   analysisView: {
     label: "Análise de imóveis",
-    blurb: "Distribuições de preço, deságio, área e nota do resultado atual.",
+    blurb: "Distribuições de preço, desconto, área e Nota de Investimento atual.",
   },
   marketCompare: {
     label: "Comparativo de mercado",
@@ -65,10 +65,10 @@ export const FEATURE_COPY: Record<Feature, { label: string; blurb: string; quota
 export const PLAN_PITCH: Partial<Record<Role, readonly { lead: string; text: string }[]>> = {
   investor: [
     { lead: "Favoritos e alertas ilimitados", text: "sem teto de carteira nem de buscas salvas" },
-    { lead: "Filtros avançados", text: "deságio, notas, financiamento, FGTS e lugares próximos" },
+    { lead: "Filtros avançados", text: "desconto, notas, financiamento, FGTS e lugares próximos" },
     {
       lead: "Análise de imóveis",
-      text: "distribuição de preço, deságio, área e nota do resultado",
+      text: "distribuição de preço, desconto, área e Nota de Investimento",
     },
     {
       lead: "Recomendações semanais",
@@ -76,7 +76,7 @@ export const PLAN_PITCH: Partial<Record<Role, readonly { lead: string; text: str
     },
   ],
   professional: [
-    { lead: "Vantagem de Largada", text: "seus alertas saem antes dos demais planos" },
+    { lead: "Alertas em primeira mão", text: "seus alertas saem antes dos demais planos" },
     { lead: "Painel de mercado", text: "preço por m², tendências e comparáveis por cidade" },
     { lead: "Calendário de leilões", text: "a agenda das datas, dia a dia" },
     { lead: "Relatórios e exportação", text: "buscas, filtros e análises em CSV ou PDF" },
@@ -91,13 +91,13 @@ export const PLAN_INCLUDES: Partial<Record<Role, { heading: string; items: reado
     items: [
       "Histórico de preços",
       "Análise de fachada usando IA",
-      "Mudança de modalidade",
+      "Avisos quando o imóvel muda de leilão para venda direta",
       "Perfil da região e distância do centro",
-      "Score de investimento",
+      "Nota de Investimento",
       "Tese de investimento recomendada",
       // Deliberately not "análises comparativas de porte e preço": that reads as the
       // marketCompare block, which is paid. This is PropertyRanks, which is free.
-      "Porte e preço comparados à base",
+      "Tamanho e preço comparados à base",
     ],
   },
 };

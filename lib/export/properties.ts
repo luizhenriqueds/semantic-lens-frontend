@@ -53,7 +53,10 @@ export function propertyColumns(opts: { origin?: string } = {}): CsvColumn<Prope
   // Passed in, not read from process.env, so the module stays pure.
   if (opts.origin) {
     const origin = opts.origin.replace(/\/$/, "");
-    cols.push({ header: "Ficha no Lavra", value: (p) => csvCell(`${origin}/property/${p.id}`) });
+    cols.push({
+      header: "Ficha no Leilão Index",
+      value: (p) => csvCell(`${origin}/property/${p.id}`),
+    });
   }
   return cols;
 }

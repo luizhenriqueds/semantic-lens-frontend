@@ -31,9 +31,16 @@ export default function PlanCta({
   const plan = PLANS[target];
 
   if (role === "anon") {
+    // The best argument for the paid plan - no card - was invisible at the moment of the click.
+    const label =
+      target === "basic"
+        ? "Criar conta grátis"
+        : target === TRIAL_ROLE
+          ? `Testar ${TRIAL_DAYS} dias grátis`
+          : `Assinar ${plan.label}`;
     return (
       <Link className={className} href={`/register?plan=${target}`} onClick={onDone}>
-        {target === "basic" ? "Criar conta grátis" : "Criar conta"}
+        {label}
       </Link>
     );
   }

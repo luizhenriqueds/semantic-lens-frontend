@@ -95,28 +95,24 @@ button {
   gap: 12px;
   padding: 6px 8px 22px;
 }
+/* Sem tile: o lockup mostra a marca em dois tons sobre o próprio fundo. */
 .brand .mark {
-  width: 40px;
-  height: 40px;
-  border-radius: 11px;
-  background: var(--primary);
-  color: var(--surface);
   display: grid;
   place-items: center;
-  font-weight: 700;
-  font-size: 20px;
   flex-shrink: 0;
+  --brand-tone-a: var(--primary);
+  --brand-tone-b: var(--ink-soft);
 }
 .brand b {
   font-weight: 700;
   font-size: 19px;
-  letter-spacing: -0.01em;
+  letter-spacing: -0.028em;
   display: block;
+  color: var(--ink);
 }
-.brand small {
-  color: var(--ink-faint);
-  font-size: 12px;
+.brand b span {
   font-weight: 500;
+  color: var(--ink-soft);
 }
 .navlabel {
   font-size: 11px;
@@ -8357,5 +8353,166 @@ select.selectish {
   }
   .market .note {
     font-size: 12.5px;
+  }
+}
+
+/* ── SEO landings ─────────────────────────────────────────────────────────── */
+
+.seobody {
+  max-width: 1180px;
+  margin: 40px auto 0;
+  padding: 0 20px 48px;
+}
+.seobody-prose {
+  max-width: 76ch;
+  color: var(--ink-soft);
+  font-size: 14.5px;
+  line-height: 1.75;
+}
+.seobody-prose p {
+  margin: 0 0 14px;
+}
+.seobody-pages {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 28px;
+}
+.seobody-pages a,
+.seobody-pages span {
+  min-width: 40px;
+  min-height: 40px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  font-size: 13.5px;
+  text-decoration: none;
+  color: var(--ink-soft);
+}
+.seobody-pages span[aria-current] {
+  background: var(--primary-wash);
+  border-color: var(--primary-soft);
+  color: var(--primary);
+  font-weight: 600;
+}
+.seobody-faq {
+  margin: 32px 0 0;
+  max-width: 76ch;
+}
+.seobody-faq h2 {
+  font-size: 17px;
+  margin: 0 0 12px;
+}
+.seobody-faq details {
+  border-top: 1px solid var(--line-soft);
+  padding: 12px 0;
+}
+.seobody-faq summary {
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 14.5px;
+  min-height: 32px;
+  display: flex;
+  align-items: center;
+}
+.seobody-faq p {
+  margin: 8px 0 0;
+  color: var(--ink-soft);
+  font-size: 14px;
+  line-height: 1.7;
+}
+
+.seolinks {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 24px 28px;
+  margin-top: 40px;
+  padding-top: 28px;
+  border-top: 1px solid var(--line);
+}
+.seolinks-h {
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--ink-faint);
+  margin: 0 0 10px;
+  font-weight: 600;
+}
+.seolinks ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.seolinks li a {
+  display: block;
+  padding: 7px 0;
+  min-height: 32px;
+  font-size: 13.5px;
+  color: var(--ink-soft);
+  text-decoration: none;
+}
+.seolinks li a:hover {
+  color: var(--primary);
+}
+.seolinks-all {
+  grid-column: 1 / -1;
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--primary);
+  text-decoration: none;
+  min-height: 32px;
+  display: inline-flex;
+  align-items: center;
+}
+
+.socialrow {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+.socialrow a {
+  font-size: 13.5px;
+  color: var(--ink-soft);
+  text-decoration: none;
+  min-height: 32px;
+  display: inline-flex;
+  align-items: center;
+}
+
+/* 404 */
+.nf {
+  max-width: 1180px;
+  margin: 0 auto;
+  padding: 72px 20px 56px;
+}
+.nf h1 {
+  font-size: 26px;
+  margin: 0 0 8px;
+}
+.nf > p {
+  color: var(--ink-soft);
+  margin: 0;
+  max-width: 60ch;
+}
+.nf-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin: 24px 0 8px;
+}
+
+@media (max-width: 720px) {
+  .seolinks {
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 20px;
+  }
+  .seobody {
+    padding: 0 16px 40px;
+  }
+  /* 40px clears the audit on desktop but not on touch. */
+  .pager button {
+    min-width: 44px;
+    height: 44px;
   }
 }
