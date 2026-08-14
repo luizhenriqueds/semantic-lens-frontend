@@ -101,7 +101,7 @@ export function ttlCached<T>(load: () => Promise<T>, ttlMs: number): () => Promi
 }
 
 // unstable_cache does not coalesce in flight, so the two Suspense slots that both call
-// getScoreExplain(id) each missed a cold key and each hit Postgres. One map per request.
+// getScoreExplain(id) each missed a cold key and each hit Postgres.
 const inFlight = requestCache(() => new Map<string, Promise<unknown>>());
 
 // Wraps a loader in next's request cache. Extra args become part of the cache key.

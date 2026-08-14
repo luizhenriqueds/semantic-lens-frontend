@@ -1,9 +1,8 @@
 import { getMarketDashboard } from "./dashboard";
 
 // Counting these live cost ~33 `count=exact` HEAD requests per cache miss against a pool of 8,
-// and a failed count degraded to 0 rather than an error - the unfiltered `pois` scan blew the 8s
-// deadline and rendered "0 LUGARES PRÓXIMOS". They move by a few hundred a day and are rounded
-// for display anyway, so they are written down and updated by hand.
+// and a failed count degraded to 0, not an error - which is how "0 LUGARES PRÓXIMOS" shipped.
+// They move by a few hundred a day and are rounded for display, so they are updated by hand.
 export type LandingStats = {
   activeProperties: number;
   pois: number;
