@@ -11,7 +11,7 @@ import {
   type RegionSortKey,
 } from "@/lib/region";
 import type { Region } from "@/lib/types";
-import { cached, num, REVALIDATE, rows, withRetry } from "./client";
+import { cached, DETAIL_REVALIDATE, num, REVALIDATE, rows, withRetry } from "./client";
 
 function mapScores(s: any): Region["scores"] {
   return {
@@ -289,7 +289,7 @@ async function loadRegion(h3: string): Promise<Region | null> {
   };
 }
 
-export const getRegion = cached(loadRegion, "region");
+export const getRegion = cached(loadRegion, "region", DETAIL_REVALIDATE);
 
 async function loadRegionLabel(h3: string): Promise<string | null> {
   const res = await withRetry(() =>
@@ -300,4 +300,4 @@ async function loadRegionLabel(h3: string): Promise<string | null> {
   return `${cell.neighborhood_label ?? "Região"} · ${titleCase(cell.city ?? "")}`;
 }
 
-export const getRegionLabel = cached(loadRegionLabel, "region-label");
+export const getRegionLabel = cached(loadRegionLabel, "region-label", DETAIL_REVALIDATE);
