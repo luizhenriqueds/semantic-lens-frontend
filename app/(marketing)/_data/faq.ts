@@ -37,6 +37,16 @@ export const FAQ: { id: string; q: string; a: string }[] = [
     a: "O desconto sobre a avaliação é só metade da história: ele compara o lance com o valor que a Caixa avaliou. A outra metade é o mercado — calculamos o preço mediano por m² de imóveis parecidos anunciados na mesma região e refinamos comparando só área e número de quartos semelhantes. Quando há poucos anúncios, a estimativa se apoia numa área maior e reduzimos a confiança daquele número.",
   },
   {
+    id: "faq-colecoes",
+    q: "Como as coleções de imóveis parecidos são montadas?",
+    a: "Automaticamente, por semelhança. O algoritmo compara os imóveis pelos atributos que tornam dois anúncios realmente comparáveis — tipo, área, faixa de preço e características da região — e junta numa mesma coleção os que ficam próximos entre si. Ninguém monta coleção à mão e elas são recalculadas conforme a base muda. Cada coleção recebe um rótulo e o objetivo que ela melhor atende, para você comparar semelhante com semelhante em vez de pôr lado a lado um apartamento na capital e um terreno no interior. Imóveis que não se parecem com nenhum outro ficam de fora até haver grupo para eles.",
+  },
+  {
+    id: "faq-recomendacoes",
+    q: "Como funcionam as recomendações?",
+    a: "Elas partem de um imóvel que você salvou. Usamos esse imóvel como âncora, procuramos na base os mais parecidos com ele e mostramos os que passam de um limite de semelhança, ordenados pela Nota de Investimento. Quando ainda não há semelhantes suficientes calculados para aquele imóvel, completamos com imóveis do mesmo tipo na mesma cidade, também ordenados por nota. Não é publicidade nem perfilamento: a recomendação olha só para o imóvel que você escolheu, não para o seu comportamento. O recurso está disponível a partir do plano Investidor.",
+  },
+  {
     id: "faq-atualizacao",
     q: "Com que frequência os dados são atualizados?",
     a: "Diariamente. Novos imóveis entram, arrematados saem e as notas são recalculadas para refletir a base ativa do dia. Com uma conta, você pode salvar buscas e receber por e-mail as novidades, no ritmo que escolher: diário ou semanal.",

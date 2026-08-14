@@ -4,7 +4,8 @@ import SeoLinks from "./SeoLinks";
 const MAX_CRAWLABLE_PAGES = 5;
 
 /** Prose, FAQ and real <a> pagination under the list. The app pager is button-driven, so without
- *  this nothing past page 1 is reachable by a crawler. */
+ *  this nothing past page 1 is reachable by a crawler. The links are clipped, not display:none, so
+ *  they stay discoverable without showing a second pager. */
 export default function SeoBody({
   slug,
   body,
@@ -24,18 +25,14 @@ export default function SeoBody({
   return (
     <section className="seobody">
       {last > 1 && (
-        <nav className="seobody-pages" aria-label="Páginas de resultados">
-          {Array.from({ length: last }, (_, i) => i + 1).map((n) =>
-            n === page ? (
-              <span aria-current="page" key={n}>
-                {n}
-              </span>
-            ) : (
-              <Link href={n === 1 ? base : `${base}?page=${n}`} key={n}>
+        <nav className="seobody-pages" aria-hidden="true">
+          {Array.from({ length: last }, (_, i) => i + 1)
+            .filter((n) => n !== page)
+            .map((n) => (
+              <Link href={n === 1 ? base : `${base}?page=${n}`} key={n} tabIndex={-1}>
                 {n}
               </Link>
-            ),
-          )}
+            ))}
         </nav>
       )}
 

@@ -14,17 +14,13 @@ export const T = {
   mono: "'JetBrains Mono', ui-monospace, 'SF Mono', Menlo, monospace",
 };
 
-// Uma cor só: sobre o tile verde o neutro do dois-tons não teria contraste. O translate
-// em y centra a tinta da marca, cujo centro é 21.375 e não 24.
+// Uma cor só: sobre o tile verde o neutro do dois-tons não teria contraste.
 const LOGO = `<svg viewBox="0 0 48 48" width="22" height="22" style="display:block">
-  <g transform="translate(0 2.625)" fill="${T.surface}">
-    <g fill="none" stroke="${T.surface}" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round">
-      <path d="M11 11H6v26h5"/>
-      <path d="M37 11h5v26h-5"/>
-    </g>
-    <rect x="14.5" y="26" width="5" height="7" rx="2.5"/>
-    <rect x="21.5" y="21" width="5" height="12" rx="2.5"/>
-    <rect x="28.5" y="4" width="5" height="29" rx="2.5"/>
+  <path d="M25 9H15a9 9 0 0 0-9 9v14a9 9 0 0 0 9 9h18a9 9 0 0 0 9-9v-14" fill="none" stroke="${T.surface}" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/>
+  <g fill="${T.surface}">
+    <rect x="12.5" y="27" width="5" height="7" rx="2.5"/>
+    <rect x="21.75" y="22" width="5" height="12" rx="2.5"/>
+    <rect x="31" y="5" width="5" height="29" rx="2.5"/>
   </g>
 </svg>`;
 

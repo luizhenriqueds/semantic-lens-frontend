@@ -38,9 +38,12 @@ import {
   showDiscount,
 } from "@/lib/format";
 import { addressLine } from "@/lib/geo";
+import { IconPin } from "@/lib/icons";
 
 // Dynamic: the app layout reads the auth cookie, so this route can't be static.
 export const dynamic = "force-dynamic";
+
+export const maxDuration = 20;
 
 export async function generateMetadata({
   params,
@@ -123,7 +126,12 @@ export default async function PropertyPage({ params }: { params: Promise<{ id: s
           {p.occupancyStatus ? ` · ${p.occupancyStatus}` : ""}
         </div>
         <h1>{heading}</h1>
-        {p.rawAddress && <div className="loc">{addressLine(p.rawAddress)}</div>}
+        {p.rawAddress && (
+          <div className="loc">
+            <IconPin className="addr-pin" aria-hidden />
+            {addressLine(p.rawAddress)}
+          </div>
+        )}
         <div className="loc">
           {p.city}/{p.uf}
           {p.centerProximity != null && ` · a ${fmtDist(p.centerProximity)} do centro`}

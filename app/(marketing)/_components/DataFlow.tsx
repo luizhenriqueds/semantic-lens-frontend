@@ -1,9 +1,6 @@
-// Three named stages - Coleta, Processamento, Entrega - with the nodes as real DOM text and the
-// SVG reduced to the connectors between them. Same drawing rules as UseSpots: stroke-first, three
-// tones from the palette, no perspective, no gradients.
-//
-// The engine is three plates fusing into one: many sources becoming a single base. The brand badge
-// used to sit here, but a logo says who, not what.
+// Three stages - inputs, engine, outputs - with the nodes as real DOM text and the SVG reduced to
+// the connectors between them. Same drawing rules as UseSpots: stroke-first, three tones from the
+// palette, no perspective, no gradients.
 
 type FlowNode = { key: string; label: string; glyph: React.ReactNode };
 
@@ -83,7 +80,6 @@ const INPUTS: FlowNode[] = [
   { key: "market", label: "Preços do mercado aberto", glyph: tag },
 ];
 
-// Kept short: these sit two-per-row, so a long label wraps to three lines next to a 30px chip.
 const OUTPUTS: FlowNode[] = [
   { key: "score", label: "Nota de Investimento", glyph: ring },
   { key: "price", label: "Preço vs. mercado", glyph: bars },
@@ -93,11 +89,11 @@ const OUTPUTS: FlowNode[] = [
   { key: "discovery", label: "Coleções e recomendações", glyph: stack },
 ];
 
-// Each connector is drawn twice: a dim rail, then a short dash that runs along it. Endpoints sit
-// at 1/6, 3/6 and 5/6 of the height so they land on the row centres of a three-row column, whatever
-// that column ends up measuring - the wire stretches with the grid rather than assuming pixels.
-const WIRES_IN = ["M0 30C34 30 30 90 66 90", "M0 90H66", "M0 150C34 150 30 90 66 90"];
-const WIRES_OUT = ["M0 90C34 90 30 30 66 30", "M0 90H66", "M0 90C34 90 30 150 66 150"];
+// Each connector is drawn twice: a dim rail, then a short dash that runs along it. The 180-tall
+// viewBox stretches to the grid row, so endpoints are percentages: inputs at 33/50/67%, outputs
+// fanning across all six rows at 7/50/93%.
+const WIRES_IN = ["M0 59C34 59 30 90 66 90", "M0 90H66", "M0 121C34 121 30 90 66 90"];
+const WIRES_OUT = ["M0 90C34 90 30 13 66 13", "M0 90H66", "M0 90C34 90 30 167 66 167"];
 
 function NodeChip({ node }: { node: FlowNode }) {
   return (
@@ -139,13 +135,12 @@ function Connector({ wires, className }: { wires: string[]; className: string })
   );
 }
 
-// Caps and content are placed explicitly on the wide grid, so the three captions share a row and
-// the three content cells share one of equal height. Stacked, the DOM order is already correct.
+// Content is placed explicitly on the wide grid so the three cells share a row of equal height.
+// Stacked, the DOM order is already correct.
 export default function DataFlow() {
   return (
     <div className="lp-dataflow lp-reveal">
       <div className="lp-df-stages">
-        <span className="lp-df-cap lp-df-cap-in">Coleta</span>
         <div className="lp-df-in">
           {INPUTS.map((n) => (
             <NodeChip node={n} key={n.key} />
@@ -154,7 +149,6 @@ export default function DataFlow() {
 
         <Connector wires={WIRES_IN} className="lp-df-link-in" />
 
-        <span className="lp-df-cap lp-df-cap-mid">Processamento</span>
         <div className="lp-df-mid">
           <div className="lp-df-engine">
             <svg viewBox="0 0 120 96" aria-hidden="true">
@@ -164,13 +158,11 @@ export default function DataFlow() {
               <path className="e-edge" d="M38 43.5 82 60.5M60 26 60 44" />
               <path className="e-sweep" d="M22 35H98" />
             </svg>
-            <b>o Leilão Index</b>
           </div>
         </div>
 
         <Connector wires={WIRES_OUT} className="lp-df-link-out" />
 
-        <span className="lp-df-cap lp-df-cap-out">Entrega</span>
         <div className="lp-df-out">
           {OUTPUTS.map((n) => (
             <NodeChip node={n} key={n.key} />

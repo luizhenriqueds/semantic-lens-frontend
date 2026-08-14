@@ -2,7 +2,8 @@ import { unstable_cache } from "next/cache";
 
 export const CLUSTER_RUN = "property-v1";
 export const REVALIDATE = 120;
-// The corpus is rebuilt by one nightly batch, so search results outlive the shared 120s.
+// Not one nightly batch: `crawl-followups` refreshes property_list_mv hourly from 09:00 to 19:00
+// (America/Campo_Grande). Still, a rebuild reorders far less than it changes.
 export const SEARCH_REVALIDATE = 900;
 
 export function num(v: unknown): number | null {
@@ -11,13 +12,28 @@ export function num(v: unknown): number | null {
   return isNaN(n) ? null : n;
 }
 
-export type QueryResult<T> = { data: T[] | null; error: { message: string } | null };
+export type QueryError = { message: string; code?: string };
+export type QueryResult<T> = { data: T[] | null; error: QueryError | null; status?: number };
 
-const TRANSIENT =
-  /statement timeout|canceling statement|timeout|fetch failed|ECONN|socket hang up/i;
-
-const TIMEOUT = /timeout|canceling/i;
+// Status and SQLSTATE, not just the message: a HEAD request (`count: "exact"`) carries no body, so
+// postgrest reports an empty message and a timed-out landing count read as permanent.
+const TIMEOUT_CODE = "57014";
+const TIMEOUT_TEXT = /timeout|canceling/i;
+const NETWORK_TEXT = /fetch failed|ECONN|socket hang up|network|db queue timeout/i;
+const RETRYABLE_STATUS = new Set([502, 503, 504, 520, 522, 524]);
 const MAX_RETRIES = 3;
+
+type Failure = "timeout" | "transient" | "permanent";
+
+function classify({ error, status }: QueryResult<unknown>): Failure {
+  if (!error) return "permanent";
+  if (error.code === TIMEOUT_CODE || TIMEOUT_TEXT.test(error.message)) return "timeout";
+  if (NETWORK_TEXT.test(error.message)) return "transient";
+  if (status != null && RETRYABLE_STATUS.has(status)) return "transient";
+  // Bodyless HEAD count: on this data layer that is overwhelmingly a statement timeout.
+  if (status === 500 && !error.message) return "timeout";
+  return "permanent";
+}
 
 // Retries transient failures, but not a `statement timeout` - retrying an already-heavy query only
 // piles more load onto a struggling DB. `timeoutRetries` opts back in, and caps how far.
@@ -25,11 +41,13 @@ export async function withRetry<T>(
   build: () => PromiseLike<QueryResult<T>>,
   { timeoutRetries = 0 }: { timeoutRetries?: number } = {},
 ): Promise<QueryResult<T>> {
-  const canRetry = (msg: string, done: number) =>
-    TRANSIENT.test(msg) && (!TIMEOUT.test(msg) || done < timeoutRetries);
   let res = await build();
-  for (let i = 0; i < MAX_RETRIES && res.error && canRetry(res.error.message, i); i++) {
-    await new Promise((r) => setTimeout(r, 250 * (i + 1)));
+  for (let i = 0; i < MAX_RETRIES && res.error; i++) {
+    const failure = classify(res);
+    if (failure === "permanent") break;
+    if (failure === "timeout" && i >= timeoutRetries) break;
+    // Jittered: several deployments backing off in lockstep is a thundering herd.
+    await new Promise((r) => setTimeout(r, 250 * (i + 1) + Math.random() * 250));
     res = await build();
   }
   return res;

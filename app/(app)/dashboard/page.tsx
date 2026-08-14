@@ -36,6 +36,11 @@ import { GridSkeleton, InsightsSkeleton, RailSkeleton } from "./_components/skel
 
 type SP = Record<string, string | string[] | undefined>;
 
+// Dynamic: the app layout reads the auth cookie, so this route can't be static.
+export const dynamic = "force-dynamic";
+
+export const maxDuration = 20;
+
 export default async function HomePage({ searchParams }: { searchParams: Promise<SP> }) {
   const goal = parseGoal((await searchParams).goal);
 

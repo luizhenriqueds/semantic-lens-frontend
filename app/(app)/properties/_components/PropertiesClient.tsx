@@ -5,6 +5,7 @@ import { createPortal } from "react-dom";
 import dynamic from "next/dynamic";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import SignInLink from "@/components/auth/SignInLink";
 import PlanBadge from "@/components/plan/PlanBadge";
 import { usePlan } from "@/components/plan/PlanProvider";
 import UpgradeWall from "@/components/plan/UpgradeWall";
@@ -803,19 +804,8 @@ export default function PropertiesClient({
             <button type="button" onClick={() => require(lockedFilter)}>
               Ver plano
             </button>
-            {/* Someone who already pays may simply be signed out on this device. The URL is only
-                readable after mount, so the link degrades to a plain /login before then. */}
-            {role === "anon" && (
-              <Link
-                href={
-                  mounted
-                    ? `/login?redirect=${encodeURIComponent(location.pathname + location.search)}`
-                    : "/login"
-                }
-              >
-                Entrar
-              </Link>
-            )}
+            {/* Someone who already pays may simply be signed out on this device. */}
+            {role === "anon" && <SignInLink>Entrar</SignInLink>}
           </div>
         </div>
       )}

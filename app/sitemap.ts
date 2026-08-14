@@ -30,6 +30,8 @@ export default async function sitemap({ id }: { id: number }): Promise<MetadataR
         changeFrequency: "daily" as const,
         priority: 0.8,
       })),
+      { url: abs("/termos"), changeFrequency: "yearly" as const, priority: 0.2 },
+      { url: abs("/privacidade"), changeFrequency: "yearly" as const, priority: 0.2 },
     ];
   }
 

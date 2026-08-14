@@ -119,14 +119,16 @@ function mapListRow(r: any): Property {
 async function rpcJson(
   name: string,
   args: Record<string, unknown>,
-  { required = false }: { required?: boolean } = {},
+  // `required` decides whether a failure throws; `timeoutRetries` opts out of the retry it would
+  // otherwise imply, for callers that fan out and would double their load on a struggling DB.
+  { required = false, timeoutRetries }: { required?: boolean; timeoutRetries?: number } = {},
 ): Promise<any> {
   const res = await withRetry<any>(
     async () => {
-      const { data, error } = await supabase.rpc(name, args);
-      return { data: data == null ? null : [data], error };
+      const { data, error, status } = await supabase.rpc(name, args);
+      return { data: data == null ? null : [data], error, status };
     },
-    { timeoutRetries: required ? 1 : 0 },
+    { timeoutRetries: timeoutRetries ?? (required ? 1 : 0) },
   );
   if (res.error) {
     console.error(`[data] rpc "${name}" failed: ${res.error.message}`);
@@ -173,11 +175,15 @@ export function getPropertiesPage(
   return cachedPage(JSON.stringify(toRpcFilters(filters)), sort, Math.max(1, page), pageSize);
 }
 
-async function loadCount(filtersJson: string, required = false): Promise<number> {
+async function loadCount(
+  filtersJson: string,
+  required = false,
+  timeoutRetries?: number,
+): Promise<number> {
   const data = await rpcJson(
     "property_list_page",
     { p_filters: JSON.parse(filtersJson), p_limit: 0 },
-    { required },
+    { required, timeoutRetries },
   );
   return data?.total ?? 0;
 }
@@ -452,28 +458,15 @@ async function loadFilterOptions(): Promise<RawFilterOptions> {
 }
 
 // Five full scans of the MV on every search, but it only changes when the batch refreshes it.
-// The search path takes this one directly: it needs the city list, not the probe below.
+// The search path takes this one directly: it needs the city list, not the flag below.
 export const getFilterOptionsRaw = cached(loadFilterOptions, "filter-options", 3600);
 
-// property_list_page ignores filter keys it doesn't know, so a visual-score control would
-// look active while doing nothing. An impossible floor tells the two apart: a supported key
-// matches nothing, an ignored one matches the whole base.
-async function loadVisualScoreSupport(): Promise<boolean> {
-  const [all, probe] = await Promise.all([
-    loadCount("{}"),
-    loadCount(JSON.stringify({ min_visual_score: 101 })),
-  ]);
-  return all > 0 && probe < all;
-}
-
-const cachedVisualScoreSupport = cached(loadVisualScoreSupport, "visual-score-support", 3600);
+// Whether property_list_matched reads `min_visual_score` - a deploy-time fact. Probing it at
+// request time cost two full counts of the base on the landing, every 404 and every SEO page.
+const VISUAL_SCORE_SUPPORTED = process.env.VISUAL_SCORE_FILTER !== "off";
 
 export async function getFilterOptions(): Promise<FilterOptions> {
-  const [options, visualScore] = await Promise.all([
-    getFilterOptionsRaw(),
-    cachedVisualScoreSupport(),
-  ]);
-  return { ...options, visualScore };
+  return { ...(await getFilterOptionsRaw()), visualScore: VISUAL_SCORE_SUPPORTED };
 }
 
 async function loadAnalysis(filtersJson: string): Promise<AnalysisData> {
@@ -538,12 +531,13 @@ export function getAnalysis(filters: PropertyFilters): Promise<AnalysisData> {
 }
 
 // `loadCount`, not `countProperties`: unstable_cache skips a read nested inside another.
-// `required` so a failed bucket cannot draw as a truthful-looking zero.
+// `required` so a failed bucket cannot draw as a truthful-looking zero, but with no timeout retry -
+// eleven counts at once is the heaviest fan-out here, and retrying all of them doubles it.
 async function loadProximity(filtersJson: string): Promise<ProximityData> {
   const filters = JSON.parse(filtersJson) as RpcFilters;
   const radius = filters.poi_radius_m ?? POI_RADIUS_M;
   const count = (patch: Partial<RpcFilters>) =>
-    loadCount(JSON.stringify({ ...filters, ...patch }), true);
+    loadCount(JSON.stringify({ ...filters, ...patch }), true, 0);
 
   const [cumulative, poiCounts] = await Promise.all([
     Promise.all(
