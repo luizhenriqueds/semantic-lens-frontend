@@ -2,6 +2,7 @@ import { Analytics } from "@vercel/analytics/next";
 import type { Metadata, Viewport } from "next";
 import { JetBrains_Mono, Plus_Jakarta_Sans } from "next/font/google";
 import GoogleAnalytics from "@/components/analytics/GoogleAnalytics";
+import MetaPixel from "@/components/analytics/MetaPixel";
 import JsonLd from "@/components/seo/JsonLd";
 import { organizationLd, websiteLd } from "@/lib/seo/jsonLd";
 import { SITE_DESCRIPTION, SITE_NAME, SITE_TITLE, SITE_URL } from "@/lib/seo/site";
@@ -94,6 +95,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         {children}
         <Analytics />
         <GoogleAnalytics />
+        <MetaPixel />
       </body>
     </html>
   );
