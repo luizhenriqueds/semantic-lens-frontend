@@ -2246,6 +2246,16 @@ select.selectish {
   color: var(--ink-soft);
   font-size: 16px;
 }
+/* Marks the line as an address. Decorative - there is nothing to click here.
+   inline-block because the Tailwind reset makes every svg display:block. */
+.dhead .addr-pin {
+  display: inline-block;
+  width: 15px;
+  height: 15px;
+  margin-right: 5px;
+  vertical-align: -2px;
+  color: var(--ink-faint);
+}
 .dhead .matr {
   font-family: var(--font-mono), ui-monospace, monospace;
   font-size: 12px;
@@ -8433,29 +8443,15 @@ select.selectish {
 .seobody-prose p {
   margin: 0 0 14px;
 }
+/* Crawler-only: the app pager is the one users see. Clipped rather than display:none so the
+   links stay discoverable. */
 .seobody-pages {
-  display: flex;
-  gap: 6px;
-  margin-bottom: 28px;
-}
-.seobody-pages a,
-.seobody-pages span {
-  min-width: 40px;
-  min-height: 40px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  font-size: 13.5px;
-  text-decoration: none;
-  color: var(--ink-soft);
-}
-.seobody-pages span[aria-current] {
-  background: var(--primary-wash);
-  border-color: var(--primary-soft);
-  color: var(--primary);
-  font-weight: 600;
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
 }
 .seobody-faq {
   margin: 32px 0 0;

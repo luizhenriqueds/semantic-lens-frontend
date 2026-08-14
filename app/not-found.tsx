@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import Link from "next/link";
 import SeoLinks from "@/components/seo/SeoLinks";
 
@@ -24,7 +25,10 @@ export default function NotFound() {
           Voltar ao início
         </Link>
       </div>
-      <SeoLinks />
+      {/* Streamed: a 404 is served to crawlers by the thousand and must not wait on the DB. */}
+      <Suspense fallback={null}>
+        <SeoLinks />
+      </Suspense>
     </main>
   );
 }

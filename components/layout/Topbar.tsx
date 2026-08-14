@@ -1,5 +1,6 @@
 import Link from "next/link";
 import AlertsBell from "@/components/alerts/AlertsBell";
+import SignInLink from "@/components/auth/SignInLink";
 import Breadcrumb from "@/components/layout/Breadcrumb";
 import MobileNav from "@/components/layout/MobileNav";
 import TopSearch from "@/components/layout/TopSearch";
@@ -17,9 +18,7 @@ export default function Topbar({ account }: { account: Account | null }) {
         <UserMenu account={account} />
       ) : (
         <div className="topbar-auth">
-          <Link className="btn ghost" href="/login">
-            Entrar
-          </Link>
+          <SignInLink className="btn ghost">Entrar</SignInLink>
           <Link className="btn solid" href="/register">
             Criar conta
           </Link>

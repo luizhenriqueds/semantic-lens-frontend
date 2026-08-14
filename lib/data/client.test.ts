@@ -81,4 +81,49 @@ describe("withRetry", () => {
     expect(build).toHaveBeenCalledTimes(4);
     expect(result.error).toEqual(CONN_ERROR);
   });
+
+  it("reads a bodyless server failure as a timeout", async () => {
+    const build = vi.fn(async (): Promise<QueryResult<unknown>> => ({
+      data: null,
+      error: { message: "" },
+      status: 500,
+    }));
+    const promise = withRetry(build);
+    await vi.runAllTimersAsync();
+    expect(build).toHaveBeenCalledTimes(1);
+  });
+
+  it("reads SQLSTATE 57014 as a timeout whatever the message says", async () => {
+    const build = vi.fn(async (): Promise<QueryResult<unknown>> => ({
+      data: null,
+      error: { message: "query cancelled", code: "57014" },
+      status: 500,
+    }));
+    const promise = withRetry(build, { timeoutRetries: 1 });
+    await vi.runAllTimersAsync();
+    await promise;
+    expect(build).toHaveBeenCalledTimes(2);
+  });
+
+  it("retries a gateway status even with no message", async () => {
+    const build = vi.fn(async (): Promise<QueryResult<unknown>> => ({
+      data: null,
+      error: { message: "" },
+      status: 503,
+    }));
+    const promise = withRetry(build);
+    await vi.runAllTimersAsync();
+    await promise;
+    expect(build).toHaveBeenCalledTimes(4);
+  });
+
+  it("does not retry a rejected filter", async () => {
+    const build = vi.fn(async (): Promise<QueryResult<unknown>> => ({
+      data: null,
+      error: { message: 'column "nope" does not exist', code: "42703" },
+      status: 400,
+    }));
+    await withRetry(build, { timeoutRetries: 3 });
+    expect(build).toHaveBeenCalledTimes(1);
+  });
 });

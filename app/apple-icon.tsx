@@ -15,22 +15,20 @@ export default function AppleIcon() {
         background: "#2f5d3a",
       }}
     >
-      {/* Nudged down in y: the mark's ink centres on 21.375, not on the viewBox's 24. */}
-      <svg width="134" height="134" viewBox="0 0 48 48">
-        <g transform="translate(0 2.625)" fill="#fbfcfb">
-          <g
-            fill="none"
-            stroke="#fbfcfb"
-            strokeWidth="3.5"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          >
-            <path d="M11 11H6v26h5" />
-            <path d="M37 11h5v26h-5" />
-          </g>
-          <rect x="14.5" y="26" width="5" height="7" rx="2.5" />
-          <rect x="21.5" y="21" width="5" height="12" rx="2.5" />
-          <rect x="28.5" y="4" width="5" height="29" rx="2.5" />
+      {/* 120, not 134: this mark's ink is wider than the one it replaced. */}
+      <svg width="120" height="120" viewBox="0 0 48 48">
+        <path
+          d="M25 9H15a9 9 0 0 0-9 9v14a9 9 0 0 0 9 9h18a9 9 0 0 0 9-9v-14"
+          fill="none"
+          stroke="#fbfcfb"
+          strokeWidth="3.5"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+        <g fill="#fbfcfb">
+          <rect x="12.5" y="27" width="5" height="7" rx="2.5" />
+          <rect x="21.75" y="22" width="5" height="12" rx="2.5" />
+          <rect x="31" y="5" width="5" height="29" rx="2.5" />
         </g>
       </svg>
     </div>,

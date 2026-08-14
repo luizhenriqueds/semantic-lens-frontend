@@ -1,3 +1,4 @@
+import { after } from "next/server";
 import CollectionCard from "@/components/groups/CollectionCard";
 import { stillOpen } from "@/lib/auctionTime";
 import PropertyPhoto from "@/components/property/PropertyPhoto";
@@ -18,6 +19,7 @@ import {
   BUDGET,
   CLOSING_HREF,
   DISCOUNT,
+  DISCOVERY_GOALS,
   FINANCING,
   MODALITY_CHANGE,
   PAYMENT_CHANGE,
@@ -208,6 +210,12 @@ export async function PaymentChangeRailSlot({ seed, now }: SlotProps) {
 
 export async function GoalRailSlot({ goal, seed, now }: SlotProps & { goal: ProfileKey }) {
   const items = railItems(await fetchPool(goalPool(goal)), `goal-${goal}`, seed, now);
+
+  // Each goal's pool is a cold RPC the first time it is asked for in the cache window, and
+  // router.prefetch warms the route but never this query. Runs after the response.
+  after(() =>
+    Promise.all(DISCOVERY_GOALS.filter((g) => g !== goal).map((g) => fetchPool(goalPool(g)))),
+  );
   return (
     <RailSection
       hideHead

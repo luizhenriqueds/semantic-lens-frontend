@@ -24,20 +24,20 @@ export default function OpengraphImage() {
       <div style={{ display: "flex", alignItems: "center", gap: 20 }}>
         <svg width="72" height="72" viewBox="0 0 48 48">
           <rect width="48" height="48" rx="13" fill="#2f5d3a" />
-          <g transform="translate(4.32 6.47) scale(0.82)" fill="#fbfcfb">
-            <g
+          <g transform="translate(4.8 4.9) scale(0.8)">
+            <path
+              d="M25 9H15a9 9 0 0 0-9 9v14a9 9 0 0 0 9 9h18a9 9 0 0 0 9-9v-14"
               fill="none"
               stroke="#fbfcfb"
               strokeWidth="3.5"
               strokeLinecap="round"
               strokeLinejoin="round"
-            >
-              <path d="M11 11H6v26h5" />
-              <path d="M37 11h5v26h-5" />
+            />
+            <g fill="#fbfcfb">
+              <rect x="12.5" y="27" width="5" height="7" rx="2.5" />
+              <rect x="21.75" y="22" width="5" height="12" rx="2.5" />
+              <rect x="31" y="5" width="5" height="29" rx="2.5" />
             </g>
-            <rect x="14.5" y="26" width="5" height="7" rx="2.5" />
-            <rect x="21.5" y="21" width="5" height="12" rx="2.5" />
-            <rect x="28.5" y="4" width="5" height="29" rx="2.5" />
           </g>
         </svg>
         <div style={{ display: "flex", flexDirection: "column" }}>

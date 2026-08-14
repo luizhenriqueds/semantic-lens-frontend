@@ -33,7 +33,7 @@ export default function GoalSection({
     start(() => router.replace(hrefFor(goal), { scroll: false }));
   };
 
-  // Warms the RSC payload on intent, so the click has less left to wait for.
+  // Warms the route only; the rail's query is warmed server-side in GoalRailSlot.
   const warm = (goal: ProfileKey) => {
     if (goal !== shown) router.prefetch(hrefFor(goal));
   };

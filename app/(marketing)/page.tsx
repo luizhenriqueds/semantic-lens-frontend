@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
@@ -30,6 +31,11 @@ import { getEntitlements } from "@/lib/entitlements/server";
 import { countShort, money } from "@/lib/format";
 import { POI_LABEL, POI_ORDER } from "@/lib/pois";
 import { getUser } from "@/lib/supabase/server";
+
+// Dynamic: getUser()/getEntitlements() read the auth cookie, so this route can't be static.
+export const dynamic = "force-dynamic";
+
+export const maxDuration = 20;
 
 export const metadata: Metadata = {
   title: { absolute: SITE_TITLE },
@@ -398,7 +404,7 @@ export default async function LandingPage() {
         <div className="lp-wrap">
           <div className="lp-sechead lp-reveal">
             <span className="lp-seclabel">do dado bruto à tomada de decisão</span>
-            <h2>O anúncio do leilão traz o dado bruto. Nós te devolvemos o relatório.</h2>
+            <h2>O edital do leilão traz o dado bruto. Nós te devolvemos o relatório.</h2>
             <p>
               As melhores oportunidades do Brasil, ordenadas por potencial de investimento. Um
               relatório completo para te apoiar no processo de decisão.
@@ -1701,6 +1707,55 @@ export default async function LandingPage() {
                 </p>
               </div>
             </details>
+            <details id="faq-colecoes">
+              <summary>
+                Como as coleções de imóveis parecidos são montadas?
+                <span className="lp-chev">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                    <path d="m6 9 6 6 6-6" />
+                  </svg>
+                </span>
+              </summary>
+              <div className="lp-ans">
+                <p>
+                  <b>Automaticamente, por semelhança.</b> O algoritmo compara os imóveis pelos
+                  atributos que tornam dois anúncios realmente comparáveis — tipo, área, faixa de
+                  preço e características da região — e junta numa mesma coleção os que ficam
+                  próximos entre si. Ninguém monta coleção à mão e elas são recalculadas conforme a
+                  base muda.
+                </p>
+                <p>
+                  Cada coleção recebe um rótulo e o <b>objetivo que ela melhor atende</b>, para você
+                  comparar semelhante com semelhante em vez de pôr lado a lado um apartamento na
+                  capital e um terreno no interior. Imóveis que não se parecem com nenhum outro
+                  ficam de fora até haver grupo para eles.
+                </p>
+              </div>
+            </details>
+            <details id="faq-recomendacoes">
+              <summary>
+                Como funcionam as recomendações?
+                <span className="lp-chev">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                    <path d="m6 9 6 6 6-6" />
+                  </svg>
+                </span>
+              </summary>
+              <div className="lp-ans">
+                <p>
+                  Elas partem de <b>um imóvel que você salvou</b>. Usamos esse imóvel como âncora,
+                  procuramos na base os mais parecidos com ele e mostramos os que passam de um
+                  limite de semelhança, ordenados pela Nota de Investimento. Quando ainda não há
+                  semelhantes suficientes calculados para aquele imóvel, completamos com imóveis do
+                  mesmo tipo na mesma cidade, também ordenados por nota.
+                </p>
+                <p>
+                  Não é publicidade nem perfilamento: a recomendação olha só para o imóvel que você
+                  escolheu, não para o seu comportamento. O recurso está disponível a partir do
+                  plano {PLANS.investor.label}.
+                </p>
+              </div>
+            </details>
             <details id="faq-atualizacao">
               <summary>
                 Com que frequência os dados são atualizados?
@@ -1861,7 +1916,10 @@ export default async function LandingPage() {
 
       <footer className="lp-foot">
         <div className="lp-wrap lp-footlinks">
-          <SeoLinks />
+          {/* Streamed: the catalogue read must not sit in front of the page. */}
+          <Suspense fallback={null}>
+            <SeoLinks />
+          </Suspense>
         </div>
         <div className="lp-wrap">
           <a className="lp-brand" href="#top">
@@ -1880,6 +1938,9 @@ export default async function LandingPage() {
             <a href="#casos">Objetivos</a>
             <a href="#planos">Planos</a>
             <a href="#faq">Dúvidas</a>
+            <Link href="/termos">Termos de uso</Link>
+            <Link href="/privacidade">Privacidade</Link>
+            <a href="mailto:contato@leilaoindex.com.br">contato@leilaoindex.com.br</a>
           </div>
           <SocialRow />
           <span className="lp-fine">

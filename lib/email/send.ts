@@ -1,4 +1,5 @@
-const FROM = process.env.EMAIL_FROM || "Leilão Index <nao-responda@leilaoindex.com.br>";
+// Needs the domain verified in Resend; override with a resend.dev sandbox address locally.
+const FROM = process.env.EMAIL_FROM || "Leilão Index <noreply@leilaoindex.com.br>";
 
 export async function sendEmail({
   to,
