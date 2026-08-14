@@ -1,0 +1,48 @@
+"use client";
+
+import Script from "next/script";
+import { usePathname } from "next/navigation";
+import { useEffect, useRef } from "react";
+
+declare global {
+  interface Window {
+    fbq?: (command: string, ...args: unknown[]) => void;
+  }
+}
+
+const id = process.env.NEXT_PUBLIC_META_PIXEL_ID;
+
+export default function MetaPixel() {
+  // Pathname only: filter tweaks are not page views, and useSearchParams would opt every page
+  // under this layout into client rendering.
+  const pathname = usePathname();
+  // The init snippet already counted the landing path. GA4 does this leg itself, through
+  // enhanced measurement; the pixel has to be told.
+  const counted = useRef(pathname);
+
+  useEffect(() => {
+    if (counted.current === pathname) return;
+    counted.current = pathname;
+    window.fbq?.("track", "PageView");
+  }, [pathname]);
+
+  if (!id) return null;
+
+  return (
+    <>
+      <Script id="meta-pixel" strategy="afterInteractive">
+        {`!function(f,b,e,v,n,t,s){if(f.fbq)return;n=f.fbq=function(){n.callMethod?n.callMethod.apply(n,arguments):n.queue.push(arguments)};if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';n.queue=[];t=b.createElement(e);t.async=!0;t.src=v;s=b.getElementsByTagName(e)[0];s.parentNode.insertBefore(t,s)}(window,document,'script','https://connect.facebook.net/en_US/fbevents.js');fbq('init','${id}');fbq('track','PageView');`}
+      </Script>
+      <noscript>
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          height="1"
+          width="1"
+          alt=""
+          style={{ display: "none" }}
+          src={`https://www.facebook.com/tr?id=${id}&ev=PageView&noscript=1`}
+        />
+      </noscript>
+    </>
+  );
+}

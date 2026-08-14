@@ -100,6 +100,9 @@
 - [x] Sentry DSN set, source maps upload, release/env tags, PII scrubbing
 - [ ] Deliberate client + server error both land; `[billing]` logs searchable
 - [ ] Uptime check on the domain and the webhook; someone on call
+- [ ] `NEXT_PUBLIC_GA_ID` and `NEXT_PUBLIC_META_PIXEL_ID` on Vercel production only, not preview.
+      GA4 enhanced measurement must be on, or soft navigations go uncounted on that side; confirm
+      both with GA realtime and the Meta Pixel Helper.
 
 ## Performance
 
