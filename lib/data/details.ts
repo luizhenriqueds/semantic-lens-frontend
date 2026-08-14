@@ -1,6 +1,6 @@
 import { supabase } from "@/lib/supabase";
 import type { PriceHistoryPoint, Recommendation, ScoreExplain, ScoreTerm } from "@/lib/types";
-import { cached, num, rows, withRetryTimeouts } from "./client";
+import { DETAIL_REVALIDATE, cached, num, rows, withRetry } from "./client";
 
 const dashless = (s: string) => s.replace(/[--]/g, "-");
 const IMPACTS = ["ajuda", "neutro", "pesa"];
@@ -8,7 +8,7 @@ const IMPACTS = ["ajuda", "neutro", "pesa"];
 // The `components` JSONB is heavy, so it is fetched per-property rather than
 // joined into the bulk properties result.
 async function loadScoreExplain(id: string): Promise<ScoreExplain | null> {
-  const res = await withRetryTimeouts(() =>
+  const res = await withRetry(() =>
     supabase
       .from("property_scores")
       .select("components")
@@ -41,14 +41,18 @@ async function loadScoreExplain(id: string): Promise<ScoreExplain | null> {
   return { summary, terms };
 }
 
-export const getScoreExplain = cached(loadScoreExplain, "property-score-explain");
+export const getScoreExplain = cached(
+  loadScoreExplain,
+  "property-score-explain",
+  DETAIL_REVALIDATE,
+);
 
 // Heavy text kept out of property_list_mv, fetched per-id on the detail page.
 // `last_seen` rides along: it is the day the batch last found the listing on Caixa.
 async function loadPropertyDetailText(
   id: string,
 ): Promise<{ description: string | null; visualNote: string | null; lastSeen: string | null }> {
-  const res = await withRetryTimeouts(() =>
+  const res = await withRetry(() =>
     supabase
       .from("properties")
       .select("canonical_description,visual_note,last_seen")
@@ -63,13 +67,17 @@ async function loadPropertyDetailText(
   };
 }
 
-export const getPropertyDetailText = cached(loadPropertyDetailText, "property-detail-text");
+export const getPropertyDetailText = cached(
+  loadPropertyDetailText,
+  "property-detail-text",
+  DETAIL_REVALIDATE,
+);
 
 // `listings` rows are intervals dated at their *last* live day; the chart wants starts, so each
 // is dated from where the previous ended and `first_seen` opens the series.
 async function loadPriceHistory(id: string): Promise<PriceHistoryPoint[]> {
   const [listed, prop] = await Promise.all([
-    withRetryTimeouts(() =>
+    withRetry(() =>
       supabase
         .from("listings")
         .select("appraised_value,sale_value,discount,modality,snapshot_date")
@@ -77,7 +85,7 @@ async function loadPriceHistory(id: string): Promise<PriceHistoryPoint[]> {
         .order("snapshot_date", { ascending: true })
         .order("id", { ascending: true }),
     ),
-    withRetryTimeouts(() =>
+    withRetry(() =>
       supabase.from("properties").select("first_seen").eq("property_id", id).limit(1),
     ),
   ]);
@@ -109,10 +117,10 @@ async function loadPriceHistory(id: string): Promise<PriceHistoryPoint[]> {
   return out;
 }
 
-export const getPriceHistory = cached(loadPriceHistory, "price-history");
+export const getPriceHistory = cached(loadPriceHistory, "price-history", DETAIL_REVALIDATE);
 
 async function loadRecommendations(id: string): Promise<Recommendation[]> {
-  const res = await withRetryTimeouts(() =>
+  const res = await withRetry(() =>
     supabase
       .from("property_recommendations")
       .select("kind,rank,similarity,rec_property_id")
@@ -129,4 +137,8 @@ async function loadRecommendations(id: string): Promise<Recommendation[]> {
     }));
 }
 
-export const getRecommendations = cached(loadRecommendations, "property-recommendations");
+export const getRecommendations = cached(
+  loadRecommendations,
+  "property-recommendations",
+  DETAIL_REVALIDATE,
+);

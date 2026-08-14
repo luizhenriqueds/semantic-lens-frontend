@@ -1,6 +1,6 @@
 import { supabase } from "@/lib/supabase";
 import type { NearbyPoi, Poi } from "@/lib/types";
-import { cached, rows, withRetry } from "./client";
+import { DETAIL_REVALIDATE, cached, rows, withRetry } from "./client";
 
 // The pois table is large, so it is never loaded whole - callers
 // fetch only the POIs they need by id, by bounding box, or by name.
@@ -77,4 +77,4 @@ async function loadPropertyPois(id: string): Promise<NearbyPoi[]> {
     .sort((a, b) => a.distance - b.distance);
 }
 
-export const getPropertyPois = cached(loadPropertyPois, "property-poi");
+export const getPropertyPois = cached(loadPropertyPois, "property-poi", DETAIL_REVALIDATE);

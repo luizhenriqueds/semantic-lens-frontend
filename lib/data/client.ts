@@ -1,3 +1,4 @@
+import { cache as requestCache } from "react";
 import { unstable_cache } from "next/cache";
 
 export const CLUSTER_RUN = "property-v1";
@@ -5,6 +6,9 @@ export const REVALIDATE = 120;
 // Not one nightly batch: `crawl-followups` refreshes property_list_mv hourly from 09:00 to 19:00
 // (America/Campo_Grande). Still, a rebuild reorders far less than it changes.
 export const SEARCH_REVALIDATE = 900;
+// Half the crawl's refresh interval: at 120s a property in Google's rotation was re-read 30
+// times an hour, across ~45k sitemap URLs, to return the same bytes.
+export const DETAIL_REVALIDATE = 1_800;
 
 export function num(v: unknown): number | null {
   if (v == null) return null;
@@ -56,10 +60,6 @@ export async function withRetry<T>(
   return res;
 }
 
-// Opts a cheap, indexed lookup back into retrying a `statement timeout` - see `withRetry`.
-export const withRetryTimeouts = <T>(build: () => PromiseLike<QueryResult<T>>) =>
-  withRetry(build, { timeoutRetries: MAX_RETRIES });
-
 export function rows<T>(name: string, res: QueryResult<T>): T[] {
   if (res.error) {
     console.error(`[data] query "${name}" failed: ${res.error.message}`);
@@ -100,12 +100,25 @@ export function ttlCached<T>(load: () => Promise<T>, ttlMs: number): () => Promi
   };
 }
 
+// unstable_cache does not coalesce in flight, so the two Suspense slots that both call
+// getScoreExplain(id) each missed a cold key and each hit Postgres.
+const inFlight = requestCache(() => new Map<string, Promise<unknown>>());
+
 // Wraps a loader in next's request cache. Extra args become part of the cache key.
 export function cached<A extends unknown[], T>(
   fn: (...args: A) => Promise<T>,
   prefix: string,
   revalidate = REVALIDATE,
 ): (...args: A) => Promise<T> {
-  return (...args: A) =>
-    unstable_cache(() => fn(...args), [prefix, ...args.map(String)], { revalidate })();
+  return (...args: A) => {
+    const parts = [prefix, ...args.map(String)];
+    // NUL, not a space: ("a b") and ("a", "b") must not collide.
+    const key = parts.join("\u0000");
+    const store = inFlight();
+    const open = store.get(key) as Promise<T> | undefined;
+    if (open) return open;
+    const p = unstable_cache(() => fn(...args), parts, { revalidate })();
+    store.set(key, p);
+    return p;
+  };
 }
