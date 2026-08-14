@@ -20,7 +20,10 @@ export type QueryResult<T> = { data: T[] | null; error: QueryError | null; statu
 const TIMEOUT_CODE = "57014";
 const TIMEOUT_TEXT = /timeout|canceling/i;
 const NETWORK_TEXT = /fetch failed|ECONN|socket hang up|network|db queue timeout/i;
-const RETRYABLE_STATUS = new Set([502, 503, 504, 520, 522, 524]);
+// 503 is deliberately absent: postgrest answers it when the pool is exhausted, so retrying spends
+// a connection the database does not have and saturation outlives the load that caused it. The
+// rest stay - those are edge and socket blips, where a second attempt is the right answer.
+const RETRYABLE_STATUS = new Set([502, 504, 520, 522, 524]);
 const MAX_RETRIES = 3;
 
 type Failure = "timeout" | "transient" | "permanent";

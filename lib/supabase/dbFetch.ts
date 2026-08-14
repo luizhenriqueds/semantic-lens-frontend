@@ -22,6 +22,35 @@ type Waiter = {
 let inFlight = 0;
 const waiting: Waiter[] = [];
 
+// The permit queue bounds one render's fan-out, not the fleet's. A 503 means postgrest's pool is
+// already gone, so consecutive saturation trips a breaker and gives it a window to drain.
+const TRIP_AFTER = envNum(process.env.DB_TRIP_AFTER, 5);
+const COOLDOWN_MS = envNum(process.env.DB_COOLDOWN_MS, 5_000);
+
+let saturation = 0;
+let openedAt = 0;
+
+function isOpen(): boolean {
+  if (!openedAt) return false;
+  if (Date.now() - openedAt < COOLDOWN_MS) return true;
+  // Half-open: let one request through, and re-trip on a single further failure.
+  openedAt = 0;
+  saturation = TRIP_AFTER - 1;
+  return false;
+}
+
+function record(saturated: boolean): void {
+  if (!saturated) {
+    saturation = 0;
+    openedAt = 0;
+    return;
+  }
+  if (++saturation >= TRIP_AFTER && !openedAt) {
+    openedAt = Date.now();
+    console.warn(`[db] breaker open for ${COOLDOWN_MS}ms after ${saturation} saturated responses`);
+  }
+}
+
 function acquire(): Promise<void> {
   if (inFlight < LIMIT) {
     inFlight++;
@@ -71,6 +100,8 @@ function log(input: RequestInfo | URL, startedAt: number, status: string, quiet:
 }
 
 export async function dbFetch(input: RequestInfo | URL, init?: RequestInit): Promise<Response> {
+  // Before the permit, not after: a queued request is a connection this database cannot spare.
+  if (isOpen()) throw new Error("db unavailable: breaker open");
   await acquire();
   const startedAt = Date.now();
   // Composed, not replaced: an `.abortSignal()` passed at a call site has to keep working.
@@ -79,13 +110,22 @@ export async function dbFetch(input: RequestInfo | URL, init?: RequestInit): Pro
   try {
     const res = await fetch(input, { ...init, signal });
     log(input, startedAt, String(res.status), res.ok);
+    // 503 is pool exhaustion; 504 is the gateway giving up on a query still holding a connection.
+    record(res.status === 503 || res.status === 504);
     return res;
   } catch (e) {
     log(input, startedAt, e instanceof Error ? e.name : "error", false);
+    // A deadline abort means the statement outlived its budget and is still running on the server.
+    record(e instanceof Error && e.name === "TimeoutError");
     throw e;
   } finally {
     release();
   }
 }
 
-export const dbPoolStats = () => ({ limit: LIMIT, inFlight, queued: waiting.length });
+export const dbPoolStats = () => ({
+  limit: LIMIT,
+  inFlight,
+  queued: waiting.length,
+  breakerOpen: Boolean(openedAt),
+});

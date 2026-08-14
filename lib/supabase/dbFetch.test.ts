@@ -4,6 +4,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 process.env.DB_MAX_CONCURRENCY = "2";
 process.env.DB_QUEUE_TIMEOUT_MS = "1000";
 process.env.DB_TIMEOUT_MS = "5000";
+process.env.DB_TRIP_AFTER = "3";
+process.env.DB_COOLDOWN_MS = "50";
 
 const { dbFetch, dbPoolStats } = await import("./dbFetch");
 
@@ -73,6 +75,30 @@ describe("dbFetch", () => {
     release.forEach((r) => r());
     await Promise.all(held);
     expect(dbPoolStats()).toMatchObject({ inFlight: 0, queued: 0 });
+
+    vi.unstubAllGlobals();
+  });
+
+  it("stops sending once postgrest reports a spent pool, and recovers on a success", async () => {
+    const status = { code: 503 };
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => new Response("{}", { status: status.code })),
+    );
+
+    // Below the threshold the 503 is still handed back for the caller to classify.
+    for (let i = 0; i < 3; i++) {
+      expect((await dbFetch("http://db.test/rest/v1/t")).status).toBe(503);
+    }
+    await expect(dbFetch("http://db.test/rest/v1/t")).rejects.toThrow(/breaker open/);
+    expect(dbPoolStats()).toMatchObject({ inFlight: 0, breakerOpen: true });
+
+    // Half-open after the cooldown: the probe gets through, and its success clears the breaker.
+    status.code = 200;
+    await vi.waitFor(async () => {
+      expect((await dbFetch("http://db.test/rest/v1/t")).status).toBe(200);
+    });
+    expect(dbPoolStats()).toMatchObject({ breakerOpen: false });
 
     vi.unstubAllGlobals();
   });
