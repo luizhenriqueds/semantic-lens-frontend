@@ -1,6 +1,6 @@
 import { supabase } from "@/lib/supabase";
 import { titleCase } from "@/lib/format";
-import { dominantStreet, streetOf } from "@/lib/geo";
+import { streetOf } from "@/lib/geo";
 import {
   regionComboKey,
   regionTags,
@@ -11,10 +11,7 @@ import {
   type RegionSortKey,
 } from "@/lib/region";
 import type { Region } from "@/lib/types";
-import { cached, fetchAllRows, num, REVALIDATE, rows, withRetry } from "./client";
-import { countProperties } from "./propertyList";
-
-const SCORE_COLS = "h3,convenience,walkability,commercial,airbnb,student,family";
+import { cached, num, REVALIDATE, rows, withRetry } from "./client";
 
 function mapScores(s: any): Region["scores"] {
   return {
@@ -25,39 +22,6 @@ function mapScores(s: any): Region["scores"] {
     student: num(s?.student),
     family: num(s?.family),
   };
-}
-
-// raw_address of listable properties in the given cells, for street disambiguation.
-async function addressesByCell(
-  h3s: string[],
-): Promise<Map<string, { rawAddress: string | null }[]>> {
-  const chunks: string[][] = [];
-  for (let i = 0; i < h3s.length; i += 100) chunks.push(h3s.slice(i, i + 100));
-
-  const batches = await Promise.all(
-    chunks.map((chunk) =>
-      fetchAllRows<any>("property_list_mv-addresses", (f, t) =>
-        supabase
-          .from("property_list_mv")
-          .select("h3_r8,raw_address")
-          .in("h3_r8", chunk)
-          .eq("is_listable", true)
-          .order("property_id")
-          .range(f, t),
-      ),
-    ),
-  );
-
-  const map = new Map<string, { rawAddress: string | null }[]>();
-  for (const batch of batches) {
-    for (const r of batch) {
-      const g = map.get(r.h3_r8);
-      const item = { rawAddress: r.raw_address || null };
-      if (g) g.push(item);
-      else map.set(r.h3_r8, [item]);
-    }
-  }
-  return map;
 }
 
 // /regions ranks ~9k cells by a blend of the sort keys. Shipping them all to the browser
@@ -245,22 +209,17 @@ export function getRegions(): Promise<RegionsIndex> {
   return regionsCache.promise;
 }
 
+// region_stats_mv (0089) carries the cell, its scores, its dna and a precomputed num_props and
+// sub_label, one row per region_cells row. It folds in two round trips, and its count replaces
+// the full-corpus count RPC this used to run on every property detail render.
+const REGION_COLS =
+  "h3,city,neighborhood_label,sub_label,num_props,dna,top_tags," +
+  "convenience,walkability,commercial,airbnb,student,family";
+
 async function loadRegion(h3: string): Promise<Region | null> {
-  const [cellRes, scoreRes, dnaRes, featRes, nbRes, numProps] = await Promise.all([
-    withRetry(() =>
-      supabase.from("region_cells").select("h3,city,neighborhood_label").eq("h3", h3).limit(1),
-    ),
-    withRetry(() =>
-      supabase
-        .from("region_scores")
-        .select(SCORE_COLS)
-        .eq("score_version", 1)
-        .eq("h3", h3)
-        .limit(1),
-    ),
-    withRetry(() =>
-      supabase.from("region_dna").select("h3,dna,top_tags,summary_text").eq("h3", h3).limit(1),
-    ),
+  const [statsRes, dnaRes, featRes, nbRes] = await Promise.all([
+    withRetry(() => supabase.from("region_stats_mv").select(REGION_COLS).eq("h3", h3).limit(1)),
+    withRetry(() => supabase.from("region_dna").select("summary_text").eq("h3", h3).limit(1)),
     withRetry(() =>
       supabase
         .from("region_features")
@@ -277,12 +236,11 @@ async function loadRegion(h3: string): Promise<Region | null> {
         .order("rank")
         .limit(3),
     ),
-    countProperties({ h3 }),
   ]);
 
-  const cell = rows<any>("region_cells", cellRes)[0];
-  const score = rows<any>("region_scores", scoreRes)[0];
-  if (!cell || !score) return null;
+  const cell = rows<any>("region_stats_mv", statsRes)[0];
+  // Stands in for the region_scores row this used to probe for; /regions applies the same test.
+  if (!cell || !hasProfile(cell)) return null;
 
   const d = rows<any>("region_dna", dnaRes)[0];
   const feat = (rows<any>("region_features", featRes)[0]?.features ?? {}) as {
@@ -314,29 +272,16 @@ async function loadRegion(h3: string): Promise<Region | null> {
     });
   }
 
-  let subLabel: string | null = null;
-  const dupRes = await withRetry(() =>
-    supabase
-      .from("region_cells")
-      .select("h3")
-      .eq("city", cell.city)
-      .eq("neighborhood_label", cell.neighborhood_label)
-      .limit(2),
-  );
-  if (rows<any>("region_cells", dupRes).length > 1) {
-    const addrs = await addressesByCell([h3]);
-    subLabel = dominantStreet(addrs.get(h3) ?? []);
-  }
-
   return {
     h3: cell.h3,
     name: cell.neighborhood_label ?? "Região",
     city: titleCase(cell.city ?? ""),
-    subLabel,
-    numProps,
-    scores: mapScores(score),
-    dna: (d?.dna as Region["dna"]) ?? null,
-    topTags: (d?.top_tags as string[]) ?? [],
+    // Already null unless the (city, label) pair repeats - the MV applies that test itself.
+    subLabel: streetOf(cell.sub_label),
+    numProps: Number(cell.num_props ?? 0),
+    scores: mapScores(cell),
+    dna: (cell.dna as Region["dna"]) ?? null,
+    topTags: (cell.top_tags as string[]) ?? [],
     summary: d?.summary_text ?? null,
     counts: feat.counts ?? {},
     nearest: feat.nearest_m ?? {},

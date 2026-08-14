@@ -31,21 +31,3 @@ export function addressLine(rawAddress: string | null | undefined): string | nul
   const cep = CEP.exec(cased);
   return cep ? cased.slice(0, cep.index + cep[0].length) : cased;
 }
-
-// Most common street among a cell's properties, to disambiguate same-named regions.
-export function dominantStreet(properties: { rawAddress: string | null }[]): string | null {
-  const counts = new Map<string, number>();
-  for (const p of properties) {
-    const s = streetOf(p.rawAddress);
-    if (s) counts.set(s, (counts.get(s) ?? 0) + 1);
-  }
-  let best: string | null = null;
-  let bestN = 0;
-  for (const [s, n] of counts) {
-    if (n > bestN) {
-      best = s;
-      bestN = n;
-    }
-  }
-  return best;
-}

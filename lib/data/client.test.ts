@@ -109,12 +109,24 @@ describe("withRetry", () => {
     const build = vi.fn(async (): Promise<QueryResult<unknown>> => ({
       data: null,
       error: { message: "" },
-      status: 503,
+      status: 502,
     }));
     const promise = withRetry(build);
     await vi.runAllTimersAsync();
     await promise;
     expect(build).toHaveBeenCalledTimes(4);
+  });
+
+  it("does not retry a spent connection pool", async () => {
+    const build = vi.fn(async (): Promise<QueryResult<unknown>> => ({
+      data: null,
+      error: { message: "" },
+      status: 503,
+    }));
+    const promise = withRetry(build);
+    await vi.runAllTimersAsync();
+    await promise;
+    expect(build).toHaveBeenCalledTimes(1);
   });
 
   it("does not retry a rejected filter", async () => {
