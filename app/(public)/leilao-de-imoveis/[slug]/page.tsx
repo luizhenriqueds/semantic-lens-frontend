@@ -16,8 +16,10 @@ import { breadcrumbLd, faqLd, itemListLd } from "@/lib/seo/jsonLd";
 import { findLanding, landingFallback, resolveLandingFilters } from "@/lib/seo/resolve";
 import type { PropertyFilters } from "@/lib/types";
 
-// The (app) layout reads the auth cookie, so nothing under it can be static. Every read below is
-// already unstable_cache'd, which is what keeps a crawler sweep cheap.
+// Still dynamic, and not for the old reason: the (public) layout no longer reads cookies, but this
+// page reads searchParams for paging and facets, which is itself a dynamic API. Only /property/[id]
+// in this group is actually cacheable. Every read below is already unstable_cache'd, which is what
+// keeps a crawler sweep cheap.
 export const dynamic = "force-dynamic";
 
 // Below this the page is thin content: it still renders, it just does not ask to be indexed.
@@ -64,7 +66,6 @@ export async function generateMetadata({
       title,
       description: landing.lead,
     },
-    // The (app) layout is noindex; an indexable page under it has to say so explicitly.
     robots: { index: total >= MIN_INDEXABLE, follow: true },
   };
 }

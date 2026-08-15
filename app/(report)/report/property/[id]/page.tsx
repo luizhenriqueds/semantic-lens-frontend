@@ -2,9 +2,9 @@ import { notFound } from "next/navigation";
 import AutoPrint from "@/app/(report)/_components/AutoPrint";
 import ReportDenied from "@/app/(report)/_components/ReportDenied";
 import ReportShell from "@/app/(report)/_components/ReportShell";
-import PriceHistory from "@/app/(app)/property/[id]/_components/PriceHistory";
-import PropertyRanks from "@/app/(app)/property/[id]/_components/PropertyRanks";
-import ScoreBreakdown from "@/app/(app)/property/[id]/_components/ScoreBreakdown";
+import PriceHistory from "@/app/(public)/property/[id]/_components/PriceHistory";
+import PropertyRanks from "@/app/(public)/property/[id]/_components/PropertyRanks";
+import ScoreBreakdown from "@/app/(public)/property/[id]/_components/ScoreBreakdown";
 import PropertyMarket from "@/components/market/PropertyMarket";
 import RegionScoreBars from "@/components/region/RegionScoreBars";
 import {

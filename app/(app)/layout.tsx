@@ -14,8 +14,7 @@ import { getUser } from "@/lib/supabase/server";
 
 // noindex covers every faceted permutation of /properties, /search and the rest in one stroke, so
 // the /leilao-de-imoveis landings are the only indexable representation. follow keeps link equity
-// flowing. The two pages under here that must be indexed - /property/[id] and the landings -
-// re-assert index:true at page level, which wins over the layout.
+// flowing. The indexable pages moved out to (public) rather than re-asserting index:true here.
 export const metadata: Metadata = {
   title: { default: "Painel de leilões", template: "%s | Leilão Index" },
   description:
@@ -23,6 +22,8 @@ export const metadata: Metadata = {
   robots: { index: false, follow: true },
 };
 
+// These two cookie reads make every route in this group dynamic, which is fine: they are all behind
+// a session or faceted anyway. The indexable routes live in (public) so they do not inherit it.
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const [{ user }, ent] = await Promise.all([getUser(), getEntitlements()]);
   const account = accountFrom(user);

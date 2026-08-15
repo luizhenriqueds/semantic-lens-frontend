@@ -11,15 +11,14 @@ import PropertyRanks from "./_components/PropertyRanks";
 import PayCards from "./_components/PayCards";
 import Ring from "@/components/ui/Ring";
 import {
-  BlockSkeleton,
-  InlineSkeleton,
-  MarketSlot,
   PriceHistorySlot,
-  RecommendationsSlot,
   RegionSlot,
   ScoreBreakdownSlot,
   ScoreWeightsSlot,
 } from "./_components/sections";
+import { BlockSkeleton, InlineSkeleton } from "./_components/skeletons";
+import MarketSection from "./_components/MarketSection";
+import RecommendationsSection from "./_components/RecommendationsSection";
 import JsonLd from "@/components/seo/JsonLd";
 import { getPropertyById, getPropertyDetailText, isListable } from "@/lib/data";
 import { breadcrumbLd, realEstateListingLd } from "@/lib/seo/jsonLd";
@@ -40,10 +39,19 @@ import {
 import { addressLine } from "@/lib/geo";
 import { IconPin } from "@/lib/icons";
 
-// Dynamic: the app layout reads the auth cookie, so this route can't be static.
-export const dynamic = "force-dynamic";
+// Cached, which is why this route sits under (public): one sitemap crawl is ~30k requests, and each
+// was a full dynamic render. DETAIL_REVALIDATE, inlined because next only accepts a literal here.
+export const revalidate = 1800;
 
 export const maxDuration = 20;
+
+// Empty on purpose: 30k listings must not be prerendered at build. It has to exist all the same -
+// without it a dynamic segment is served on demand and never written to the cache.
+export function generateStaticParams() {
+  return [];
+}
+
+export const dynamicParams = true;
 
 export async function generateMetadata({
   params,
@@ -78,7 +86,7 @@ export async function generateMetadata({
       title: `${p.title} em ${where} — leilão da Caixa${price}`,
       images: p.image ? [p.image] : undefined,
     },
-    // The (app) layout is noindex; sold and unscored listings stay that way.
+    // Sold and unscored listings stay out of the index.
     robots: { index: isListable(p) && !p.inactive, follow: true },
   };
 }
@@ -274,7 +282,7 @@ export default async function PropertyPage({ params }: { params: Promise<{ id: s
           </Suspense>
 
           <Suspense fallback={<BlockSkeleton height={220} />}>
-            <MarketSlot p={p} />
+            <MarketSection id={p.id} />
           </Suspense>
 
           <div className="infoblock">
@@ -335,7 +343,7 @@ export default async function PropertyPage({ params }: { params: Promise<{ id: s
       </div>
 
       <Suspense fallback={null}>
-        <RecommendationsSlot p={p} />
+        <RecommendationsSection id={p.id} />
       </Suspense>
     </section>
   );
