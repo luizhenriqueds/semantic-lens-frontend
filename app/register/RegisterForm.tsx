@@ -5,11 +5,16 @@ import { useSearchParams } from "next/navigation";
 import { useState } from "react";
 import { registerAccount } from "@/app/actions/auth";
 import AuthAlert from "@/components/auth/AuthAlert";
+import GoogleButton from "@/components/auth/GoogleButton";
 import PasswordInput from "@/components/auth/PasswordInput";
 import type { RegisterError } from "@/lib/auth/messages";
+import { TRIAL_ROLE } from "@/lib/entitlements";
+import { withTrialParam } from "@/lib/entitlements/trialFlag";
 
 export default function RegisterForm() {
   const plan = useSearchParams().get("plan") ?? undefined;
+  // Google skips registerAccount, so the trial flag has to ride along on the callback redirect.
+  const next = plan === TRIAL_ROLE ? withTrialParam("/dashboard", "") : "/dashboard";
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -58,6 +63,8 @@ export default function RegisterForm() {
           hint="Clique nele para concluir seu cadastro. Confira também a caixa de spam."
         />
       )}
+
+      <GoogleButton next={next} onError={(message) => setError(message ? { message } : null)} />
 
       <label className="au-field">
         <span>Nome</span>

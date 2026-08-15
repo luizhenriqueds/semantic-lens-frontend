@@ -45,10 +45,14 @@ export function signInError(raw?: { code?: string; message?: string } | null): s
   return "E-mail ou senha inválidos.";
 }
 
-/** Keyed on the ?error= values app/auth/confirm redirects with. */
+export const OAUTH_START_FAILED = "Não foi possível abrir o login do Google. Tente novamente.";
+
+/** Keyed on the ?error= values app/auth/confirm and app/auth/callback redirect with. */
 export const CONFIRM_ERRORS: Record<string, string> = {
   "expired-link": `Esse link de confirmação expirou. ${RECOVER_HINT}`,
   "invalid-link": `Esse link não é válido - alguns aplicativos de e-mail o encurtam. ${RECOVER_HINT}`,
+  "oauth-cancelled": "Login com Google cancelado. Você pode tentar de novo ou entrar com e-mail.",
+  "oauth-failed": "Não foi possível concluir o login com Google. Tente novamente.",
 };
 
 export function registerError(raw?: { code?: string; message?: string } | null): RegisterError {

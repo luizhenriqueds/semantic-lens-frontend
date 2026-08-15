@@ -6634,6 +6634,34 @@ select.selectish {
   justify-content: center;
   margin-top: 4px;
 }
+/* Neutral edge on purpose: the only colour on this control is the Google mark itself. */
+.au-oauth {
+  width: 100%;
+  justify-content: center;
+  border-color: var(--line);
+  color: var(--ink);
+}
+.au-oauth:hover {
+  background: var(--surface-2);
+}
+.au-oauth:disabled:hover {
+  background: var(--surface);
+}
+.au-or {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 18px 0;
+  font-size: 12.5px;
+  color: var(--ink-faint);
+}
+.au-or::before,
+.au-or::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: var(--line);
+}
 .au-swap {
   margin: 20px 0 0;
   font-size: 14px;
