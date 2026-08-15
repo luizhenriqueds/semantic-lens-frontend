@@ -12,6 +12,9 @@ type PlanContextValue = Entitlements & {
   require: (f: Feature, opts?: Upsell) => boolean;
   /** Opens the upsell for a feature the plan *has* but has run out of - a quota, not a gate. */
   showQuotaUpsell: (f: Feature) => void;
+  /** True while the plan is still resolving in the browser, which is the case on the cached
+   *  routes. Gated controls stay inert rather than act on the anon default and wall a subscriber. */
+  loading: boolean;
 };
 
 type Upsell = { art?: Feature; propertyLabel?: string };
@@ -22,6 +25,7 @@ const PlanContext = createContext<PlanContextValue>({
   ...anonEntitlements,
   require: () => false,
   showQuotaUpsell: () => {},
+  loading: false,
 });
 
 // Only the scalars cross the RSC boundary; the plan table is rebuilt from the shared map.
@@ -29,11 +33,13 @@ export default function PlanProvider({
   role,
   isAdmin,
   trial,
+  loading = false,
   children,
 }: {
   role: Role;
   isAdmin: boolean;
   trial: Trial;
+  loading?: boolean;
   children: React.ReactNode;
 }) {
   const [upsell, setUpsell] = useState<(Upsell & { feature: Feature; quota?: boolean }) | null>(
@@ -44,17 +50,20 @@ export default function PlanProvider({
   const require = useCallback(
     (f: Feature, opts?: Upsell) => {
       if (ent.can(f)) return true;
+      // Until the plan lands `ent` is the anon default, so every gate reads as closed. Opening the
+      // upsell on that would show a subscriber the wall for a feature they pay for.
+      if (loading) return false;
       setUpsell({ feature: f, ...opts });
       return false;
     },
-    [ent],
+    [ent, loading],
   );
 
   const showQuotaUpsell = useCallback((f: Feature) => setUpsell({ feature: f, quota: true }), []);
 
   const value = useMemo(
-    () => ({ ...ent, require, showQuotaUpsell }),
-    [ent, require, showQuotaUpsell],
+    () => ({ ...ent, require, showQuotaUpsell, loading }),
+    [ent, require, showQuotaUpsell, loading],
   );
 
   return (
