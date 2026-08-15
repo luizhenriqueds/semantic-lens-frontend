@@ -40,8 +40,9 @@ import { addressLine } from "@/lib/geo";
 import { IconPin } from "@/lib/icons";
 
 // Cached, which is why this route sits under (public): one sitemap crawl is ~30k requests, and each
-// was a full dynamic render. DETAIL_REVALIDATE, inlined because next only accepts a literal here.
-export const revalidate = 1800;
+// was a full dynamic render. Keep in step with DETAIL_REVALIDATE - next takes the shortest
+// revalidate in the tree, so a longer literal here is silently capped by the data reads below.
+export const revalidate = 21_600;
 
 export const maxDuration = 20;
 
