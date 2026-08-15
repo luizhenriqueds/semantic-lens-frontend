@@ -6,9 +6,14 @@ export const REVALIDATE = 120;
 // Not one nightly batch: `crawl-followups` refreshes property_list_mv hourly from 09:00 to 19:00
 // (America/Campo_Grande). Still, a rebuild reorders far less than it changes.
 export const SEARCH_REVALIDATE = 900;
-// Half the crawl's refresh interval: at 120s a property in Google's rotation was re-read 30
-// times an hour, across ~45k sitemap URLs, to return the same bytes.
-export const DETAIL_REVALIDATE = 1_800;
+// Prices ISR writes now, not Postgres reads: /property/[id] is cached, and next takes the shortest
+// revalidate in a route's tree, so this value is what the page's TTL actually resolves to. At 1800s
+// a crawled corpus rewrote all ~30k documents up to 48x a day; 6h caps that at 4.
+export const DETAIL_REVALIDATE = 21_600;
+// app/not-found.tsx renders SeoLinks, and next renders that boundary into every route's payload -
+// so this catalogue TTL is a floor on every page's ISR TTL, not just on its own reads. The
+// catalogue is cities and ranges: it moves far slower than the listings do.
+export const CATALOGUE_REVALIDATE = 21_600;
 
 export function num(v: unknown): number | null {
   if (v == null) return null;

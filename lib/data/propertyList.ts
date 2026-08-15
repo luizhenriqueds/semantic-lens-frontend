@@ -26,6 +26,7 @@ import type {
 } from "@/lib/types";
 import {
   cached,
+  CATALOGUE_REVALIDATE,
   DETAIL_REVALIDATE,
   fetchAllRows,
   num,
@@ -459,7 +460,11 @@ async function loadFilterOptions(): Promise<RawFilterOptions> {
 
 // Five full scans of the MV on every search, but it only changes when the batch refreshes it.
 // The search path takes this one directly: it needs the city list, not the flag below.
-export const getFilterOptionsRaw = cached(loadFilterOptions, "filter-options", 3600);
+export const getFilterOptionsRaw = cached(
+  loadFilterOptions,
+  "filter-options",
+  CATALOGUE_REVALIDATE,
+);
 
 // Whether property_list_matched reads `min_visual_score` - a deploy-time fact. Probing it at
 // request time cost two full counts of the base on the landing, every 404 and every SEO page.
