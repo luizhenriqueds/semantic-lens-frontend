@@ -44,7 +44,7 @@ export const FAQ: { id: string; q: string; a: string }[] = [
   {
     id: "faq-recomendacoes",
     q: "Como funcionam as recomendações?",
-    a: "Elas partem de um imóvel que você salvou. Usamos esse imóvel como âncora, procuramos na base os mais parecidos com ele e mostramos os que passam de um limite de semelhança, ordenados pela Nota de Investimento. Quando ainda não há semelhantes suficientes calculados para aquele imóvel, completamos com imóveis do mesmo tipo na mesma cidade, também ordenados por nota. Não é publicidade nem perfilamento: a recomendação olha só para o imóvel que você escolheu, não para o seu comportamento. O recurso está disponível a partir do plano Investidor.",
+    a: "Elas partem do imóvel que você está vendo, salvo ou não na sua carteira. Usamos a página aberta como âncora, procuramos na base os mais parecidos com ela e mostramos os que passam de um limite de semelhança, ordenados pela Nota de Investimento. Quando ainda não há semelhantes suficientes calculados para aquele imóvel, completamos com imóveis do mesmo tipo na mesma cidade, também ordenados por nota. Não é publicidade nem perfilamento: a recomendação olha só para o imóvel aberto, não para o seu comportamento. O recurso está disponível a partir do plano Investidor.",
   },
   {
     id: "faq-atualizacao",

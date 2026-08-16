@@ -284,7 +284,7 @@ export default function PropertiesClient({
     dayItems: Property[];
     dayTotal: number;
   };
-  map?: { points: MapPoint[]; total: number };
+  map?: { points: MapPoint[]; total: number } | null;
   /** Composed server-side by an SEO landing so the crawler sees the final h1 and lead. */
   heading?: { h1: string; lead: string };
   /** An SEO landing fixes its filters, so the first edit has to leave it - otherwise the fixed
@@ -692,15 +692,7 @@ export default function PropertiesClient({
 
   return (
     <>
-      <div
-        className="pagehead"
-        style={{
-          display: "flex",
-          alignItems: "flex-start",
-          justifyContent: "space-between",
-          gap: 16,
-        }}
-      >
+      <div className="pagehead pagehead-actions">
         <div>
           <h1>{title}</h1>
           <p>
@@ -711,28 +703,19 @@ export default function PropertiesClient({
           </p>
         </div>
         {canAlert && alertChanged && (
-          <button type="button" className="btn solid" style={{ flexShrink: 0 }} onClick={saveAlert}>
+          <button type="button" className="btn solid" onClick={saveAlert}>
             <IconBell width={16} height={16} strokeWidth={1.8} /> Salvar filtros no alerta
           </button>
         )}
         {canAlert &&
           !alertChanged &&
           (editing || alertExists ? (
-            <Link
-              className="btn ghost"
-              href={editing ? `/alerts/${editing.id}` : "/alerts"}
-              style={{ flexShrink: 0 }}
-            >
+            <Link className="btn ghost" href={editing ? `/alerts/${editing.id}` : "/alerts"}>
               <IconBell width={16} height={16} strokeWidth={1.8} /> Editar alerta
               <IconArrow width={15} height={15} strokeWidth={1.8} />
             </Link>
           ) : (
-            <button
-              type="button"
-              className="btn ghost"
-              style={{ flexShrink: 0 }}
-              onClick={createAlert}
-            >
+            <button type="button" className="btn ghost" onClick={createAlert}>
               <IconBell width={16} height={16} strokeWidth={1.8} /> Criar alerta com estes filtros
             </button>
           ))}
@@ -1265,6 +1248,11 @@ export default function PropertiesClient({
                 )}
                 <PropertiesMap properties={mapProperties} />
               </>
+            ) : map === null ? (
+              <EmptyState icon={<IconBuilding />} title="Não foi possível carregar o mapa">
+                A consulta demorou mais do que o esperado. Tente de novo em instantes ou use a
+                lista.
+              </EmptyState>
             ) : (
               <EmptyState icon={<IconBuilding />} title="Nenhum imóvel para mostrar no mapa">
                 Tente remover um filtro ou limpar a busca para ver imóveis no mapa.

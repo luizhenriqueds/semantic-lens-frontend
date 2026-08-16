@@ -16,9 +16,10 @@ export type LandingStats = {
 };
 
 // Checked against production 2026-08-14: 28,308 listable / 368,813 pois / 10,034 region cells /
-// 119 clusters / 27 UFs. Rounded to the precision countShort() renders ("29 mil", "370 mil").
+// 119 clusters / 27 UFs. Rounded to the precision countShort() renders ("370 mil"); the property
+// count is rounded down and shown as "+25 mil", so it stays true as the base moves.
 const HEADLINE = {
-  activeProperties: 29_000,
+  activeProperties: 25_000,
   pois: 370_000,
   poiCategories: 29,
   regions: 10_000,

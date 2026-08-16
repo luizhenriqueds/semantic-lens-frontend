@@ -135,7 +135,10 @@ async function rpcJson(
     console.error(`[data] rpc "${name}" failed: ${res.error.message}`);
     if (required) throw new Error(`rpc "${name}" failed: ${res.error.message}`);
   }
-  return res.data?.[0] ?? null;
+  const payload = res.data?.[0] ?? null;
+  // These RPCs always return an object, so a missing payload is a failure wearing an empty result.
+  if (required && payload == null) throw new Error(`rpc "${name}" returned no payload`);
+  return payload;
 }
 
 type PropertyPage = { items: Property[]; total: number };
@@ -412,11 +415,14 @@ async function loadPropertyImage(id: string): Promise<string | null> {
 export const getPropertyImage = cached(loadPropertyImage, "property-image");
 
 async function loadMapPoints(filtersJson: string): Promise<{ points: MapPoint[]; total: number }> {
-  const data = await rpcJson("property_map_points", {
-    p_filters: JSON.parse(filtersJson),
-    p_limit: MAP_POINT_LIMIT,
-  });
-  const points = ((data?.points ?? []) as any[]).filter(isListableRow).map((r): MapPoint => ({
+  // The unfiltered view is the widest read the app makes and the one that times out: `required`
+  // keeps `cached` from memoising that failure as an empty map, and no retry piles onto a slow DB.
+  const data = await rpcJson(
+    "property_map_points",
+    { p_filters: JSON.parse(filtersJson), p_limit: MAP_POINT_LIMIT },
+    { required: true, timeoutRetries: 0 },
+  );
+  const points = ((data.points ?? []) as any[]).filter(isListableRow).map((r): MapPoint => ({
     id: r.property_id,
     lat: Number(r.lat),
     lon: Number(r.lon),
@@ -434,7 +440,7 @@ async function loadMapPoints(filtersJson: string): Promise<{ points: MapPoint[];
     occupancyStatus: r.occupancy_status || null,
     investment: num(r.investment),
   }));
-  return { points, total: data?.total ?? 0 };
+  return { points, total: data.total ?? 0 };
 }
 
 const cachedMapPoints = cached(loadMapPoints, "map-points");
