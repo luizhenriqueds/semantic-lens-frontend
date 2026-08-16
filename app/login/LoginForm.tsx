@@ -4,6 +4,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useState } from "react";
 import { requestPasswordReset } from "@/app/actions/auth";
 import AuthAlert from "@/components/auth/AuthAlert";
+import GoogleButton from "@/components/auth/GoogleButton";
 import PasswordInput from "@/components/auth/PasswordInput";
 import { CONFIRM_ERRORS, signInError } from "@/lib/auth/messages";
 import { safeRedirect } from "@/lib/auth/redirect";
@@ -54,6 +55,8 @@ export default function LoginForm() {
 
       {error && <AuthAlert kind="bad" message={error} />}
       {notice && <AuthAlert kind="good" message={notice} />}
+
+      <GoogleButton next={redirect} onError={setError} />
 
       <label className="au-field">
         <span>E-mail</span>
