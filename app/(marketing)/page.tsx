@@ -96,7 +96,10 @@ const PLAN_CARDS: {
     popular: true,
     subnote: `Tudo do ${PLANS.basic.label}, mais:`,
     features: [
-      { lead: "Favoritos e alertas ilimitados", text: "sem teto de carteira nem de buscas salvas" },
+      {
+        lead: "Favoritos e alertas ilimitados",
+        text: "sem limite de carteira nem de buscas salvas",
+      },
       {
         lead: "Lugares próximos",
         text: "escolas, mercados, transporte e serviços num raio de 5 km do imóvel",
@@ -105,14 +108,17 @@ const PLAN_CARDS: {
         lead: "Filtros avançados",
         text: "desconto, notas, financiamento, FGTS e lugares próximos",
       },
-      { lead: "Coleções", text: "imóveis parecidos reunidos automaticamente para comparar" },
+      {
+        lead: "Coleções",
+        text: "imóveis com características parecidas reunidos automaticamente para análise",
+      },
       {
         lead: "Análise de imóveis",
         text: "distribuição de preço, desconto, área e Nota de Investimento",
       },
       {
         lead: "Comparativo de mercado",
-        text: "o lance contra anúncios reais do bairro, com o potencial de ganho",
+        text: "o valor de avaliação comparado a anúncios reais do bairro, com o potencial de ganho e estimativa de m²",
       },
       {
         lead: `Até ${PLANS.investor.limits.recommendations} recomendações`,
@@ -130,18 +136,23 @@ const PLAN_CARDS: {
       { lead: "Alertas em primeira mão", text: "seus alertas saem antes dos demais planos" },
       {
         lead: "Todos os alertas automáticos",
-        text: "descontos, reduções de preço, imóveis que migram de leilão para venda direta, coleções e regiões em destaque",
+        text: "descontos, reduções de preço, imóveis que mudaram de modalidade no leilão, coleções e regiões em destaque",
       },
       { lead: "Painel de mercado", text: "preço por m², tendências e comparáveis por cidade" },
-      { lead: "Calendário de leilões", text: "a agenda das datas, dia a dia" },
+      {
+        lead: "Calendário de leilões",
+        text: "confira a agenda completa dos leilões, atualizada diariamente",
+      },
       {
         lead: "Regiões",
         text: "perfil e DNA de cada bairro, o que existe no entorno, preços de mercado e regiões semelhantes",
       },
       {
         lead: `Até ${PLANS.professional.limits.recommendations} recomendações`,
-        text: "e envio por WhatsApp (em breve)",
+        text: "de imóveis semelhantes",
+        joiner: " ",
       },
+      { text: "Alerta de novas oportunidades por Whatsapp (breve)" },
       { lead: "Relatórios e exportação", text: "buscas, filtros e análises em CSV ou PDF" },
     ],
   },
@@ -157,9 +168,9 @@ export default async function LandingPage() {
   const tiles: StatTile[] = stats
     ? [
         {
-          v: countShort(stats.activeProperties),
+          v: `+${countShort(stats.activeProperties)}`,
           k: "imóveis ativos",
-          note: "de leilão e venda direta da Caixa",
+          note: "de leilões em todo o Brasil",
         },
         {
           v: countShort(stats.pois),
@@ -391,10 +402,6 @@ export default async function LandingPage() {
                 </div>
               ))}
             </div>
-            <p className="lp-stats-foot">
-              Sem cadastro para explorar · Nota de investimento explicada para você tomar as
-              melhores decisões
-            </p>
           </div>
         </section>
       )}
@@ -468,7 +475,7 @@ export default async function LandingPage() {
                       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
                         <path d="m5 13 4 4L19 7" />
                       </svg>
-                      Resultados ranqueados por relevância
+                      Resultados ordenados por relevância
                     </li>
                   </ul>
                 </div>
@@ -556,7 +563,7 @@ export default async function LandingPage() {
                       <i>2</i> nota de investimento
                     </span>
                   </div>
-                  <h3>Uma nota de 0 a 100 para rankear as melhores oportunidades</h3>
+                  <h3>Uma nota de 0 a 100 para ordenar as melhores oportunidades</h3>
                   <p>
                     A nota combina desconto sobre a avaliação, preço frente ao mercado do bairro,
                     serviços no entorno e facilidade de revenda.
@@ -572,7 +579,7 @@ export default async function LandingPage() {
                       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
                         <path d="m5 13 4 4L19 7" />
                       </svg>
-                      Explicação fator a fator: o que puxou para cima e o que puxou para baixo
+                      Explicação fator a fator: o que puxou a nota para cima ou para baixo
                     </li>
                   </ul>
                 </div>
@@ -972,7 +979,7 @@ export default async function LandingPage() {
             <span className="lp-seclabel">para o que o imóvel serve melhor</span>
             <h2>Notas de uso: o destaque de cada imóvel</h2>
             <p>
-              Além da nota principal, mostramos a tese de investimento recomendada para o imóvel.
+              Além da nota principal, mostramos a tese de investimento recomendada para cada imóvel
             </p>
           </div>
           <div className="lp-uses-grid">
@@ -1025,14 +1032,9 @@ export default async function LandingPage() {
                 shopping e ponto de ônibus.
               </p>
               <p>
-                Regiões mais completas puxam a nota para cima. No mapa, quanto mais escura a célula,
-                maior a densidade de serviços na região.
+                Regiões mais completas puxam a nota para cima. Além disso, a análise de região é
+                feita por cada cidade para uma comparação mais justa.
               </p>
-              <div className="lp-legend">
-                <span>Menos serviços</span>
-                <span className="lp-scale"></span>
-                <span>Mais serviços</span>
-              </div>
             </div>
             <div className="lp-mapcard lp-reveal lp-d1">
               <div className="lp-maphex">
@@ -1415,9 +1417,9 @@ export default async function LandingPage() {
               <div>
                 <h3>“Quero uma renda de aluguel”</h3>
                 <p>
-                  Compare a vocação de cada imóvel para temporada, aluguel estudantil ou moradia: a
-                  Medimos hotéis, restaurantes e universidades no entorno, além da distância do
-                  centro.
+                  Compare a vocação de cada imóvel para temporada, aluguel estudantil ou moradia:
+                  medimos a densidade de hotéis, restaurantes e universidades no entorno, além da
+                  distância do centro.
                 </p>
                 <div className="lp-flow">
                   <span>temporada</span>
@@ -1431,10 +1433,10 @@ export default async function LandingPage() {
                 <IconCalendar />
               </div>
               <div>
-                <h3>“Não posso perder a data”</h3>
+                <h3>“Não tenho tempo de acompanhar as datas”</h3>
                 <p>
-                  Salve os critérios, escolha o aviso diário ou semanal e acompanhe as datas dos
-                  seus favoritos na carteira.
+                  Salve os critérios de suas buscas ou filtros, escolha entre aviso diário ou
+                  semanal e receba alertas de imóveis diretamente em seu e-mail.
                 </p>
                 <div className="lp-flow">
                   <span>alerta por e-mail</span>
@@ -1489,7 +1491,7 @@ export default async function LandingPage() {
                         </svg>
                         <span>
                           {f.lead && <b>{f.lead}</b>}
-                          {f.lead ? `${f.joiner ?? " — "}${f.text}` : f.text}
+                          {f.lead ? `${f.joiner ?? " - "}${f.text}` : f.text}
                         </span>
                       </li>
                     ))}
@@ -1743,16 +1745,17 @@ export default async function LandingPage() {
               </summary>
               <div className="lp-ans">
                 <p>
-                  Elas partem de <b>um imóvel que você salvou</b>. Usamos esse imóvel como âncora,
-                  procuramos na base os mais parecidos com ele e mostramos os que passam de um
-                  limite de semelhança, ordenados pela Nota de Investimento. Quando ainda não há
-                  semelhantes suficientes calculados para aquele imóvel, completamos com imóveis do
-                  mesmo tipo na mesma cidade, também ordenados por nota.
+                  Elas partem <b>do imóvel que você está vendo</b>, salvo ou não na sua carteira.
+                  Usamos a página aberta como âncora, procuramos na base os mais parecidos com ela e
+                  mostramos os que passam de um limite de semelhança, ordenados pela Nota de
+                  Investimento. Quando ainda não há semelhantes suficientes calculados para aquele
+                  imóvel, completamos com imóveis do mesmo tipo na mesma cidade, também ordenados
+                  por nota.
                 </p>
                 <p>
-                  Não é publicidade nem perfilamento: a recomendação olha só para o imóvel que você
-                  escolheu, não para o seu comportamento. O recurso está disponível a partir do
-                  plano {PLANS.investor.label}.
+                  Não é publicidade nem perfilamento: a recomendação olha só para o imóvel aberto,
+                  não para o seu comportamento. O recurso está disponível a partir do plano{" "}
+                  {PLANS.investor.label}.
                 </p>
               </div>
             </details>

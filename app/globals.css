@@ -4566,7 +4566,8 @@ select.selectish {
   .searchhead {
     flex-direction: column;
   }
-  .searchhead .btn {
+  .searchhead .btn,
+  .pagehead-actions > .btn {
     width: 100%;
     justify-content: center;
   }

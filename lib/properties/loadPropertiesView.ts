@@ -51,7 +51,8 @@ export type PropertiesViewData = {
     dayItems: Property[];
     dayTotal: number;
   };
-  map?: { points: MapPoint[]; total: number };
+  /** `null` when the read failed, so the view can say so instead of claiming no results. */
+  map?: { points: MapPoint[]; total: number } | null;
 };
 
 export async function loadPropertiesView(
@@ -94,7 +95,7 @@ export async function loadPropertiesView(
             };
           })()
         : Promise.resolve(undefined),
-      view === "map" ? getMapPoints(filters) : Promise.resolve(undefined),
+      view === "map" ? getMapPoints(filters).catch(() => null) : Promise.resolve(undefined),
     ]);
 
   return {
@@ -111,6 +112,6 @@ export async function loadPropertiesView(
     analysis: analysis as AnalysisData | undefined,
     proximity: proximity as ProximityData | undefined,
     calendar,
-    map: map as { points: MapPoint[]; total: number } | undefined,
+    map: map as { points: MapPoint[]; total: number } | null | undefined,
   };
 }

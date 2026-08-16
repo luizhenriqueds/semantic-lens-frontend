@@ -24,7 +24,7 @@ export const FEATURE_COPY: Record<Feature, { label: string; blurb: string; quota
   },
   recommendations: {
     label: "Recomendações de imóveis",
-    blurb: "Sugestões de imóveis semelhantes aos que você já salvou.",
+    blurb: "Sugestões de imóveis semelhantes ao que você está vendo.",
   },
   advancedFilters: {
     label: "Filtros avançados",
@@ -64,21 +64,24 @@ export const FEATURE_COPY: Record<Feature, { label: string; blurb: string; quota
 /** Checkout/trial-dialog highlights per sellable Role. Full comparison is PLAN_CARDS on the marketing page. */
 export const PLAN_PITCH: Partial<Record<Role, readonly { lead: string; text: string }[]>> = {
   investor: [
-    { lead: "Favoritos e alertas ilimitados", text: "sem teto de carteira nem de buscas salvas" },
+    { lead: "Favoritos e alertas ilimitados", text: "sem limite de carteira nem de buscas salvas" },
     { lead: "Filtros avançados", text: "desconto, notas, financiamento, FGTS e lugares próximos" },
     {
       lead: "Análise de imóveis",
       text: "distribuição de preço, desconto, área e Nota de Investimento",
     },
     {
-      lead: "Recomendações semanais",
-      text: "sugestões de imóveis semelhantes aos que você salvou",
+      lead: "Recomendações",
+      text: "sugestões de imóveis semelhantes ao que você está vendo",
     },
   ],
   professional: [
     { lead: "Alertas em primeira mão", text: "seus alertas saem antes dos demais planos" },
     { lead: "Painel de mercado", text: "preço por m², tendências e comparáveis por cidade" },
-    { lead: "Calendário de leilões", text: "a agenda das datas, dia a dia" },
+    {
+      lead: "Calendário de leilões",
+      text: "a agenda completa dos leilões, atualizada diariamente",
+    },
     { lead: "Relatórios e exportação", text: "buscas, filtros e análises em CSV ou PDF" },
   ],
 };
@@ -90,8 +93,8 @@ export const PLAN_INCLUDES: Partial<Record<Role, { heading: string; items: reado
     heading: "Em cada imóvel você vê:",
     items: [
       "Histórico de preços",
-      "Análise de fachada usando IA",
-      "Avisos quando o imóvel muda de leilão para venda direta",
+      "Análise de fachada usando IA, incluindo estado aparente de conservação e idade estimada do imóvel",
+      "Avisos quando o imóvel muda de modalidade/oferta no leilão",
       "Perfil da região e distância do centro",
       "Nota de Investimento",
       "Tese de investimento recomendada",
