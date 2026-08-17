@@ -14,8 +14,8 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
   const { id } = await params;
   const section = new URL(request.url).searchParams.get("section");
 
-  // Ungated, and deliberately ahead of getEntitlements(): reading auth would attach Set-Cookie and
-  // stop the CDN from absorbing the repeat views this adds.
+  // Must stay ahead of getEntitlements(): reading auth attaches Set-Cookie, which stops the CDN
+  // from absorbing the repeat views this adds.
   if (section === "freshness") {
     return NextResponse.json(
       { lastSeen: await getLastSeen(id) },

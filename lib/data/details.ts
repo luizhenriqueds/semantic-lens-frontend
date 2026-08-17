@@ -73,8 +73,8 @@ export const getPropertyDetailText = cached(
   DETAIL_REVALIDATE,
 );
 
-// Same column, short TTL: `crawl-followups` moves last_seen hourly, so the copy baked into the
-// 6h-cached page runs up to a day behind. The detail page reads this one from the browser.
+// Same column on a short TTL: crawl-followups moves last_seen hourly, so the copy baked into the
+// 6h-cached page runs a day behind.
 async function loadLastSeen(id: string): Promise<string | null> {
   const res = await withRetry(() =>
     supabase.from("properties").select("last_seen").eq("property_id", id).limit(1),

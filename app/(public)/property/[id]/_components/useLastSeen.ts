@@ -15,8 +15,7 @@ function load(id: string): Promise<string | null> {
   return p;
 }
 
-/** `last_seen` moves hourly but the page it renders on is cached for 6h, so the server value is a
- *  seed the browser corrects. Shared across the call sites on one page. */
+/** The server value is a seed the browser corrects, shared across the call sites on one page. */
 export function useLastSeen(id: string, initial: string | null): string | null {
   const [lastSeen, setLastSeen] = useState(initial);
 
