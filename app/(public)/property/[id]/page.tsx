@@ -4,6 +4,8 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import PropertyPhoto from "@/components/property/PropertyPhoto";
 import BackButton from "./_components/BackButton";
+import AvailabilityNote from "./_components/AvailabilityNote";
+import CheckedOn from "./_components/CheckedOn";
 import SaveButton from "./_components/SaveButton";
 import ScoreBars from "./_components/ScoreBars";
 import VisualScore from "./_components/VisualScore";
@@ -26,7 +28,6 @@ import { slugify } from "@/lib/seo/slug";
 import Hint from "@/components/ui/Hint";
 import {
   fmtDate,
-  fmtDay,
   fmtDist,
   money,
   titleCase,
@@ -108,8 +109,6 @@ export default async function PropertyPage({ params }: { params: Promise<{ id: s
 
   const data = fmtDate(p.auctionDate);
   const discPct = showDiscount(p) ? p.discountPercentile : null;
-  // Undated offers can be sold or withdrawn between batches, so they carry the last day seen.
-  const checkedOn = data ? null : fmtDay(text.lastSeen);
 
   return (
     <section className="view">
@@ -148,8 +147,11 @@ export default async function PropertyPage({ params }: { params: Promise<{ id: s
         <div className="matr">
           MATRÍCULA CAIXA {p.id}
           {p.modality ? ` · ${p.modality.toUpperCase()}` : ""}
-          {data ? ` · LEILÃO EM ${data.toUpperCase()}` : ""}
-          {checkedOn ? ` · DISPONÍVEL EM ${checkedOn}` : ""}
+          {data ? (
+            ` · LEILÃO EM ${data.toUpperCase()}`
+          ) : (
+            <CheckedOn id={p.id} initial={text.lastSeen} variant="meta" />
+          )}
         </div>
       </div>
 
@@ -253,15 +255,13 @@ export default async function PropertyPage({ params }: { params: Promise<{ id: s
             )}
             <div className="when">
               {p.modality && <b>{p.modality}</b>}
-              {data ? ` · leilão em ${data}` : ""}
-              {checkedOn ? ` · disponível em ${checkedOn}` : ""}
+              {data ? (
+                ` · leilão em ${data}`
+              ) : (
+                <CheckedOn id={p.id} initial={text.lastSeen} variant="inline" />
+              )}
             </div>
-            {checkedOn && (
-              <div className="availnote">
-                A oferta estava disponível na Caixa em {checkedOn}. Confirme no anúncio original
-                antes de negociar.
-              </div>
-            )}
+            {!data && <AvailabilityNote id={p.id} initial={text.lastSeen} />}
             <div className="cta">
               <SaveButton id={p.id} propertyLabel={heading} />
               {p.link && (

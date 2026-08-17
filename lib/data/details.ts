@@ -1,6 +1,6 @@
 import { supabase } from "@/lib/supabase";
 import type { PriceHistoryPoint, Recommendation, ScoreExplain, ScoreTerm } from "@/lib/types";
-import { DETAIL_REVALIDATE, cached, num, rows, withRetry } from "./client";
+import { DETAIL_REVALIDATE, REVALIDATE, cached, num, rows, withRetry } from "./client";
 
 const dashless = (s: string) => s.replace(/[--]/g, "-");
 const IMPACTS = ["ajuda", "neutro", "pesa"];
@@ -72,6 +72,17 @@ export const getPropertyDetailText = cached(
   "property-detail-text",
   DETAIL_REVALIDATE,
 );
+
+// Same column, short TTL: `crawl-followups` moves last_seen hourly, so the copy baked into the
+// 6h-cached page runs up to a day behind. The detail page reads this one from the browser.
+async function loadLastSeen(id: string): Promise<string | null> {
+  const res = await withRetry(() =>
+    supabase.from("properties").select("last_seen").eq("property_id", id).limit(1),
+  );
+  return rows<any>("property-last-seen", res)[0]?.last_seen || null;
+}
+
+export const getLastSeen = cached(loadLastSeen, "property-last-seen", REVALIDATE);
 
 // `listings` rows are intervals dated at their *last* live day; the chart wants starts, so each
 // is dated from where the previous ended and `first_seen` opens the series.
