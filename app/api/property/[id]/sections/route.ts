@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getMarketComparables, getPropertyById } from "@/lib/data";
+import { getLastSeen, getMarketComparables, getPropertyById } from "@/lib/data";
 import { PLANS } from "@/lib/entitlements/plans";
 import { getEntitlements } from "@/lib/entitlements/server";
 import { recommendationRails } from "@/lib/property/rails";
@@ -13,6 +13,16 @@ export const maxDuration = 20;
 export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const section = new URL(request.url).searchParams.get("section");
+
+  // Must stay ahead of getEntitlements(): reading auth attaches Set-Cookie, which stops the CDN
+  // from absorbing the repeat views this adds.
+  if (section === "freshness") {
+    return NextResponse.json(
+      { lastSeen: await getLastSeen(id) },
+      { headers: { "Cache-Control": "public, s-maxage=120, stale-while-revalidate=600" } },
+    );
+  }
+
   const ent = await getEntitlements();
 
   if (section === "market") {
