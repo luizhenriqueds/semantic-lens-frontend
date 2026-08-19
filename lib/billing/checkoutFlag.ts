@@ -1,7 +1,7 @@
 import { withoutParam } from "@/lib/entitlements/trialFlag";
 
-/** The URL flag AbacatePay's hosted checkout sends us back with. A plain module, so the dialog
- *  and the server actions can both read it. */
+/** The URL flag Stripe Checkout sends us back with. A plain module, so the dialog and the server
+ *  actions can both read it. */
 export const CHECKOUT_PARAM = "checkout";
 
 /** The settings tab the round trip lands on, so the action and the tab list cannot drift. */

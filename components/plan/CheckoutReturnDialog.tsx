@@ -16,7 +16,7 @@ import { IconCheck, IconStar } from "@/lib/icons";
 const BACKOFF_MS = [800, 1500, 2500, 4000, 5000, 5000, 5000, 5000];
 
 /**
- * Owns the `?checkout=` round trip back from AbacatePay's hosted page. The return URL is not
+ * Owns the `?checkout=` round trip back from Stripe Checkout. The return URL is not
  * authoritative - the webhook is - so a successful return only starts polling for the row the
  * webhook writes, and running out of polls never claims the payment failed.
  */

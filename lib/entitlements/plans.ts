@@ -126,6 +126,16 @@ export const PATH_FEATURE: Record<string, Feature> = {
   "/regions": "regions",
 };
 
+/** The roles with a price. `platform` is sold by hand and `basic` is free, so neither is buyable.
+ *  Plan vocabulary rather than provider vocabulary: it lives here so the data layer can classify a
+ *  subscription row without pulling in the payment SDK. */
+export const PAID_ROLES = ["investor", "professional"] as const;
+export type PaidRole = (typeof PAID_ROLES)[number];
+
+export const isPaidRole = (r: unknown): r is PaidRole => PAID_ROLES.includes(r as PaidRole);
+
+export const priceInCents = (role: PaidRole): number => Math.round(PLANS[role].price * 100);
+
 export const TRIAL_DAYS = 7;
 
 /** The one plan a user can self-serve, until payment is integrated. */

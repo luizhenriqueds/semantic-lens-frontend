@@ -18,8 +18,8 @@ const ERROR_COPY: Record<CheckoutFailure, string> = {
   error: "Não conseguimos abrir o pagamento. Tente de novo.",
 };
 
-/** Opens the AbacatePay checkout. Their hosted page is the only flow that does recurring billing,
- *  so the browser leaves here and comes back on ?checkout= (see CheckoutReturnDialog). */
+/** Opens Stripe Checkout. The browser leaves here for their hosted page and comes back on
+ *  ?checkout= (see CheckoutReturnDialog). */
 export default function PaywallDialog({
   plan,
   trial,

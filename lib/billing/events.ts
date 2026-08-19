@@ -1,109 +1,53 @@
-import { createHash } from "node:crypto";
+import type Stripe from "stripe";
 
-export type Effect = "activate" | "renew" | "cancel" | "revoke" | "ignore";
+/** No `renew` (which apply_subscription_event still accepts): it adds a month relative to the row,
+ *  so redeliveries compound. Every payment is an `activate` carrying Stripe's own period end. */
+export type Effect = "activate" | "cancel" | "revoke" | "ignore";
 
-const EFFECTS: Record<string, Effect> = {
-  "checkout.completed": "activate",
-  "subscription.completed": "activate",
-  "subscription.trial_started": "activate",
-  "subscription.renewed": "renew",
-  "subscription.cancelled": "cancel",
-  "checkout.refunded": "revoke",
-  "checkout.disputed": "revoke",
-  "checkout.lost": "revoke",
-};
-
-/** Unknown names and the transparent/payout/transfer families all mean "not ours". They are
- *  answered 200 so the provider stops retrying something we will never act on. */
-export const effectOf = (event: string): Effect => EFFECTS[event] ?? "ignore";
-
-export type ProviderEvent = {
-  event: string;
-  eventKey: string;
-  externalId: string | null;
-  billId: string | null;
-  subscriptionId: string | null;
-  customerId: string | null;
-  periodEnd: string | null;
-  amount: number | null;
-  occurredAt: string | null;
-  devMode: boolean;
-};
-
-type Bag = Record<string, unknown>;
-
-const asString = (v: unknown): string | null => (typeof v === "string" && v ? v : null);
-const asBag = (v: unknown): Bag | null =>
-  v && typeof v === "object" && !Array.isArray(v) ? (v as Bag) : null;
-
-/** The payload nesting is undocumented, so every plausible envelope is flattened before reading:
- *  {event, data}, {event, data: {billing|subscription|...}}, or a bare object. */
-function layersOf(root: Bag): Bag[] {
-  const data = asBag(root.data) ?? {};
-  const nested = ["billing", "subscription", "checkout", "payment", "object"]
-    .map((key) => asBag(data[key]))
-    .filter((b): b is Bag => b != null);
-  return [root, data, ...nested];
-}
-
-const firstString = (layers: Bag[], ...keys: string[]): string | null => {
-  for (const layer of layers) {
-    for (const key of keys) {
-      const value = asString(layer[key]);
-      if (value) return value;
-    }
+export function effectOf(event: Stripe.Event): Effect {
+  switch (event.type) {
+    case "checkout.session.completed":
+      return event.data.object.mode === "subscription" ? "activate" : "ignore";
+    case "invoice.paid":
+      return subscriptionIdOfInvoice(event.data.object) ? "activate" : "ignore";
+    case "customer.subscription.updated":
+      // State, not previous_attributes: an out-of-order redelivery reads the same answer.
+      return event.data.object.cancel_at_period_end ? "cancel" : "ignore";
+    case "customer.subscription.deleted":
+      // Not `revoke`: both routes here - a scheduled cancel reaching term, or dunning giving up -
+      // have already let role_expires_at elapse, so the clock has demoted the user already.
+      return "cancel";
+    case "charge.refunded":
+      // Fires for partial refunds too, where the flag stays false.
+      return event.data.object.refunded ? "revoke" : "ignore";
+    case "charge.dispute.created":
+      return "revoke";
+    default:
+      return "ignore";
   }
-  return null;
-};
-
-/** Last resort when the id sits under a key we did not anticipate: AbacatePay ids are prefixed. */
-const firstWithPrefix = (layers: Bag[], prefix: string): string | null => {
-  for (const layer of layers) {
-    for (const value of Object.values(layer)) {
-      const s = asString(value);
-      if (s?.startsWith(prefix)) return s;
-    }
-  }
-  return null;
-};
-
-export function parseEvent(body: unknown): ProviderEvent | null {
-  const root = asBag(body);
-  if (!root) return null;
-
-  const layers = layersOf(root);
-  const event = firstString(layers, "event", "type", "eventType");
-  if (!event) return null;
-
-  const parsed = {
-    event,
-    externalId: firstString(layers, "externalId", "external_id"),
-    billId: firstString(layers, "billId", "bill_id") ?? firstWithPrefix(layers, "bill_"),
-    subscriptionId:
-      firstString(layers, "subscriptionId", "subscription_id") ?? firstWithPrefix(layers, "subs_"),
-    customerId:
-      firstString(layers, "customerId", "customer_id") ?? firstWithPrefix(layers, "cust_"),
-    periodEnd: firstString(layers, "nextBilling", "currentPeriodEnd", "periodEnd", "trialEndsAt"),
-    amount: (layers.find((l) => typeof l.amount === "number")?.amount as number) ?? null,
-    occurredAt: firstString(layers, "occurredAt", "updatedAt", "createdAt", "timestamp"),
-    devMode: layers.some((layer) => layer.devMode === true),
-  };
-
-  const providerEventId = firstString(layers, "eventId", "event_id");
-  return { ...parsed, eventKey: eventKey(parsed, providerEventId) };
 }
 
-/** Uses the provider's event id when there is one; otherwise a digest of what makes the event
- *  unique, so a redelivery collapses onto the same key.
- *
- *  Without a timestamp two genuine consecutive renewals would collapse too, hence the month
- *  bucket - correct for MONTHLY, the only cycle we sell. */
-export function eventKey(
-  e: Omit<ProviderEvent, "eventKey">,
-  providerEventId?: string | null,
-): string {
-  if (providerEventId) return providerEventId;
-  const subject = e.subscriptionId ?? e.billId ?? e.externalId ?? "unknown";
-  const when = e.occurredAt ?? new Date().toISOString().slice(0, 7);
-  return createHash("sha256").update(`${e.event}|${subject}|${when}`).digest("hex");
+type Ref = string | { id: string } | null | undefined;
+
+/** Stripe returns either a bare id or the expanded object, depending on the event. */
+export const idOf = (value: Ref): string | null =>
+  typeof value === "string" ? value : (value?.id ?? null);
+
+/** Unix seconds, on the item since Basil moved periods off the subscription. */
+export function periodEndOf(subscription: Stripe.Subscription): string | null {
+  const seconds = subscription.items.data[0]?.current_period_end;
+  return seconds ? new Date(seconds * 1000).toISOString() : null;
 }
+
+export const externalIdOf = (subscription: Stripe.Subscription): string | null =>
+  subscription.metadata?.external_id || null;
+
+/** Invoices lost their top-level `subscription` in Basil; it now hangs off the parent union. */
+export function subscriptionIdOfInvoice(invoice: Stripe.Invoice): string | null {
+  const parent = invoice.parent;
+  return parent?.type === "subscription_details"
+    ? idOf(parent.subscription_details?.subscription)
+    : null;
+}
+
+export const customerIdOf = (object: { customer?: Ref }): string | null => idOf(object.customer);
