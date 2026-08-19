@@ -1,7 +1,16 @@
 import { describe, expect, it } from "vitest";
 import { CURATED_ALERTS } from "@/lib/alerts/curated";
 import { PLAN_PITCH } from "./copy";
-import { entitlementsFor, PLANS, requiredPlan, SELLABLE_PLANS, toRole, TRIAL_ROLE } from "./plans";
+import {
+  entitlementsFor,
+  isPaidRole,
+  PLANS,
+  priceInCents,
+  requiredPlan,
+  SELLABLE_PLANS,
+  toRole,
+  TRIAL_ROLE,
+} from "./plans";
 import type { Feature, Role } from "./plans";
 
 const ent = (role: Role, isAdmin = false) => entitlementsFor(role, isAdmin);
@@ -139,6 +148,19 @@ describe("plan matrix", () => {
     for (const role of ["investor", "professional"] as Role[]) {
       expect(PLAN_PITCH[role]?.length, role).toBeGreaterThan(0);
     }
+  });
+
+  it("only investor and professional are buyable", () => {
+    expect(isPaidRole("investor")).toBe(true);
+    expect(isPaidRole("professional")).toBe(true);
+    for (const role of ["anon", "basic", "platform", "", null, 7]) {
+      expect(isPaidRole(role), String(role)).toBe(false);
+    }
+  });
+
+  it("converts the plan price to whole cents", () => {
+    expect(priceInCents("investor")).toBe(PLANS.investor.price * 100);
+    expect(priceInCents("professional")).toBe(PLANS.professional.price * 100);
   });
 
   it("no curated alert is offered below investor", () => {

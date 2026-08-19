@@ -48,8 +48,8 @@
 - [ ] Quotas (basic: 10 favorites, 3 saved searches); enforced server-side, not just hidden in the UI
 - [ ] RLS + quota triggers agree with `PLANS`; admin bypass shows the real plan
 - [ ] Trial: start, expiry back to `basic`, no second trial, trial → paid
-- [ ] AbacatePay prod cutover (runbook §6): prod key, products re-created, prices match `PLANS`,
-      fresh secret, webhook on the prod domain
+- [ ] Stripe live cutover (runbook §6): live key, Prices re-created, amounts match `PLANS`,
+      endpoint on the prod domain with its own `whsec_` and a pinned API version
 - [ ] Event replay → `duplicate`; declined card → no role change; price drift guard trips
 - [ ] Cancel → `cancel_at_period_end`, access to period end + grace
 

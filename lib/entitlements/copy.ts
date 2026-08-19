@@ -116,7 +116,12 @@ export const canTrial = (plan: { role: Role }, trial: Trial): boolean =>
   plan.role === TRIAL_ROLE && trial.eligible;
 
 /** One string, so the three checkout surfaces cannot drift apart. */
-export const PAYMENT_NOTE = "Pagamento seguro via AbacatePay. Cancele quando quiser.";
+export const PAYMENT_NOTE = "Pagamento seguro via Stripe. Cancele quando quiser.";
+
+/** Shown under Stripe Checkout's submit button. Says where to cancel rather than repeating
+ *  PAYMENT_NOTE, which the user already read on the paywall to get here. */
+export const CHECKOUT_SUBMIT_NOTE =
+  "Renova todo mês. Cancele quando quiser em Configurações → Plano.";
 
 export function upsellTitle(
   feature: Feature,

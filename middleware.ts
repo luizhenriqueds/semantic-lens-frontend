@@ -19,7 +19,7 @@ export const PUBLIC = [
   "/api/emails/preview",
   "/termos",
   "/privacidade",
-  // The payment provider has no session; the route authenticates itself on a shared secret.
+  // The payment provider has no session; the route authenticates itself on a signature.
   "/api/webhooks",
   "/dashboard",
   "/search",

@@ -1,5 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { isPaidRole, type PaidRole } from "@/lib/billing/abacate";
+import { isPaidRole, type PaidRole } from "@/lib/entitlements";
 
 export type SubscriptionStatus =
   "pending" | "active" | "cancelled" | "expired" | "refunded" | "failed";
@@ -11,12 +11,20 @@ export type Subscription = {
   amountCents: number | null;
   currentPeriodEnd: string | null;
   cancelAtPeriodEnd: boolean;
-  /** Null until a webhook tells us the subs_... id, which is what cancellation needs. */
+  /** Null until a webhook tells us the sub_... id, which is what cancellation needs. */
   providerSubscriptionId: string | null;
 };
 
 const COLUMNS =
   "id,role,status,amount_cents,current_period_end,cancel_at_period_end,provider_subscription_id";
+
+/** Null until a webhook has seen one. Passing it back to Checkout keeps a resubscribing account on
+ *  a single Stripe customer, and so on a single billing history. RLS scopes the row. */
+export async function getStripeCustomerId(db: SupabaseClient): Promise<string | null> {
+  const { data, error } = await db.from("users").select("stripe_customer_id").maybeSingle();
+  if (error) console.error(`[data] customer id load failed: ${error.message}`);
+  return (data?.stripe_customer_id as string) ?? null;
+}
 
 /** The account's latest subscription, whatever its state - the checkout return dialog needs to see
  *  a pending row, and the settings panel a cancelled one. RLS scopes it, so no .eq() is needed. */
