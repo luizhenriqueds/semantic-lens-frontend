@@ -5,6 +5,11 @@ export function money(n: number | null | undefined): string {
   return BRL + Math.round(n).toLocaleString("pt-BR");
 }
 
+/** Cents in, both decimals out: on a receipt, money() rounding a proration would contradict it. */
+export const moneyCents = (cents: number): string =>
+  BRL +
+  (cents / 100).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
 export function moneyShort(n: number | null | undefined): string {
   if (n == null) return EMPTY;
   if (n >= 1_000_000)
