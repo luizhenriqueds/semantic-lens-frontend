@@ -18,11 +18,14 @@ import { createClient } from "@/lib/supabase/client";
 import type { Subscription } from "@/lib/data/billing";
 import type { CuratedSlug, CuratedStates, NotificationChannel, UserSettings } from "@/lib/types";
 
-type Tab = "conta" | typeof PLAN_TAB | "notificacoes" | "seguranca";
+const INVOICES_TAB = "faturas";
+
+type Tab = "conta" | typeof PLAN_TAB | typeof INVOICES_TAB | "notificacoes" | "seguranca";
 
 const TABS: { key: Tab; label: string }[] = [
   { key: "conta", label: "Conta" },
   { key: PLAN_TAB, label: "Plano" },
+  { key: INVOICES_TAB, label: "Faturas" },
   { key: "notificacoes", label: "Notificações" },
   { key: "seguranca", label: "Segurança" },
 ];
@@ -41,19 +44,26 @@ export default function SettingsClient({
   settings,
   curated,
   subscription,
+  invoices,
 }: {
   settings: UserSettings;
   curated: CuratedStates;
   subscription: Subscription | null;
+  /** Server-rendered, and null for an account that was never charged - which also hides the tab. */
+  invoices: React.ReactNode;
 }) {
   const router = useRouter();
   const toast = useToast();
   const params = useSearchParams();
+  const { atLeast, isAdmin } = usePlan();
+
+  const hidden: Partial<Record<Tab, boolean>> = { [PLAN_TAB]: isAdmin, [INVOICES_TAB]: !invoices };
+  const tabs = TABS.filter((t) => !hidden[t.key]);
 
   // Seeded from the URL so the checkout return lands on the tab it promised.
   const [tab, setTab] = useState<Tab>(() => {
     const wanted = params.get("tab");
-    return TABS.some((t) => t.key === wanted) ? (wanted as Tab) : "conta";
+    return tabs.some((t) => t.key === wanted) ? (wanted as Tab) : "conta";
   });
   const [saving, setSaving] = useState<Tab | null>(null);
 
@@ -64,8 +74,6 @@ export default function SettingsClient({
 
   const [states, setStates] = useState(curated);
   const [pending, setPending] = useState<CuratedSlug | null>(null);
-  const { atLeast, isAdmin } = usePlan();
-  const tabs = isAdmin ? TABS.filter((t) => t.key !== "plano") : TABS;
 
   const digits = phoneDigits(phone);
   const phoneShort = digits.length > 0 && digits.length < 10;
@@ -208,6 +216,8 @@ export default function SettingsClient({
       )}
 
       {tab === PLAN_TAB && !isAdmin && <PlansPanel subscription={subscription} />}
+
+      {tab === INVOICES_TAB && invoices}
 
       {tab === "notificacoes" && (
         <>

@@ -82,6 +82,56 @@ export async function createSubscriptionCheckout(input: {
   return { id: session.id, url: session.url, livemode: session.livemode };
 }
 
+/** No `draft`: Stripe has not billed those, and it types the field open-endedly for statuses it has
+ *  yet to invent, which the panel would have no wording for. */
+const INVOICE_STATUSES = ["paid", "open", "uncollectible", "void"] as const;
+
+export type InvoiceStatus = (typeof INVOICE_STATUSES)[number];
+
+export type Invoice = {
+  id: string;
+  number: string | null;
+  issuedAt: string;
+  amountCents: number;
+  status: InvoiceStatus;
+  /** Stripe's PDF, falling back to its hosted page while the PDF is still rendering. */
+  fileUrl: string | null;
+};
+
+// Stripe's own ceiling. The panel pages through them, so this is the whole history it can show.
+const INVOICE_LIMIT = 100;
+
+/** Stripe holds the only copy: `subscriptions` keeps the current period, not the charges behind it,
+ *  and the PDF exists nowhere else. Null - not [] - on failure, so the panel can offer a retry
+ *  rather than claim the account never paid. */
+export async function listInvoices(customerId: string): Promise<Invoice[] | null> {
+  const page = await stripeClient()
+    .invoices.list({ customer: customerId, limit: INVOICE_LIMIT })
+    .catch((err: Error) => err);
+
+  if (page instanceof Error) {
+    console.error(`[billing] invoice list failed: ${page.message}`);
+    return null;
+  }
+
+  return page.data.flatMap((invoice) => {
+    const status = INVOICE_STATUSES.find((known) => known === invoice.status);
+    if (!status) return [];
+    return {
+      id: invoice.id,
+      number: invoice.number,
+      // paid_at is when the money moved; `created` covers the rows that never got there.
+      issuedAt: new Date(
+        (invoice.status_transitions.paid_at ?? invoice.created) * 1000,
+      ).toISOString(),
+      // amount_paid is 0 while an invoice is open, where the total is what is being asked for.
+      amountCents: invoice.amount_paid || invoice.total,
+      status,
+      fileUrl: invoice.invoice_pdf ?? invoice.hosted_invoice_url ?? null,
+    };
+  });
+}
+
 /** Access runs to the end of the paid period, matching what request_subscription_cancel records. */
 export async function cancelProviderSubscription(subscriptionId: string): Promise<void> {
   await stripeClient().subscriptions.update(subscriptionId, { cancel_at_period_end: true });

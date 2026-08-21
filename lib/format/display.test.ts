@@ -6,6 +6,7 @@ import {
   fmtDist,
   fmtPhone,
   money,
+  moneyCents,
   moneyShort,
   phoneDigits,
   titleCase,
@@ -22,6 +23,13 @@ describe("money", () => {
   it("returns the empty placeholder for null/undefined", () => {
     expect(money(null)).toBe(EMPTY);
     expect(money(undefined)).toBe(EMPTY);
+  });
+});
+
+describe("moneyCents", () => {
+  it("keeps both decimals, so a proration is not rounded away", () => {
+    expect(moneyCents(3900)).toBe("R$ 39,00");
+    expect(moneyCents(1247)).toBe("R$ 12,47");
   });
 });
 
