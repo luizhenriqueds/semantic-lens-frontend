@@ -29,6 +29,7 @@ import {
   CATALOGUE_REVALIDATE,
   DETAIL_REVALIDATE,
   fetchAllRows,
+  mapLimit,
   num,
   REVALIDATE,
   rows,
@@ -543,20 +544,27 @@ export function getAnalysis(filters: PropertyFilters): Promise<AnalysisData> {
 
 // `loadCount`, not `countProperties`: unstable_cache skips a read nested inside another.
 // `required` so a failed bucket cannot draw as a truthful-looking zero, but with no timeout retry -
-// eleven counts at once is the heaviest fan-out here, and retrying all of them doubles it.
+// eleven counts is the heaviest fan-out here, and retrying all of them doubles it.
+const PROXIMITY_CONCURRENCY = 3;
+
 async function loadProximity(filtersJson: string): Promise<ProximityData> {
   const filters = JSON.parse(filtersJson) as RpcFilters;
   const radius = filters.poi_radius_m ?? POI_RADIUS_M;
-  const count = (patch: Partial<RpcFilters>) =>
-    loadCount(JSON.stringify({ ...filters, ...patch }), true, 0);
+  const centerEdges = CENTER_EDGES.slice(1);
 
-  const [cumulative, poiCounts] = await Promise.all([
-    Promise.all(
-      CENTER_EDGES.slice(1).map((e) => count({ max_center_m: Math.min(e, CENTER_MAX_M) })),
-    ),
-    // The counted category replaces any nearby-places filter in play.
-    Promise.all(PROXIMITY_POIS.map((cat) => count({ poi_cats: [cat], poi_radius_m: radius }))),
-  ]);
+  // Issued a few at a time: eleven at once outran the eight permits dbFetch has, so the tail timed
+  // out in the queue and took the reads sharing the lambda down with it.
+  const counts = await mapLimit(
+    [
+      ...centerEdges.map((e) => ({ max_center_m: Math.min(e, CENTER_MAX_M) })),
+      // The counted category replaces any nearby-places filter in play.
+      ...PROXIMITY_POIS.map((cat) => ({ poi_cats: [cat], poi_radius_m: radius })),
+    ] as Partial<RpcFilters>[],
+    PROXIMITY_CONCURRENCY,
+    (patch) => loadCount(JSON.stringify({ ...filters, ...patch }), true, 0),
+  );
+  const cumulative = counts.slice(0, centerEdges.length);
+  const poiCounts = counts.slice(centerEdges.length);
 
   return {
     // The counts are cumulative, so each bucket is the step between two of them.

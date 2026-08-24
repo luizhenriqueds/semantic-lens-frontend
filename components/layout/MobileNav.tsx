@@ -7,6 +7,7 @@ import BrandLogo from "@/components/brand/BrandLogo";
 import NavLink from "@/components/layout/NavLink";
 import { NAV } from "@/components/layout/navItems";
 import { IconClose, IconMenu } from "@/lib/icons";
+import { useScrollLock } from "@/lib/useScrollLock";
 
 export default function MobileNav() {
   const [open, setOpen] = useState(false);
@@ -15,12 +16,7 @@ export default function MobileNav() {
     href === "/dashboard" ? path === "/dashboard" : path.startsWith(href);
 
   useEffect(() => setOpen(false), [path]);
-  useEffect(() => {
-    document.body.style.overflow = open ? "hidden" : "";
-    return () => {
-      document.body.style.overflow = "";
-    };
-  }, [open]);
+  useScrollLock(open);
 
   return (
     <>

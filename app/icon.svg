@@ -1,5 +1,7 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" width="48" height="48">
-  <rect width="48" height="48" rx="13" fill="#2f5d3a" />
+  <!-- Edge to edge, no corner radius: Safari composites a favicon's transparent pixels onto white,
+       so rounded corners showed as four white notches around the mark on a dark tab bar. -->
+  <rect width="48" height="48" fill="#2f5d3a" />
   <!-- Ink centres on (24, 23.9); the translate makes up the 0.1 in y. -->
   <g transform="translate(4.8 4.9) scale(0.8)" fill="none" stroke="#fbfcfb" stroke-width="3.5"
      stroke-linecap="round" stroke-linejoin="round">

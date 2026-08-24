@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useRef, useTransition } from "react";
+import { MAX_QUERY_CHARS } from "@/lib/facets/limits";
 import { IconSearch } from "@/lib/icons";
 
 export default function TopSearch() {
@@ -31,6 +32,7 @@ export default function TopSearch() {
         name="q"
         placeholder="Buscar imóveis - descreva o que procura"
         aria-label="Buscar imóveis"
+        maxLength={MAX_QUERY_CHARS}
         autoComplete="off"
         onFocus={() => router.prefetch("/search")}
       />

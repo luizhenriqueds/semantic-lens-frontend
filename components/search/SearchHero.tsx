@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useRef, useState, useTransition } from "react";
+import { MAX_QUERY_CHARS } from "@/lib/facets/limits";
 import { IconSearch } from "@/lib/icons";
 
 const EXAMPLES = [
@@ -55,6 +56,7 @@ export default function SearchHero({
             defaultValue={initial}
             onChange={(e) => setEmpty(!e.target.value.trim())}
             placeholder="Ex.: apartamento para reformar e revender na zona sul"
+            maxLength={MAX_QUERY_CHARS}
             autoFocus
           />
         </div>

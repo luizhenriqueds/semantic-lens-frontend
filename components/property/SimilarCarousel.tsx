@@ -3,6 +3,7 @@
 import { useRef } from "react";
 import Link from "next/link";
 import PropertyPhoto from "@/components/property/PropertyPhoto";
+import AuctionFlag from "@/components/property/AuctionFlag";
 import Ring from "@/components/ui/Ring";
 import { investmentScore, money } from "@/lib/format";
 import type { Property } from "@/lib/types";
@@ -62,6 +63,7 @@ export default function SimilarCarousel({
                 <div className="recloc">
                   {p.neighborhood} · {p.city}/{p.uf}
                 </div>
+                <AuctionFlag p={p} />
                 <div className="recfoot">
                   <div className="recprice">{money(p.saleValue)}</div>
                   {nota != null && (

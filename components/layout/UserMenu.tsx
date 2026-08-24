@@ -68,8 +68,8 @@ export default function UserMenu({ account }: { account: Account }) {
           <div className="usermenu-head">
             <span className="useravatar lg">{initials}</span>
             <div className="usermenu-id">
-              <b>{name}</b>
-              <span>{email}</span>
+              <b title={name}>{name}</b>
+              <span title={email}>{email}</span>
             </div>
           </div>
           <div className="usermenu-plan">

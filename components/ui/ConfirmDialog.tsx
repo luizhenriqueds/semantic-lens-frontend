@@ -3,6 +3,7 @@
 import { useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
 import { IconPencil, IconTrash } from "@/lib/icons";
+import { useScrollLock } from "@/lib/useScrollLock";
 
 export default function ConfirmDialog({
   open,
@@ -28,6 +29,8 @@ export default function ConfirmDialog({
 }) {
   const confirmRef = useRef<HTMLButtonElement>(null);
 
+  useScrollLock(open);
+
   useEffect(() => {
     if (!open) return;
     confirmRef.current?.focus();
@@ -35,11 +38,7 @@ export default function ConfirmDialog({
       if (e.key === "Escape") onCancel();
     };
     document.addEventListener("keydown", onKey);
-    document.body.style.overflow = "hidden";
-    return () => {
-      document.removeEventListener("keydown", onKey);
-      document.body.style.overflow = "";
-    };
+    return () => document.removeEventListener("keydown", onKey);
   }, [open, onCancel]);
 
   if (!open) return null;

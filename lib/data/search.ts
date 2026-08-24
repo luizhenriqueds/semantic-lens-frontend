@@ -8,6 +8,7 @@ import {
   isStructural,
   normalize,
   parseFacets,
+  simplifyFacets,
   type Facets,
   type GoalKey,
   type PoiQuery,
@@ -598,9 +599,23 @@ async function ftsSearch(facets: Facets): Promise<SearchResult> {
   return pooled(built, facets, hits);
 }
 
-async function runHybridSearch(query: string): Promise<SearchResult> {
-  const facets = parseFacets(query, await getCities());
+const SIMPLIFIED_NOTE = (dropped: string[]) =>
+  `Sua busca tinha critérios demais. Buscamos sem: ${dropped.join(", ")}.`;
 
+// Nothing an embedding or a pool could match, so neither is worth buying.
+const searchable = (f: Facets): boolean =>
+  (f.normalized.match(/\p{L}/gu) ?? []).length >= 2 &&
+  f.lexical.split(" ").some((t) => t.length >= 2);
+
+async function runHybridSearch(query: string): Promise<SearchResult> {
+  const { facets, dropped } = simplifyFacets(parseFacets(query, await getCities()));
+  if (!searchable(facets)) return EMPTY;
+  const res = await runBranches(facets);
+  if (!dropped.length) return res;
+  return { ...res, fallback: true, fallbackNote: SIMPLIFIED_NOTE(dropped) };
+}
+
+async function runBranches(facets: Facets): Promise<SearchResult> {
   // Proximity queries are filters (comprehensive), not ranked semantic searches.
   if (facets.center) {
     return proximity(await centerProximityHits(facets));

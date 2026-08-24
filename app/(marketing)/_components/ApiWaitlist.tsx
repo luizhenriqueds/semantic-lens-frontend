@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import BrandLogo from "@/components/brand/BrandLogo";
 import { joinApiWaitlist } from "@/app/actions/waitlist";
+import { useScrollLock } from "@/lib/useScrollLock";
 
 const SOURCES = [
   "Busca no Google",
@@ -72,15 +73,13 @@ export default function ApiWaitlist() {
   const [source, setSource] = useState("");
   const [uses, setUses] = useState<string[]>([]);
 
+  useScrollLock(open);
+
   useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => e.key === "Escape" && setOpen(false);
     document.addEventListener("keydown", onKey);
-    document.body.style.overflow = "hidden";
-    return () => {
-      document.removeEventListener("keydown", onKey);
-      document.body.style.overflow = "";
-    };
+    return () => document.removeEventListener("keydown", onKey);
   }, [open]);
 
   const toggleUse = (u: string) =>

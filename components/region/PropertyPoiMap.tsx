@@ -7,6 +7,7 @@ import { fmtDist } from "@/lib/format";
 import { catColor, homeIcon, poiIcon } from "@/lib/mapMarkers";
 import { POI_ICON } from "@/lib/icons";
 import { POI_LABEL, POI_ORDER } from "@/lib/pois";
+import { useScrollLock } from "@/lib/useScrollLock";
 import type { NearbyPoi } from "@/lib/types";
 
 function poiPopup(p: NearbyPoi): string {
@@ -76,16 +77,13 @@ export default function PropertyPoiMap({
     return () => clearTimeout(id);
   }, [expanded]);
 
+  useScrollLock(expanded);
+
   useEffect(() => {
     if (!expanded) return;
-    const prev = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
     const onKey = (e: KeyboardEvent) => e.key === "Escape" && setExpanded(false);
     window.addEventListener("keydown", onKey);
-    return () => {
-      document.body.style.overflow = prev;
-      window.removeEventListener("keydown", onKey);
-    };
+    return () => window.removeEventListener("keydown", onKey);
   }, [expanded]);
 
   const legend = POI_ORDER.filter((cat) => pois.some((p) => p.category === cat));
