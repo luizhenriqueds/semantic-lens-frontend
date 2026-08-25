@@ -11,6 +11,7 @@ import {
 import PropertyPhoto from "@/components/property/PropertyPhoto";
 import FavoriteButton from "@/components/property/FavoriteButton";
 import PayBadges from "@/components/property/PayBadges";
+import AuctionFlag from "@/components/property/AuctionFlag";
 import Ring from "@/components/ui/Ring";
 
 export default function PropertyCard({
@@ -51,6 +52,7 @@ export default function PropertyCard({
         <div className="loc">
           {p.neighborhood} · {p.city}/{p.uf}
         </div>
+        <AuctionFlag p={p} />
         <div className="facts">
           {p.area != null && (
             <span>

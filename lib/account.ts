@@ -10,7 +10,9 @@ export function shortName(name: string): string {
 
 export function accountFrom(user: User | null): Account {
   const email = user?.email ?? "";
-  const full = ((user?.user_metadata?.full_name as string) ?? "").trim();
+  // Collapsed, not just trimmed: an OAuth profile can carry a newline or a double space inside the
+  // name, and the topbar renders it on one line.
+  const full = ((user?.user_metadata?.full_name as string) ?? "").replace(/\s+/g, " ").trim();
   const local = email.split("@")[0] ?? "";
   const name = full || (local ? local.charAt(0).toUpperCase() + local.slice(1) : "Conta");
   const parts = name.split(/\s+/).filter(Boolean);

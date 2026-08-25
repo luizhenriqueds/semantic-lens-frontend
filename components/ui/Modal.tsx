@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { IconClose } from "@/lib/icons";
+import { useScrollLock } from "@/lib/useScrollLock";
 
 /** Backdrop, Escape, scroll lock and the close button, in one place. */
 export default function Modal({
@@ -24,17 +25,17 @@ export default function Modal({
   const [portal, setPortal] = useState<HTMLElement | null>(null);
   useEffect(() => setPortal(document.body), []);
 
+  useScrollLock(Boolean(portal));
+
   useEffect(() => {
     if (!portal) return;
     const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
     document.addEventListener("keydown", onKey);
-    document.body.style.overflow = "hidden";
     // Without this the keyboard and screen reader stay on the trigger behind the backdrop.
     const opener = document.activeElement as HTMLElement | null;
     dialogRef.current?.focus();
     return () => {
       document.removeEventListener("keydown", onKey);
-      document.body.style.overflow = "";
       opener?.focus();
     };
   }, [onClose, portal]);

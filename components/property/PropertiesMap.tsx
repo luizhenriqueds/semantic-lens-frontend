@@ -11,6 +11,7 @@ import { fmtDate, money, showDiscount } from "@/lib/format";
 import { groupByAddress } from "@/lib/geo";
 import { homeIcon, homeIconCount } from "@/lib/mapMarkers";
 import MapExpandButton from "@/components/ui/MapExpandButton";
+import { useScrollLock } from "@/lib/useScrollLock";
 import type { Property } from "@/lib/types";
 
 const esc = (s: string) =>
@@ -184,16 +185,13 @@ export default function PropertiesMap({ properties }: { properties: Property[] }
     return () => clearTimeout(id);
   }, [expanded]);
 
+  useScrollLock(expanded);
+
   useEffect(() => {
     if (!expanded) return;
-    const prev = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
     const onKey = (e: KeyboardEvent) => e.key === "Escape" && setExpanded(false);
     window.addEventListener("keydown", onKey);
-    return () => {
-      document.body.style.overflow = prev;
-      window.removeEventListener("keydown", onKey);
-    };
+    return () => window.removeEventListener("keydown", onKey);
   }, [expanded]);
 
   return (

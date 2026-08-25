@@ -1,11 +1,14 @@
+import { clampQuery } from "./limits";
+
 export function normalize(s: string): string {
   return s.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/\s+/g, " ").trim();
 }
 
 // Search cache key: folds "Casa 02 Quartos" onto "casa 2 quartos". Only whole tokens are
-// unpadded, so "R$ 100.000" is left alone.
+// unpadded, so "R$ 100.000" is left alone. Clamped here because it is the one funnel every /search
+// entry point crosses, including those with no input element to carry maxLength.
 export function canonicalQuery(s: string): string {
-  return normalize(s).replace(/(^|\s)0+(\d)/g, "$1$2");
+  return clampQuery(normalize(s).replace(/(^|\s)0+(\d)/g, "$1$2"));
 }
 
 // Keeps user input from turning into a LIKE wildcard.

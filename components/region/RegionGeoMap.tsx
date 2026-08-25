@@ -9,6 +9,7 @@ import { catColor, homeIcon, homeIconCount, poiIcon } from "@/lib/mapMarkers";
 import { POI_ICON } from "@/lib/icons";
 import { POI_LABEL, POI_ORDER } from "@/lib/pois";
 import MapExpandButton from "@/components/ui/MapExpandButton";
+import { useScrollLock } from "@/lib/useScrollLock";
 import type { NearbyPoi, Property } from "@/lib/types";
 
 export default function RegionGeoMap({
@@ -96,16 +97,13 @@ export default function RegionGeoMap({
     return () => clearTimeout(id);
   }, [expanded]);
 
+  useScrollLock(expanded);
+
   useEffect(() => {
     if (!expanded) return;
-    const prev = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
     const onKey = (e: KeyboardEvent) => e.key === "Escape" && setExpanded(false);
     window.addEventListener("keydown", onKey);
-    return () => {
-      document.body.style.overflow = prev;
-      window.removeEventListener("keydown", onKey);
-    };
+    return () => window.removeEventListener("keydown", onKey);
   }, [expanded]);
 
   const legend = heat ? [] : POI_ORDER.filter((c) => pois.some((p) => p.category === c));

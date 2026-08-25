@@ -65,6 +65,25 @@ export async function withRetry<T>(
   return res;
 }
 
+// Bounded fan-out. A caller that issues more reads at once than dbFetch has permits times its own
+// tail out at QUEUE_MS and starves everything else sharing the lambda.
+export async function mapLimit<T, R>(
+  items: T[],
+  limit: number,
+  fn: (item: T) => Promise<R>,
+): Promise<R[]> {
+  const out = new Array<R>(items.length);
+  let next = 0;
+  const worker = async () => {
+    while (next < items.length) {
+      const i = next++;
+      out[i] = await fn(items[i]);
+    }
+  };
+  await Promise.all(Array.from({ length: Math.min(limit, items.length) }, worker));
+  return out;
+}
+
 export function rows<T>(name: string, res: QueryResult<T>): T[] {
   if (res.error) {
     console.error(`[data] query "${name}" failed: ${res.error.message}`);

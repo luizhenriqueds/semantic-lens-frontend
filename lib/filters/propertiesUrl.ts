@@ -1,3 +1,4 @@
+import { clampQuery, MAX_PROPERTIES_Q_TOKENS, MAX_QUERY_CHARS } from "@/lib/facets/limits";
 import { parseRange } from "@/lib/facets/range";
 import { CHANGE_KINDS } from "@/lib/types";
 import type {
@@ -118,7 +119,8 @@ const list = (v: string | undefined): string[] | undefined => {
 export function parsePropertySearchParams(raw: SP): PropertiesQuery {
   const sp = canonical(raw);
   const filters: PropertyFilters = {};
-  const q = one(sp.q)?.trim();
+  // At the URL, not just before the RPC, so the chip and the alert description match what ran.
+  const q = clampQuery(one(sp.q) ?? "", MAX_QUERY_CHARS, MAX_PROPERTIES_Q_TOKENS);
   if (q) filters.q = q;
   const uf = one(sp.uf);
   if (uf) filters.uf = uf;

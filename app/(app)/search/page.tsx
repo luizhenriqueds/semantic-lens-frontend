@@ -3,6 +3,7 @@ import SearchHead from "./_components/SearchHead";
 import SearchResults from "./_components/SearchResults";
 import SearchAlertButton from "./_components/SearchAlertButton";
 import SearchSkeleton from "./_components/SearchSkeleton";
+import { clampQuery } from "@/lib/facets/limits";
 import { parseSort } from "@/lib/searchSort";
 
 export const dynamic = "force-dynamic";
@@ -13,7 +14,8 @@ export default async function SearchPage({
   searchParams: Promise<{ q?: string; page?: string; sort?: string }>;
 }) {
   const sp = await searchParams;
-  const query = (sp.q ?? "").trim();
+  // Clamped here too, so the box and the heading show what was actually searched.
+  const query = clampQuery(sp.q ?? "");
   const page = Math.max(1, Number(sp.page) || 1);
   const sort = parseSort(sp.sort);
 

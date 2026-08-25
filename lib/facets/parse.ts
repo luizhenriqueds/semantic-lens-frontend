@@ -1,3 +1,4 @@
+import { MAX_FACETS } from "./limits";
 import { fuzzy, normalize } from "./normalize";
 import {
   GOAL_FILLER,
@@ -157,6 +158,44 @@ function buildLexical(normalized: string, priceMatch: string | null): string {
   return words
     .filter((w, i) => !/^\d+([.,]\d+)?$/.test(w) || COUNT_WORD.test(words[i + 1] ?? ""))
     .join(" ");
+}
+
+/** Expensive: each picks a different retrieval branch, and only one of them can run. */
+const BRANCHES = ["poi", "center", "goal"] as const;
+/** Cheap on their own - they ride one p_filters - but each extra one empties the pool and buys
+ *  another widening rung in buildPool. */
+const HARD = ["type", "city", "priceMax", "bedroomsMin", "parkingMin", "bathroomsMin"] as const;
+
+const FACET_LABEL: Record<string, string> = {
+  poi: "proximidade",
+  center: "proximidade do centro",
+  goal: "objetivo",
+  type: "tipo de imóvel",
+  city: "cidade",
+  priceMax: "preço máximo",
+  bedroomsMin: "quartos",
+  parkingMin: "vagas",
+  bathroomsMin: "banheiros",
+};
+
+const isOn = (f: Facets, k: string) => Boolean(f[k as keyof Facets]);
+
+/** Caps how much retrieval one query can buy: one branch, MAX_FACETS hard filters, in that order of
+ *  precedence. `dropped` names what gave way so the caller can say so. */
+export function simplifyFacets(f: Facets): { facets: Facets; dropped: string[] } {
+  const branch = BRANCHES.find((k) => isOn(f, k));
+  const drop = [
+    ...BRANCHES.filter((k) => isOn(f, k) && k !== branch),
+    ...HARD.filter((k) => isOn(f, k)).slice(MAX_FACETS),
+  ];
+  if (!drop.length) return { facets: f, dropped: [] };
+
+  const facets = { ...f };
+  for (const k of drop) {
+    if (k === "center") facets.center = false;
+    else (facets as Record<string, unknown>)[k] = null;
+  }
+  return { facets, dropped: drop.map((k) => FACET_LABEL[k]) };
 }
 
 export function parseFacets(raw: string, cities: string[]): Facets {

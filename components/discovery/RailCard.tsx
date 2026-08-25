@@ -1,6 +1,7 @@
 import Link from "next/link";
 import FavoriteButton from "@/components/property/FavoriteButton";
 import PropertyPhoto from "@/components/property/PropertyPhoto";
+import AuctionFlag from "@/components/property/AuctionFlag";
 import ReasonChips from "@/components/discovery/ReasonChips";
 import type { Reason } from "@/lib/discovery";
 import { money, showDiscount } from "@/lib/format";
@@ -23,6 +24,7 @@ export default function RailCard({ p, reasons }: { p: Property; reasons: Reason[
         <div className="loc">
           {p.neighborhood} · {p.city}/{p.uf}
         </div>
+        <AuctionFlag p={p} />
         <div className="facts">
           {p.area != null && (
             <span>

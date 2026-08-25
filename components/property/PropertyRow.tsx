@@ -14,6 +14,7 @@ import { POI_LABEL } from "@/lib/pois";
 import PropertyPhoto from "@/components/property/PropertyPhoto";
 import FavoriteButton from "@/components/property/FavoriteButton";
 import PayBadges from "@/components/property/PayBadges";
+import AuctionFlag from "@/components/property/AuctionFlag";
 import Ring from "@/components/ui/Ring";
 
 export default function PropertyRow({
@@ -95,6 +96,7 @@ export default function PropertyRow({
         <div className="colk">Leilão</div>
         <div className="colv">{p.modality ?? "-"}</div>
         {data && <div className="sub">{data}</div>}
+        <AuctionFlag p={p} />
       </div>
       {(nota != null || p.profile) && (
         <div className="wscore">

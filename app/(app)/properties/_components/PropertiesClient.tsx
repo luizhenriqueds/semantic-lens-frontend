@@ -28,6 +28,7 @@ import {
   useAlerts,
 } from "@/lib/alerts";
 import { mapPointToProperty } from "@/lib/mapPoints";
+import { MAX_QUERY_CHARS } from "@/lib/facets/limits";
 import { rangeLabel, type RangeDim } from "@/lib/facets/range";
 import { toRpcFilters } from "@/lib/filters/contract";
 import { requiredPlan, VIEW_FEATURE } from "@/lib/entitlements";
@@ -54,6 +55,7 @@ import {
   POI_ICON,
 } from "@/lib/icons";
 import { MAX_NEAR_M, POI_LABEL, POI_ORDER } from "@/lib/pois";
+import { useScrollLock } from "@/lib/useScrollLock";
 import {
   CHANGE_WINDOW_DAYS,
   criteriaToParams,
@@ -470,17 +472,13 @@ export default function PropertiesClient({
           ? (analysis?.count ?? 0)
           : Object.values(calendar?.counts ?? {}).reduce((s, n) => s + n, 0);
 
-  // Lock body scroll while the drawer is open.
+  useScrollLock(drawerOpen);
+
   useEffect(() => {
     if (!drawerOpen) return;
-    const prev = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
     const onKey = (e: KeyboardEvent) => e.key === "Escape" && setDrawerOpen(false);
     window.addEventListener("keydown", onKey);
-    return () => {
-      document.body.style.overflow = prev;
-      window.removeEventListener("keydown", onKey);
-    };
+    return () => window.removeEventListener("keydown", onKey);
   }, [drawerOpen]);
 
   const alertCriteria = useMemo<AlertCriteriaSet>(() => toRpcFilters(filters), [filters]);
@@ -728,6 +726,7 @@ export default function PropertiesClient({
             value={qInput}
             onChange={(e) => setQInput(e.target.value)}
             placeholder="Buscar por bairro, cidade ou tipo"
+            maxLength={MAX_QUERY_CHARS}
           />
         </div>
         <SearchableSelect
