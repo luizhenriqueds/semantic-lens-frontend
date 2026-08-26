@@ -19,10 +19,12 @@ const TAIL = [
 const TAIL_AT = 7000;
 const TAIL_EVERY = 3500;
 
-export default function SearchProgress() {
-  const [text, setText] = useState(STEPS[0].text);
+/** `static` narrates nothing: a browse has no pipeline to report on, so the timers never start. */
+export default function SearchProgress({ static: fixed }: { static?: string }) {
+  const [text, setText] = useState(fixed ?? STEPS[0].text);
 
   useEffect(() => {
+    if (fixed) return;
     const timers = STEPS.slice(1).map((s) => setTimeout(() => setText(s.text), s.at));
     timers.push(
       setTimeout(() => {
@@ -33,7 +35,7 @@ export default function SearchProgress() {
     );
     // clearTimeout and clearInterval share one id map, so the interval clears here too.
     return () => timers.forEach(clearTimeout);
-  }, []);
+  }, [fixed]);
 
   return (
     <div className="searchloading">

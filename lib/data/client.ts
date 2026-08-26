@@ -91,6 +91,17 @@ export function rows<T>(name: string, res: QueryResult<T>): T[] {
   return res.data ?? [];
 }
 
+// The `rpcJson({ required: true })` rule for plain table reads: `rows` hands a failure back as `[]`
+// and `cached` memoises that emptiness, blanking the page long after the database recovered.
+export function requiredRows<T>(name: string, res: QueryResult<T>): T[] {
+  if (res.error) {
+    // Logged as well as thrown: callers that degrade gracefully swallow the throw.
+    console.error(`[data] query "${name}" failed: ${res.error.message}`);
+    throw new Error(`query "${name}" failed: ${res.error.message}`);
+  }
+  return res.data ?? [];
+}
+
 // Pages past PostgREST's 1000-row cap. `build` must apply a stable `.order(...)`.
 export async function fetchAllRows<T>(
   name: string,

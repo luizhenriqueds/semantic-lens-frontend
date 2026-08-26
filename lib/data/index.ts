@@ -38,7 +38,7 @@ export {
   getPriceHistory,
   getRecommendations,
   getPropertyDetailText,
-  getLastSeen,
+  getFreshness,
 } from "./details";
 export {
   hybridSearch,

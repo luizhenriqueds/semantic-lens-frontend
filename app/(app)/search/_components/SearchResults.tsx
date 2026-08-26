@@ -1,6 +1,7 @@
 import Link from "next/link";
 import PagedCards from "./PagedCards";
 import EmptyState from "@/components/ui/EmptyState";
+import RetryButton from "@/components/ui/RetryButton";
 import { getBrowseList, getPropertiesByIds, hybridSearch, isListable } from "@/lib/data";
 import { spreadByLocality } from "@/lib/diversify";
 import { goalFromQuery } from "@/lib/facets";
@@ -77,6 +78,7 @@ export default async function SearchResults({
                 ? "Busca indisponível no momento"
                 : "Imóveis indisponíveis no momento"
           }
+          action={limited ? undefined : <RetryButton />}
         >
           {limited
             ? RATE_LIMIT_SEARCH

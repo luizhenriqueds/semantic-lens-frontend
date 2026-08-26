@@ -24,7 +24,7 @@ export default async function SearchPage({
     <section className="view">
       <SearchHead query={query} aside={<SearchAlertButton query={query} />} />
 
-      <Suspense key={`${query}|${page}|${sort}`} fallback={<SearchSkeleton />}>
+      <Suspense key={`${query}|${page}|${sort}`} fallback={<SearchSkeleton query={query} />}>
         <SearchResults query={query} page={page} sort={sort} />
       </Suspense>
     </section>

@@ -1,9 +1,10 @@
 import SearchProgress from "./SearchProgress";
 
-export default function SearchSkeleton() {
+/** Without a query this is a plain browse, so it must not narrate a search pipeline that is idle. */
+export default function SearchSkeleton({ query }: { query?: string }) {
   return (
     <>
-      <SearchProgress />
+      {query ? <SearchProgress /> : <SearchProgress static="Carregando imóveis…" />}
       <div className="pgrid">
         {Array.from({ length: 6 }).map((_, i) => (
           <div className="skcard" key={i}>

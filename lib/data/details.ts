@@ -1,5 +1,11 @@
 import { supabase } from "@/lib/supabase";
-import type { PriceHistoryPoint, Recommendation, ScoreExplain, ScoreTerm } from "@/lib/types";
+import type {
+  Freshness,
+  PriceHistoryPoint,
+  Recommendation,
+  ScoreExplain,
+  ScoreTerm,
+} from "@/lib/types";
 import { DETAIL_REVALIDATE, REVALIDATE, cached, num, rows, withRetry } from "./client";
 
 const dashless = (s: string) => s.replace(/[--]/g, "-");
@@ -73,16 +79,17 @@ export const getPropertyDetailText = cached(
   DETAIL_REVALIDATE,
 );
 
-// Same column on a short TTL: crawl-followups moves last_seen hourly, so the copy baked into the
-// 6h-cached page runs a day behind.
-async function loadLastSeen(id: string): Promise<string | null> {
+// The base table on a short TTL: crawl-followups moves both columns hourly and property_list_mv
+// lags them again, so the copy baked into the 6h-cached page runs a day behind.
+async function loadFreshness(id: string): Promise<Freshness> {
   const res = await withRetry(() =>
-    supabase.from("properties").select("last_seen").eq("property_id", id).limit(1),
+    supabase.from("properties").select("last_seen,is_active").eq("property_id", id).limit(1),
   );
-  return rows<any>("property-last-seen", res)[0]?.last_seen || null;
+  const row = rows<any>("property-freshness", res)[0];
+  return { lastSeen: row?.last_seen || null, isActive: row?.is_active ?? null };
 }
 
-export const getLastSeen = cached(loadLastSeen, "property-last-seen", REVALIDATE);
+export const getFreshness = cached(loadFreshness, "property-freshness", REVALIDATE);
 
 // `listings` rows are intervals dated at their *last* live day; the chart wants starts, so each
 // is dated from where the previous ended and `first_seen` opens the series.

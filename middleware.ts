@@ -25,6 +25,8 @@ export const PUBLIC = [
   "/search",
   "/properties",
   "/property",
+  // Serves the public property page's sections; it gates the paid ones on entitlements itself.
+  "/api/property",
   "/alerts",
   "/portfolio",
   // The indexable SEO landings. Matched segment-wise, so every /leilao-de-imoveis/<slug> is covered.

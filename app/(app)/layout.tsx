@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Suspense } from "react";
 import SessionStores from "@/components/layout/SessionStores";
 import ThemeInit from "@/components/layout/ThemeInit";
+import OutageBanner from "@/components/layout/OutageBanner";
 import Sidebar from "@/components/layout/Sidebar";
 import Topbar from "@/components/layout/Topbar";
 import CheckoutReturnDialog from "@/components/plan/CheckoutReturnDialog";
@@ -39,6 +40,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
           <TrialStartedDialog />
           <CheckoutReturnDialog />
         </Suspense>
+        <OutageBanner />
         <div className="app">
           <Sidebar />
           <div className="main">
