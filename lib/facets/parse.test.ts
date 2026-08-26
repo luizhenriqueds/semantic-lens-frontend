@@ -195,3 +195,56 @@ describe("isStructural", () => {
     expect(structural("apartamento perto do centro")).toBe(false);
   });
 });
+
+const CITY_UF = new Map([
+  ["corumba", "ms"],
+  ["campo grande", "ms"],
+  ["sao paulo", "sp"],
+  ["recife", "pe"],
+  ["macapa", "ap"],
+]);
+const withUf = (q: string) => parseFacets(q, [...CITIES, "Recife", "Macapá"], CITY_UF);
+
+describe("UF right after the city", () => {
+  it("folds the UF into the city match instead of leaving it loose", () => {
+    const f = withUf("imovel em corumba ms");
+    expect(f.city).toBe("Corumbá");
+    expect(f.lexical).toBe(f.lexicalCore);
+    // Every token explained, so this is a filtered list rather than a semantic search.
+    expect(isStructural(f)).toBe(true);
+  });
+
+  it("handles a multi-word city", () => {
+    const f = withUf("casa em campo grande ms");
+    expect(f.city).toBe("Campo Grande");
+    expect(f.lexical).toBe(f.lexicalCore);
+  });
+
+  it("ignores a UF that is not the matched city's own", () => {
+    const f = withUf("casa em recife se possivel");
+    expect(f.city).toBe("Recife");
+    expect(f.lexical).toContain("se");
+    expect(isStructural(f)).toBe(false);
+  });
+
+  // "ap" is both Amapá and an apartamento synonym, and findType runs first.
+  it("never takes a token the type already claimed", () => {
+    const f = withUf("ap em corumba");
+    expect(f.type).toBe("Apartamento");
+    expect(f.city).toBe("Corumbá");
+
+    const g = withUf("casa em macapa ap");
+    expect(g.type).toBe("Casa");
+    expect(g.lexical).toBe(g.lexicalCore);
+  });
+
+  it("leaves a UF with no city in front of it alone", () => {
+    const f = withUf("apartamento sp");
+    expect(f.city).toBeNull();
+    expect(f.lexical).toContain("sp");
+  });
+
+  it("consumes nothing without the map", () => {
+    expect(parseFacets("imovel em corumba ms", CITIES).lexical).toContain("ms");
+  });
+});

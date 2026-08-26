@@ -1,7 +1,7 @@
 # Guarding the search inputs
 
-Status: layers 1, 2 and 4 shipped — `lib/facets/limits.ts` holds the caps, `simplifyFacets` in
-`lib/facets/parse.ts` holds the budget. Layer 3 is still a proposal.
+Status: all four layers shipped — `lib/facets/limits.ts` holds the caps, `simplifyFacets` in
+`lib/facets/parse.ts` holds the budget, and layer 3 landed alongside migration `0106`.
 
 ## Why
 
@@ -78,23 +78,32 @@ So, two rules:
   `parkingMin`, `bathroomsMin`. Price sits third deliberately: showing results the user cannot
   afford is the worst way to fail.
 
-`dropped` becomes the `fallbackNote` the `.searchnote` slot already renders, so saying so is copy,
-not new UI:
+Only the **hard** drops become the `fallbackNote` the `.searchnote` slot already renders:
 
-> Sua busca tinha critérios demais. Buscamos sem: vagas, banheiros.
+> Mostramos resultados sem as vagas e os banheiros que você pediu.
+
+A dropped branch is silent. Which retrieval branch runs is an internal choice — naming it
+("Buscamos sem: objetivo") described a criterion the user never typed and could not act on.
 
 Four hard filters is more than any ordinary query carries, which is the point — the existing
 `parse.test.ts` fixtures all pass through untouched.
 
-### Layer 3 — bound the fan-out (ship separately)
+### Layer 3 — bound the fan-out (shipped)
 
-Only worth doing if layers 1–2 do not flatten the queue-timeout rate:
-
-- `tightestRadius` probes three rungs in parallel. For a query that survived layer 2 with 3+ facets
-  the corpus is already narrow, so start at the tightest rung and probe one.
-- `buildPool`'s unfiltered widening rung scans the whole corpus. Skip it for any query layer 2
-  simplified — it is already wider than what was asked for.
-- Scale `POI_FANOUT` (40) down with facet count; cap `nearProximityHits` at two batches.
+- `categoryProximityHits` was three parallel `countProperties` probes plus a 200-row
+  discount-ordered page, re-sorted by distance in JS. `property_list_page` already had a
+  `proximidade` sort, so it is now **one** page of `RESULT_LIMIT` — and `0106` made both the
+  `poi_cats` predicate and that sort sargable, so it is index-served rather than a full MV scan.
+- `centerProximityHits` walks `CENTER_LADDER` with the page itself: `total` is the same `count(*)`
+  the probes were buying, so the dense case picks the same rung in one read instead of four.
+- `searchPoisByName` fired four `resolve_pois` calls in parallel — a category is a pure conjunct
+  there, so the categorised set is derived from the uncategorised one. One call, two on a miss.
+- `nearestByPoi` bounds `properties_near_pois` server-side at `NEAR_SCAN`.
+- `buildPool` skips the unfiltered widening rung for a POI query: that caller reads only `pool` and
+  writes its own note, so the rung only added noise.
+- `findCity` folds a trailing UF into the city match (`corumba ms`), which keeps `lexical` and
+  `lexicalCore` equal and lets `isStructural` answer the query from one indexed MV read.
+- `POI_FANOUT` is still a flat 40 — revisit only if `[db] … queued=` stays elevated.
 
 ### Layer 4 — cheap rejection before the expensive hops (shipped)
 
@@ -106,13 +115,14 @@ existing "não encontramos imóveis muito parecidos" note, which is the right an
 
 ## Not shipped
 
-Layer 3 stays a proposal; only worth doing if the above does not flatten the queue-timeout rate:
-
-- `tightestRadius` probes three rungs in parallel. For a query at the facet budget the corpus is
-  already narrow, so start at the tightest rung and probe one.
-- `buildPool`'s unfiltered widening rung scans the whole corpus. Skip it for any query layer 2
-  simplified — it is already wider than what was asked for.
-- Scale `POI_FANOUT` (40) down with facet count; cap `nearProximityHits` at two batches.
+- **`p_with_total` on `property_list_page`.** `0097` runs `count(*)` before it checks `p_limit`, so
+  every search-branch page read is two filtered scans where one would do. Skipping the count for
+  callers that never show a total would halve them. Left out of `0106` deliberately: it is a
+  signature change, so the frontend and the migration would have to deploy in lockstep, and the
+  indexes already take most of the cost out.
+- **`filter_uf` on `hybrid_search`.** Needed before a UF-only query (`apartamento sp`) can take a
+  filtered path; today the UF is only consumed when a city is next to it.
+- **Scaling `POI_FANOUT` with facet count**, and capping `nearProximityHits` at two batches.
 
 ## Signal to watch
 

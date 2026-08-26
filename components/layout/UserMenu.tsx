@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { usePlan } from "@/components/plan/PlanProvider";
-import type { Account } from "@/lib/account";
+import { shortName, type Account } from "@/lib/account";
 import { fmtDay } from "@/lib/format";
 import { TRIAL_DAYS } from "@/lib/entitlements";
 import { IconSliders } from "@/lib/icons";
@@ -49,7 +49,9 @@ export default function UserMenu({ account }: { account: Account }) {
         aria-label="Conta"
       >
         <span className="useravatar">{initials}</span>
-        <span className="usermenu-email">{name}</span>
+        {/* Short here because the badge is the first thing a narrow topbar squeezes; the panel
+            below keeps the full name. */}
+        <span className="usermenu-email">{shortName(name)}</span>
         <svg
           className="userchev"
           viewBox="0 0 24 24"

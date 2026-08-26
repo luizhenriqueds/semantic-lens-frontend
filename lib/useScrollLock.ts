@@ -2,9 +2,9 @@
 
 import { useEffect } from "react";
 
-// iOS Safari scrolls the document element, so `body { overflow: hidden }` leaves the page behind a
-// fullscreen overlay scrollable; pinning the body at its offset is what blocks it. The counter
-// keeps a dialog opened from an open drawer from unlocking early.
+// iOS Safari scrolls the document element, so overflow alone leaves the page behind a fullscreen
+// overlay scrollable; pinning the body at its offset is what blocks it. The counter keeps a dialog
+// opened from an open drawer from unlocking early.
 let locks = 0;
 let restore: (() => void) | null = null;
 
@@ -15,7 +15,6 @@ function lock(): void {
   const prev = {
     htmlOverflow: html.style.overflow,
     scrollBehavior: html.style.scrollBehavior,
-    overflow: body.style.overflow,
     position: body.style.position,
     top: body.style.top,
     left: body.style.left,
@@ -23,8 +22,10 @@ function lock(): void {
     width: body.style.width,
   };
 
+  // Only `html` gets the overflow. On a pinned body it would do two kinds of damage: with
+  // `body { height: 100% }` it clips everything below the first screen, and it makes the body the
+  // nearest scrollport, so a sticky topbar pins to -y instead of to the viewport.
   html.style.overflow = "hidden";
-  body.style.overflow = "hidden";
   body.style.position = "fixed";
   body.style.top = `-${y}px`;
   body.style.left = "0";
@@ -33,7 +34,6 @@ function lock(): void {
 
   restore = () => {
     html.style.overflow = prev.htmlOverflow;
-    body.style.overflow = prev.overflow;
     body.style.position = prev.position;
     body.style.top = prev.top;
     body.style.left = prev.left;

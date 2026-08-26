@@ -68,7 +68,8 @@ describe("simplifyFacets", () => {
     expect(out.poi).not.toBeNull();
     expect(out.center).toBe(false);
     expect(out.goal).toBeNull();
-    expect(dropped).toEqual(["proximidade do centro", "objetivo"]);
+    // Applied, but not reported: a dropped branch is not something the user asked for.
+    expect(dropped).toEqual([]);
   });
 
   it("drops hard filters past the budget, cheapest intent last", () => {
@@ -85,7 +86,7 @@ describe("simplifyFacets", () => {
     expect(out.bedroomsMin).toBe(2);
     expect(out.parkingMin).toBeNull();
     expect(out.bathroomsMin).toBeNull();
-    expect(dropped).toEqual(["vagas", "banheiros"]);
+    expect(dropped).toEqual(["as vagas", "os banheiros"]);
   });
 
   it("does not mutate its input", () => {

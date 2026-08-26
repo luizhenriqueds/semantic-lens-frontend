@@ -7,6 +7,7 @@ import { clampQuery } from "@/lib/facets/limits";
 import { parseSort } from "@/lib/searchSort";
 
 export const dynamic = "force-dynamic";
+export const maxDuration = 20;
 
 export default async function SearchPage({
   searchParams,

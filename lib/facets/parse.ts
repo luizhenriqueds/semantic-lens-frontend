@@ -166,10 +166,9 @@ const BRANCHES = ["poi", "center", "goal"] as const;
  *  another widening rung in buildPool. */
 const HARD = ["type", "city", "priceMax", "bedroomsMin", "parkingMin", "bathroomsMin"] as const;
 
-const FACET_LABEL: Record<string, string> = {
-  poi: "proximidade",
-  center: "proximidade do centro",
-  goal: "objetivo",
+/** One vocabulary for every "we dropped this" note, so two of them cannot name the same facet
+ *  differently. `FACET_ARTICLE` is separate because only one of the notes reads as a sentence. */
+export const FACET_LABEL: Record<string, string> = {
   type: "tipo de imóvel",
   city: "cidade",
   priceMax: "preço máximo",
@@ -178,16 +177,24 @@ const FACET_LABEL: Record<string, string> = {
   bathroomsMin: "banheiros",
 };
 
+const FACET_ARTICLE: Record<string, string> = {
+  type: "o",
+  city: "a",
+  priceMax: "o",
+  bedroomsMin: "os",
+  parkingMin: "as",
+  bathroomsMin: "os",
+};
+
 const isOn = (f: Facets, k: string) => Boolean(f[k as keyof Facets]);
 
 /** Caps how much retrieval one query can buy: one branch, MAX_FACETS hard filters, in that order of
- *  precedence. `dropped` names what gave way so the caller can say so. */
+ *  precedence. Only the hard filters are reported - which branch runs is internal, and the user
+ *  cannot act on it. */
 export function simplifyFacets(f: Facets): { facets: Facets; dropped: string[] } {
   const branch = BRANCHES.find((k) => isOn(f, k));
-  const drop = [
-    ...BRANCHES.filter((k) => isOn(f, k) && k !== branch),
-    ...HARD.filter((k) => isOn(f, k)).slice(MAX_FACETS),
-  ];
+  const droppedHard = HARD.filter((k) => isOn(f, k)).slice(MAX_FACETS);
+  const drop = [...BRANCHES.filter((k) => isOn(f, k) && k !== branch), ...droppedHard];
   if (!drop.length) return { facets: f, dropped: [] };
 
   const facets = { ...f };
@@ -195,10 +202,11 @@ export function simplifyFacets(f: Facets): { facets: Facets; dropped: string[] }
     if (k === "center") facets.center = false;
     else (facets as Record<string, unknown>)[k] = null;
   }
-  return { facets, dropped: drop.map((k) => FACET_LABEL[k]) };
+  return { facets, dropped: droppedHard.map((k) => `${FACET_ARTICLE[k]} ${FACET_LABEL[k]}`) };
 }
 
-export function parseFacets(raw: string, cities: string[]): Facets {
+/** `cityUf` maps a normalized city to its UF. Optional: without it no UF suffix is consumed. */
+export function parseFacets(raw: string, cities: string[], cityUf?: Map<string, string>): Facets {
   const normalized = normalize(raw);
   const tokens = normalized.split(" ").filter(Boolean);
   const used = new Set<number>();
@@ -242,6 +250,12 @@ export function parseFacets(raw: string, cities: string[]): Facets {
         }
         if (ok) {
           for (let j = 0; j < c.words.length; j++) used.add(i + j);
+          // "corumba ms": the UF says nothing the city does not, but left loose it survives into
+          // `lexical`, where the AND-ed FTS arm has no listing to match it against. Adjacency and
+          // the uf check are what keep "apartamento sp" and "recife se possivel" out of it.
+          const next = i + c.words.length;
+          const uf = tokens[next];
+          if (uf && !used.has(next) && cityUf?.get(normalize(c.raw)) === uf) used.add(next);
           return c.raw;
         }
       }
