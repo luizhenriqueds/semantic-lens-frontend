@@ -31,6 +31,7 @@ import {
   fetchAllRows,
   mapLimit,
   num,
+  requiredRows,
   REVALIDATE,
   rows,
   SEARCH_REVALIDATE,
@@ -48,7 +49,7 @@ export const isListable = (p: Property): boolean =>
 
 // `cols as "*"` only shapes the type: PostgREST cannot parse a non-literal column list, and
 // every caller reads the rows through `rows<any>`. Making it generic instead stalls tsc.
-const scoredMv = (cols = "*") =>
+const scoredMv = (cols: string) =>
   supabase
     .from("property_list_mv")
     .select(cols as "*")
@@ -56,8 +57,18 @@ const scoredMv = (cols = "*") =>
 
 // The portfolio and the detail page still show inactive listings, so only the reads that build
 // lists gate on `is_listable` and on a real price.
-export const listableMv = (cols = "*") =>
+export const listableMv = (cols: string) =>
   scoredMv(cols).eq("is_listable", true).gt("sale_value", 0);
+
+// Keep in step with mapListRow below: everything it reads, and nothing else. The MV is 47 columns
+// wide and `select("*")` drags `search_text` - a large blob - through reads that never look at it.
+const LIST_COLS =
+  "property_id,property_type,uf,city,neighborhood,raw_address,area_m2,bedrooms,parking_spots," +
+  "year_built,occupancy_status,condo_payment_rule,tax_payment_rule,image_url,appraised_value," +
+  "sale_value,discount,modality,auction_date,link,is_active,accepts_financing,accepts_fgts," +
+  "flip,liquidity,airbnb,student,family,commercial,convenience,investment,primary_profile," +
+  "primary_profile_score,cluster_id,cluster_label,h3_r8,lat,lon,visual_score,visual_age," +
+  "price_rank,size_rank,center_proximity_m,nearest_poi";
 
 function mapListRow(r: any): Property {
   return {
@@ -240,20 +251,23 @@ async function loadPropertiesByIds(idsJson: string): Promise<Property[]> {
   const chunks: string[][] = [];
   for (let i = 0; i < ids.length; i += 200) chunks.push(ids.slice(i, i + 200));
   const res = await Promise.all(
-    chunks.map((chunk) => withRetry(() => scoredMv().in("property_id", chunk))),
+    chunks.map((chunk) => withRetry(() => scoredMv(LIST_COLS).in("property_id", chunk))),
   );
   return res.flatMap((r) => rows<any>("property_list_mv", r).map(mapListRow));
 }
 
 const cachedByIds = cached(loadPropertiesByIds, "properties-by-ids", SEARCH_REVALIDATE);
 
-// Corpus top-N by a goal's precomputed percentile, already ranked and filtered.
+// Corpus top-N by a goal's precomputed percentile, already ranked and filtered. `required` so a
+// timeout is not memoised as an empty rail for the whole window; the caller falls through instead.
 async function loadGoalTop(goal: string, filtersJson: string, limit: number): Promise<Property[]> {
-  const data = await rpcJson("goal_top", {
-    p_goal: goal,
-    p_filters: JSON.parse(filtersJson),
-    p_limit: limit,
-  });
+  const data = await rpcJson(
+    "goal_top",
+    { p_goal: goal, p_filters: JSON.parse(filtersJson), p_limit: limit },
+    // No retry: `required` would imply one, and this is a corpus-wide top-N whose caller falls
+    // through to the other branches anyway - a second attempt only doubles the load that timed out.
+    { required: true, timeoutRetries: 0 },
+  );
   return ((data ?? []) as any[]).filter(isListableRow).map(mapListRow);
 }
 
@@ -287,7 +301,7 @@ export type StructuralFilters = {
 // Each predicate mirrors what property_list_matched does with the same key. Not wrapped in
 // `cached`: the only caller already runs inside the hybrid-search cache, which nesting skips.
 export async function getStructuralList(f: StructuralFilters, limit: number): Promise<Property[]> {
-  let q = listableMv();
+  let q = listableMv(LIST_COLS);
   if (f.type) q = q.ilike("property_type", escapeLike(f.type));
   if (f.city) q = q.ilike("city", escapeLike(f.city));
   if (f.minBedrooms) q = q.gte("bedrooms", f.minBedrooms);
@@ -299,7 +313,7 @@ export async function getStructuralList(f: StructuralFilters, limit: number): Pr
       .order("property_id", { ascending: true })
       .limit(limit),
   );
-  return rows<any>("structural-list", res).map(mapListRow);
+  return requiredRows<any>("structural-list", res).map(mapListRow);
 }
 
 // The empty query on /search is a browse, not a search - nobody has asked for a ranking yet, so it
@@ -317,7 +331,7 @@ const UPCOMING_LIMIT = 60;
 
 async function loadUpcomingAuctions(sinceIso: string): Promise<Property[]> {
   const res = await withRetry(() =>
-    listableMv()
+    listableMv(LIST_COLS)
       .gt("auction_date", sinceIso)
       .order("auction_date", { ascending: true })
       .limit(UPCOMING_LIMIT),
@@ -408,8 +422,16 @@ export function getAuctionDayPage(
 
 type PropertyDetail = Property & { discountPercentile: number | null };
 
+// Unlike every list read, this one does not require a score: a relisted property sits unscored in
+// the MV until the next batch, and 404ing its page is worse than rendering it without the rankings.
 async function loadPropertyById(id: string): Promise<PropertyDetail | null> {
-  const res = await withRetry(() => scoredMv().eq("property_id", id).limit(1));
+  const res = await withRetry(() =>
+    supabase
+      .from("property_list_mv")
+      .select(`${LIST_COLS},discount_percentile`)
+      .eq("property_id", id)
+      .limit(1),
+  );
   const row = rows<any>("property_list_mv", res)[0];
   if (!row) return null;
   return { ...mapListRow(row), discountPercentile: num(row.discount_percentile) };

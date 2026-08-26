@@ -3,6 +3,7 @@ import ClientSession from "@/components/auth/ClientSession";
 import SessionStores from "@/components/layout/SessionStores";
 import ThemeInit from "@/components/layout/ThemeInit";
 import ClientTopbar from "@/components/layout/ClientTopbar";
+import OutageBanner from "@/components/layout/OutageBanner";
 import Sidebar from "@/components/layout/Sidebar";
 import CheckoutReturnDialog from "@/components/plan/CheckoutReturnDialog";
 import TrialStartedDialog from "@/components/plan/TrialStartedDialog";
@@ -23,6 +24,7 @@ export default function PublicLayout({ children }: { children: React.ReactNode }
           <TrialStartedDialog />
           <CheckoutReturnDialog />
         </Suspense>
+        <OutageBanner />
         <div className="app">
           <Sidebar />
           <div className="main">

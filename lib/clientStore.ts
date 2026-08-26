@@ -10,6 +10,11 @@ export function resetClientStores() {
   stores.forEach((r) => r());
 }
 
+/** Lets caches built outside `createClientStore` share the same sign-out reset. */
+export function onResetClientStores(reset: () => void) {
+  stores.add(reset);
+}
+
 // Stores hydrate once per page load, so a change made on another device needs a re-read.
 export function refreshClientStores() {
   refreshers.forEach((r) => r());
@@ -54,6 +59,17 @@ export function createClientStore<T>(fallback: T, load: () => Promise<T>) {
     read();
   };
 
+  // Server-rendered data for this navigation. It is the newer read, so it also replaces a
+  // hydration that happened on an earlier page before the session had resolved.
+  let seeded: T | null = null;
+  const seed = (next: T) => {
+    if (seeded === next) return;
+    seeded = next;
+    started = true;
+    readAt = Date.now();
+    set(next);
+  };
+
   // The server snapshot must be the fallback: on a repeat visit the module still holds the
   // previous value, which would not match the server's HTML during hydration.
   const useValue = (): T =>
@@ -72,6 +88,7 @@ export function createClientStore<T>(fallback: T, load: () => Promise<T>) {
   stores.add(() => {
     started = false;
     readAt = 0; // the next account must not inherit this one's freshness
+    seeded = null; // nor its server seed
     set(fallback);
   });
   // Unsubscribed stores just drop their hydration; the next mount reloads.
@@ -80,5 +97,5 @@ export function createClientStore<T>(fallback: T, load: () => Promise<T>) {
     else started = false;
   });
 
-  return { get: () => value, set, useValue };
+  return { get: () => value, set, seed, useValue };
 }

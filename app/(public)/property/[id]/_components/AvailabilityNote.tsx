@@ -1,7 +1,7 @@
 "use client";
 
 import { fmtDay } from "@/lib/format";
-import { useLastSeen } from "./useLastSeen";
+import { useLastSeen } from "./useFreshness";
 
 export default function AvailabilityNote({ id, initial }: { id: string; initial: string | null }) {
   const day = fmtDay(useLastSeen(id, initial));

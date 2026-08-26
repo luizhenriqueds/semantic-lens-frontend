@@ -2,13 +2,10 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import {
-  countAlertMatches,
-  countDescriptionMatches,
-  resolveAlertQuery,
-} from "@/app/actions/alerts";
+import { countAlertMatches, resolveAlertQuery } from "@/app/actions/alerts";
 import ConfirmDialog from "@/components/ui/ConfirmDialog";
 import EmptyState from "@/components/ui/EmptyState";
+import Pagination from "@/components/ui/Pagination";
 import SearchableSelect from "@/components/ui/SearchableSelect";
 import SkeletonText from "@/components/ui/SkeletonText";
 import UsageMeter from "@/components/plan/UsageMeter";
@@ -25,10 +22,20 @@ import {
   useAlerts,
 } from "@/lib/alerts";
 import { FREQS, freqOptions } from "@/lib/alerts/cadence";
+import { requestCount, seedCriteriaCount, useAlertCount } from "@/lib/alerts/counts";
 import { SCORE_DIMS, SCORE_LABEL, titleCase } from "@/lib/format";
-import { IconArrow, IconBell, IconPencil, IconPlus, IconSliders, IconTrash } from "@/lib/icons";
+import {
+  IconArrow,
+  IconBell,
+  IconEye,
+  IconLock,
+  IconPencil,
+  IconPlus,
+  IconSliders,
+  IconTrash,
+} from "@/lib/icons";
+import SignInLink from "@/components/auth/SignInLink";
 import type {
-  AlertCriteria,
   AlertCriteriaSet,
   Cluster,
   FilterOptions,
@@ -54,6 +61,8 @@ const CONTROLLED_KEYS = [
   "max_price",
 ] as const;
 
+const ALERTS_PAGE_SIZE = 10;
+
 const SCORES = [50, 60, 70, 80, 90];
 const DESCONTOS = [20, 30, 40, 50];
 const PRECOS = [100000, 200000, 300000, 500000, 1000000];
@@ -61,17 +70,20 @@ const PRECOS = [100000, 200000, 300000, 500000, 1000000];
 const precoLabel = (n: number) => (n >= 1_000_000 ? "R$ 1 mi" : `R$ ${n / 1000} mil`);
 
 type Mode = "filtros" | "descricao";
-type DescCount = { count: number; capped: boolean };
 
 export default function AlertsClient({
   options,
   clusters,
+  initialAlerts,
 }: {
   options: FilterOptions;
   clusters: Cluster[];
+  initialAlerts: Alert[];
 }) {
-  const { alerts, add, toggle, update, remove } = useAlerts();
-  const { require, showQuotaUpsell, limit } = usePlan();
+  const { alerts, add, toggle, update, remove } = useAlerts(initialAlerts);
+  const { require, showQuotaUpsell, limit, role, loading: planLoading } = usePlan();
+  // This group is always dynamic, so the role is settled rather than the anon default.
+  const signedOut = role === "anon" && !planLoading;
   const toast = useToast();
   const [creating, setCreating] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -148,7 +160,9 @@ export default function AlertsClient({
     const t = setTimeout(() => {
       countAlertMatches(preview)
         .then((n) => {
-          if (!cancelled) setDraftCount(n);
+          if (cancelled) return;
+          setDraftCount(n);
+          if (n != null) seedCriteriaCount(preview, n);
         })
         .catch(() => {});
     }, 300);
@@ -158,50 +172,13 @@ export default function AlertsClient({
     };
   }, [preview]);
 
-  const [filterCounts, setFilterCounts] = useState<Record<string, number | null>>({});
-  const filterKey = JSON.stringify(alerts.filter((a) => a.criteria).map((a) => [a.id, a.criteria]));
+  const [page, setPage] = useState(1);
+  const pageCount = Math.max(1, Math.ceil(alerts.length / ALERTS_PAGE_SIZE));
+  const shown = Math.min(page, pageCount);
   useEffect(() => {
-    const items: [string, AlertCriteria][] = JSON.parse(filterKey);
-    if (!items.length) return;
-    let cancelled = false;
-    Promise.all(
-      items.map(async ([id, c]) => [id, await countAlertMatches(c).catch(() => null)] as const),
-    ).then((entries) => {
-      if (!cancelled) setFilterCounts(Object.fromEntries(entries));
-    });
-    return () => {
-      cancelled = true;
-    };
-  }, [filterKey]);
-
-  const [descCounts, setDescCounts] = useState<Record<string, DescCount | null>>({});
-  const descKey = JSON.stringify(
-    alerts.filter((a) => !a.criteria && a.name.trim()).map((a) => [a.id, a.name]),
-  );
-
-  useEffect(() => {
-    const items: [string, string][] = JSON.parse(descKey);
-    if (!items.length) return;
-    let cancelled = false;
-    setDescCounts({});
-    Promise.all(
-      items.map(
-        async ([id, name]) =>
-          [
-            id,
-            await countDescriptionMatches(name).catch((err) => {
-              console.warn("Failed to count alert matches", err);
-              return null;
-            }),
-          ] as const,
-      ),
-    ).then((entries) => {
-      if (!cancelled) setDescCounts(Object.fromEntries(entries));
-    });
-    return () => {
-      cancelled = true;
-    };
-  }, [descKey]);
+    if (page > pageCount) setPage(pageCount);
+  }, [page, pageCount]);
+  const pageAlerts = alerts.slice((shown - 1) * ALERTS_PAGE_SIZE, shown * ALERTS_PAGE_SIZE);
 
   // Sign-in and the quota are both enforced here, before the form opens, rather than on submit.
   function startCreating() {
@@ -569,12 +546,7 @@ export default function AlertsClient({
       )}
 
       {alerts.length ? (
-        alerts.map((a) => {
-          const isDesc = !a.criteria && Boolean(a.name.trim());
-          const desc = isDesc ? descCounts[a.id] : null;
-          const counting =
-            (isDesc && desc === undefined) || (!!a.criteria && filterCounts[a.id] === undefined);
-          const count = a.criteria ? (filterCounts[a.id] ?? null) : (desc?.count ?? null);
+        pageAlerts.map((a) => {
           const chips = a.criteria ? criteriaChips(a.criteria, labels) : [];
           return (
             <div className="alertrow" key={a.id}>
@@ -594,23 +566,7 @@ export default function AlertsClient({
                 )}
                 <p>
                   {a.freq}
-                  {counting ? (
-                    <>
-                      {" · "}
-                      <SkeletonText width={148} />
-                    </>
-                  ) : (
-                    count != null && (
-                      <>
-                        {" · "}
-                        <b style={{ color: "var(--primary)" }}>
-                          {count}
-                          {desc?.capped ? "+" : ""}
-                        </b>{" "}
-                        {count === 1 ? "imóvel corresponde" : "imóveis correspondem"} hoje
-                      </>
-                    )
-                  )}
+                  <AlertCount alert={a} />
                 </p>
               </div>
               <div className="aactions">
@@ -646,6 +602,15 @@ export default function AlertsClient({
             </div>
           );
         })
+      ) : signedOut ? (
+        // Signing out empties the store, and "você ainda não tem alertas" would read as data loss.
+        <EmptyState
+          icon={<IconLock />}
+          title="Entre para ver seus alertas"
+          action={<SignInLink className="btn solid">Entrar</SignInLink>}
+        >
+          Seus alertas continuam salvos na sua conta e voltam assim que você entrar.
+        </EmptyState>
       ) : (
         <EmptyState
           icon={<IconBell />}
@@ -663,6 +628,13 @@ export default function AlertsClient({
         </EmptyState>
       )}
 
+      <Pagination
+        page={shown}
+        total={alerts.length}
+        pageSize={ALERTS_PAGE_SIZE}
+        onChange={setPage}
+      />
+
       <ConfirmDialog
         open={confirm != null}
         title={confirm?.title ?? ""}
@@ -675,6 +647,47 @@ export default function AlertsClient({
         }}
         onCancel={() => setConfirm(null)}
       />
+    </>
+  );
+}
+
+function AlertCount({ alert }: { alert: Alert }) {
+  const state = useAlertCount(alert);
+  if (!alert.on) return null;
+
+  const body = () => {
+    switch (state.status) {
+      case "idle":
+      case "error":
+        return (
+          <button className="countbtn" type="button" onClick={() => requestCount(alert)}>
+            <IconEye width={14} height={14} strokeWidth={1.7} />
+            {state.status === "error" ? "Tentar contar de novo" : "Ver correspondências"}
+          </button>
+        );
+      case "loading":
+        return <SkeletonText width={148} />;
+      case "slow":
+        return <span className="amuted">contagem demorando - abra o alerta para ver</span>;
+      case "ready":
+        return (
+          <span>
+            <b style={{ color: "var(--primary)" }}>
+              {state.value}
+              {state.capped ? "+" : ""}
+            </b>{" "}
+            {state.value === 1 ? "imóvel corresponde" : "imóveis correspondem"} hoje
+          </span>
+        );
+    }
+  };
+
+  // Own element rather than a text node: the row is a flex line, which would strip the spaces
+  // around a bare separator and leave it touching the chip.
+  return (
+    <>
+      <span aria-hidden="true">·</span>
+      {body()}
     </>
   );
 }

@@ -25,6 +25,9 @@ export const PUBLIC = [
   "/search",
   "/properties",
   "/property",
+  // Serves the public property page's own sections; it gates the paid ones on entitlements itself,
+  // and anonymous resolves to the "anon" plan rather than to no answer.
+  "/api/property",
   "/alerts",
   "/portfolio",
   // The indexable SEO landings. Matched segment-wise, so every /leilao-de-imoveis/<slug> is covered.

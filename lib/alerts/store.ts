@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback } from "react";
+import { useCallback, useEffect } from "react";
 import * as api from "@/app/actions/alerts";
 import { createClientStore } from "@/lib/clientStore";
 import { PLANS } from "@/lib/entitlements";
@@ -21,8 +21,15 @@ export const alertError = (reason: AlertCreateFailure) =>
 
 const store = createClientStore<Alert[]>([], () => api.listAlerts());
 
-export function useAlerts() {
+/** `initial` comes from a server component that already read the list under the request's cookies. */
+export function useAlerts(initial?: Alert[]) {
   const alerts = store.useValue();
+
+  useEffect(() => {
+    // `listAlerts` returns [] for a failed read as well as an empty one, so an empty seed must
+    // never overwrite a list the client already loaded.
+    if (initial && (initial.length || !store.get().length)) store.seed(initial);
+  }, [initial]);
 
   const add = useCallback(
     async (name: string, freq: string, criteria?: AlertCriteria): Promise<AlertCreateResult> => {

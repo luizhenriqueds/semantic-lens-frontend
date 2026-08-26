@@ -417,20 +417,22 @@ const VAGUE_NOTE =
 // combinations that find a workable floor instead of falling through to the pool.
 // 1, not 0: toRpcFilters drops scoreMin on a falsy check, so 0 would mean no floor at all.
 // property_goal_pct holds the percentiles precomputed, so this is one ordered read.
+// Null when nothing matched - or when the read failed - so the caller can fall through the rest.
 async function goalDirectHits(facets: Facets): Promise<Ranked | null> {
-  const items = (await getGoalTop(facets.goal!, proximityFilters(facets), RESULT_LIMIT)).filter(
-    isListable,
+  const found = await getGoalTop(facets.goal!, proximityFilters(facets), RESULT_LIMIT).catch(
+    () => [],
   );
+  const items = found.filter(isListable);
   if (!items.length) return null;
   return rank(items, (_p, i) => 1 - i / items.length);
 }
 
-// Null when nothing matched, so the caller can still widen through FTS.
+// Null when nothing matched - or when the read failed - so the caller can still widen through FTS.
 async function structuralHits(facets: Facets): Promise<Ranked | null> {
   const found = await getStructuralList(
     { ...proximityFilters(facets), minParking: facets.parkingMin ?? undefined },
     RESULT_LIMIT,
-  );
+  ).catch(() => []);
   if (!found.length) return null;
   return rank(found, (_p, i) => 1 - i / found.length);
 }

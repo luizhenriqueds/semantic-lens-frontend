@@ -73,3 +73,9 @@ export type ScoreExplain = {
   summary: string | null;
   terms: ScoreTerm[];
 };
+
+/** Base-table values the 6h-cached page corrects itself with. `null` means unknown, not inactive. */
+export type Freshness = {
+  lastSeen: string | null;
+  isActive: boolean | null;
+};

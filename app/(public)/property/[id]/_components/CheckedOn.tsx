@@ -1,7 +1,7 @@
 "use client";
 
 import { fmtDay } from "@/lib/format";
-import { useLastSeen } from "./useLastSeen";
+import { useLastSeen } from "./useFreshness";
 
 type Props = { id: string; initial: string | null; variant: "meta" | "inline" };
 

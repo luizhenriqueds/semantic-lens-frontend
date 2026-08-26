@@ -1,5 +1,11 @@
 import "@/app/(marketing)/landing.css";
+import OutageBanner from "@/components/layout/OutageBanner";
 
 export default function MarketingLayout({ children }: { children: React.ReactNode }) {
-  return <div className="lp-landing">{children}</div>;
+  return (
+    <>
+      <OutageBanner />
+      <div className="lp-landing">{children}</div>
+    </>
+  );
 }

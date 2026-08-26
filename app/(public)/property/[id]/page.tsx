@@ -6,6 +6,7 @@ import PropertyPhoto from "@/components/property/PropertyPhoto";
 import BackButton from "./_components/BackButton";
 import AvailabilityNote from "./_components/AvailabilityNote";
 import CheckedOn from "./_components/CheckedOn";
+import InactiveNote from "./_components/InactiveNote";
 import SaveButton from "./_components/SaveButton";
 import ScoreBars from "./_components/ScoreBars";
 import VisualScore from "./_components/VisualScore";
@@ -109,6 +110,8 @@ export default async function PropertyPage({ params }: { params: Promise<{ id: s
 
   const data = fmtDate(p.auctionDate);
   const discPct = showDiscount(p) ? p.discountPercentile : null;
+  // A property awaiting its first scoring batch still renders; the ranking blocks just stay out.
+  const scored = Object.values(p.scores).some((v) => v != null);
 
   return (
     <section className="view">
@@ -193,41 +196,45 @@ export default async function PropertyPage({ params }: { params: Promise<{ id: s
 
           <PropertyRanks p={p} />
 
-          <div className="infoblock">
-            <h3 className="h3-hint">
-              Nota por objetivo de investimento
-              <Hint title="Como ler as notas" align="left">
-                {SCORE_GENERAL_EXPLAIN}
-              </Hint>
-            </h3>
-            {p.scores.investment != null && (
-              <div className="investhead">
-                <Ring value={p.scores.investment} size={66} />
-                <div className="ih-body">
-                  <div className="ih-k-row">
-                    <div className="ih-k">Nota geral de investimento</div>
-                    <Suspense fallback={<InlineSkeleton width={86} height={20} />}>
-                      <ScoreWeightsSlot id={p.id} />
-                    </Suspense>
-                  </div>
-                  <div className="ih-s">
-                    Índice ponderado que combina as notas por objetivo, o desconto e o mercado do
-                    bairro em uma única nota de 0 a 100.
+          {scored && (
+            <div className="infoblock">
+              <h3 className="h3-hint">
+                Nota por objetivo de investimento
+                <Hint title="Como ler as notas" align="left">
+                  {SCORE_GENERAL_EXPLAIN}
+                </Hint>
+              </h3>
+              {p.scores.investment != null && (
+                <div className="investhead">
+                  <Ring value={p.scores.investment} size={66} />
+                  <div className="ih-body">
+                    <div className="ih-k-row">
+                      <div className="ih-k">Nota geral de investimento</div>
+                      <Suspense fallback={<InlineSkeleton width={86} height={20} />}>
+                        <ScoreWeightsSlot id={p.id} />
+                      </Suspense>
+                    </div>
+                    <div className="ih-s">
+                      Índice ponderado que combina as notas por objetivo, o desconto e o mercado do
+                      bairro em uma única nota de 0 a 100.
+                    </div>
                   </div>
                 </div>
-              </div>
-            )}
-            <ScoreBars scores={p.scores} />
-            {p.profile && (
-              <div className="explain">
-                <b>{PROFILE_LABEL[p.profile]}:</b> {SCORE_EXPLAIN[SCORE_FIELD[p.profile]]} As notas
-                vão de 0 a 100 e comparam este imóvel com os outros da mesma cidade.
-              </div>
-            )}
-            <Suspense fallback={<div className="skel" style={{ height: 120, borderRadius: 12 }} />}>
-              <ScoreBreakdownSlot p={p} />
-            </Suspense>
-          </div>
+              )}
+              <ScoreBars scores={p.scores} />
+              {p.profile && (
+                <div className="explain">
+                  <b>{PROFILE_LABEL[p.profile]}:</b> {SCORE_EXPLAIN[SCORE_FIELD[p.profile]]} As
+                  notas vão de 0 a 100 e comparam este imóvel com os outros da mesma cidade.
+                </div>
+              )}
+              <Suspense
+                fallback={<div className="skel" style={{ height: 120, borderRadius: 12 }} />}
+              >
+                <ScoreBreakdownSlot p={p} />
+              </Suspense>
+            </div>
+          )}
 
           <Suspense fallback={<BlockSkeleton height={320} />}>
             <RegionSlot p={p} heading={heading} />
@@ -236,11 +243,7 @@ export default async function PropertyPage({ params }: { params: Promise<{ id: s
 
         <div>
           <div className="infoblock pricecard">
-            {p.inactive && (
-              <div className="inactive-note">
-                Anúncio inativo - este imóvel não aparece mais na oferta atual da Caixa.
-              </div>
-            )}
+            <InactiveNote id={p.id} initial={p.inactive} />
             <div className="now">{money(p.saleValue)}</div>
             {p.appraisedValue != null && (
               <div className="was">Valor de avaliação: {money(p.appraisedValue)}</div>

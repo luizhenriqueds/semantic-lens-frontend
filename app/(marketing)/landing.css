@@ -114,7 +114,7 @@
      ============================================================ */
 .lp-nav {
   position: sticky;
-  top: 0;
+  top: var(--banner-h);
   z-index: 60;
   background: color-mix(in srgb, var(--bg) 82%, transparent);
   backdrop-filter: blur(14px);

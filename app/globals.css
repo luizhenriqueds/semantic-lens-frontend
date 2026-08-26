@@ -1,5 +1,14 @@
 @import "tailwindcss";
 
+/* Theme-independent. OutageBanner sets data-banner while mounted; every fixed/sticky top offset
+   reads the variable, so the height lives here rather than in the component. */
+:root {
+  --banner-h: 0px;
+}
+:root[data-banner="on"] {
+  --banner-h: 44px;
+}
+
 /* tema claro — "Pedra" */
 :root,
 [data-theme="light"] {
@@ -74,10 +83,50 @@ button {
 }
 
 /* ---------- shell ---------- */
+/* Above the topbar (15) and the mobile drawer (70), below modals (100). Fixed rather than in flow:
+   the sidebar is out of flow too, so a banner in flow would slide underneath it. */
+.outage-banner {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 80;
+  height: var(--banner-h);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 0 16px;
+  font-size: 13.5px;
+  color: var(--ink);
+  background: color-mix(in srgb, var(--warn) 14%, var(--surface));
+  border-bottom: 1px solid color-mix(in srgb, var(--warn) 45%, transparent);
+}
+.outage-banner button {
+  display: flex;
+  border: 0;
+  padding: 4px;
+  border-radius: 6px;
+  background: none;
+  color: var(--ink-soft);
+  cursor: pointer;
+}
+.outage-banner button:hover {
+  background: color-mix(in srgb, var(--warn) 18%, transparent);
+}
+@media (max-width: 640px) {
+  .outage-banner {
+    font-size: 12.5px;
+    text-align: left;
+    justify-content: space-between;
+  }
+}
+
 /* Padding, not a grid column: the rail below is out of flow, so a track would go to `.main`. */
 .app {
   min-height: 100vh;
   padding-left: 248px;
+  padding-top: var(--banner-h);
 }
 .sidebar {
   background: var(--surface);
@@ -87,11 +136,11 @@ button {
   padding: 20px 16px;
   /* Fixed, not sticky: Safari drops the sticky rail mid-scroll and it rides off the top. */
   position: fixed;
-  top: 0;
+  top: var(--banner-h);
   left: 0;
   width: 248px;
   height: 100vh;
-  height: 100dvh;
+  height: calc(100dvh - var(--banner-h));
   overflow-y: auto;
   overscroll-behavior: contain;
 }
@@ -209,7 +258,7 @@ button {
 }
 .topbar {
   position: sticky;
-  top: 0;
+  top: var(--banner-h);
   z-index: 15;
   background: var(--bg);
   display: flex;
@@ -1342,14 +1391,33 @@ button {
   .filterbar {
     flex-wrap: wrap;
   }
+  /* One control per row at one width: mixing content-sized triggers with full-width selects reads
+     as a broken grid on a narrow screen. */
   .filterbar > .searchmini,
   .filterbar > .ssel,
-  .filterbar > select.selectish {
-    flex-basis: 100%;
+  .filterbar > select.selectish,
+  .filterbar > button.selectish,
+  .filterbar > .modalityfilter {
+    flex: 1 1 100%;
     max-width: none;
   }
-  .filterbar > button.selectish {
-    flex: 1 1 auto;
+  .filterbar > .modalityfilter .mf-toggle {
+    width: 100%;
+  }
+  /* The other rows park their caret on the right edge; this one has to be pushed there. */
+  .filterbar > .modalityfilter .mf-car {
+    margin-left: auto;
+  }
+  /* 16px is load-bearing on a phone: a native select draws its option list at the control's own
+     size, and anything smaller also makes iOS zoom the page on focus. Applied to the whole bar so
+     the one native select does not end up larger than the buttons beside it. */
+  .filterbar > .searchmini input,
+  .filterbar > .ssel .selectish,
+  .filterbar > select.selectish,
+  .filterbar > select.selectish option,
+  .filterbar > button.selectish,
+  .filterbar > .modalityfilter .mf-toggle {
+    font-size: 16px;
   }
   .viewbar > .selectish {
     flex: 1 1 auto;
@@ -1748,10 +1816,54 @@ select.selectish {
 .alertrow .info b {
   font-size: 16px;
 }
+/* A flex line, not inline flow: this row can carry the count chip, whose box is taller than the
+   text beside it, and `vertical-align` centres an inline-flex box on font metrics rather than on
+   the text it sits next to. Roomier margin for the same reason - the chip would crowd the
+   criteria chips above it. */
 .alertrow .info p {
-  margin: 2px 0 0;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  column-gap: 5px;
+  margin: 7px 0 0;
   font-size: 13.5px;
   color: var(--ink-soft);
+}
+/* A quiet chip, not a link: the count is opt-in, so the row offers it without competing with
+   the alert name. */
+.countbtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  border: 1px solid var(--line);
+  border-radius: 100px;
+  padding: 2px 10px;
+  background: var(--surface-2);
+  font: inherit;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--ink-soft);
+  cursor: pointer;
+  transition:
+    color 0.15s,
+    border-color 0.15s,
+    background 0.15s;
+}
+.countbtn svg {
+  color: var(--ink-faint);
+  transition: color 0.15s;
+}
+.countbtn:hover {
+  color: var(--primary);
+  border-color: var(--primary-soft);
+  background: var(--primary-wash);
+}
+.countbtn:hover svg {
+  color: var(--primary);
+}
+.amuted {
+  color: var(--ink-faint);
+  font-style: italic;
 }
 .achips {
   display: flex;
@@ -3601,6 +3713,9 @@ select.selectish {
     order: -1;
     flex: 1 1 100%;
     margin-left: 0;
+    /* The row is full width, so the button has to be justified rather than nudged: left-aligned it
+       reads as a stray control between the count above it and the sort below. */
+    justify-content: flex-end;
   }
   .viewbar > .selectish {
     margin-left: auto;
@@ -4998,6 +5113,9 @@ select.selectish {
   font-size: 14.5px;
   line-height: 1.6;
   max-width: 48ch;
+  /* Centred copy at a fixed measure strands a one-word last line; `pretty` spends the earlier
+     lines to avoid it. */
+  text-wrap: pretty;
 }
 .emptystate .eaction {
   margin-top: 18px;
