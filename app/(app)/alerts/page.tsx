@@ -4,8 +4,8 @@ import { listAlerts } from "@/lib/data/alerts";
 import { getUser } from "@/lib/supabase/server";
 
 export default async function AlertsPage() {
-  // Read here rather than leaving it to the client store: this render already has the cookies, so
-  // the list paints with the page instead of after a round trip that may resolve before the session.
+  // Read here, not in the client store: this render has the cookies, so the list paints with the
+  // page instead of after a round trip that may resolve before the session does.
   const { supabase, user } = await getUser();
   const [options, clusters, alerts] = await Promise.all([
     getFilterOptions(),

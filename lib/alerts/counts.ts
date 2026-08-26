@@ -31,8 +31,8 @@ const listeners = new Set<() => void>();
 
 const emit = () => listeners.forEach((l) => l());
 
-// Keyed by what is counted, not by which alert asked: the form's preview and the saved row key
-// alike, so a count paid for once is reused - across alerts, and across navigations.
+// Keyed by what is counted, not by which alert asked, so the form's preview and the row saved from
+// it hit the same entry.
 const keyFor = (criteria: AlertCriteria | undefined, name: string): string =>
   criteria ? `c:${criteriaKey(criteria)}` : `d:${name.trim()}`;
 
@@ -102,10 +102,7 @@ async function fetchCount(a: Alert): Promise<{ value: number; capped: boolean }>
   return { value: count, capped };
 }
 
-/**
- * Counts are expensive - a description alert runs a full hybrid search and spends the user's
- * search quota - so they are fetched only on request, never on render.
- */
+/** On request only: a description alert runs a full hybrid search and spends the user's quota. */
 export function requestCount(a: Alert): void {
   // A paused alert is not matching anything; counting it costs a query to say nothing.
   if (!a.on) return;
@@ -132,10 +129,7 @@ export function requestCount(a: Alert): void {
     .finally(() => clearTimeout(budget));
 }
 
-/**
- * The form's preview already paid for this count. Seeding it here means the alert saved from that
- * preview - and any other alert with the same filters - reads it instead of counting again.
- */
+/** The form's preview already paid for this count; the row saved from it must not ask again. */
 export function seedCriteriaCount(criteria: AlertCriteria, value: number): void {
   ready(keyFor(criteria, ""), value, false);
 }

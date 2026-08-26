@@ -83,11 +83,8 @@ export const sameCriteria = (
   b: AlertCriteria | null | undefined,
 ): boolean => stable(a) === stable(b);
 
-/**
- * Cache identity for a criteria set. Sanitised as well as sorted, so a draft built in the form and
- * the same criteria read back through jsonb hash alike - they differ in key order and in the empty
- * values the form leaves behind.
- */
+/** Cache identity for a criteria set. Sanitised as well as sorted, so a draft built in the form
+ *  and the same criteria read back through jsonb key alike. */
 export const criteriaKey = (c: AlertCriteria | null | undefined): string =>
   stable(sanitizeCriteria(c));
 

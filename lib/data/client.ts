@@ -91,13 +91,11 @@ export function rows<T>(name: string, res: QueryResult<T>): T[] {
   return res.data ?? [];
 }
 
-// The `rpcJson({ required: true })` rule for plain table reads: when the caller cannot tell an empty
-// result from a failed one, `rows` hands it `[]` and `cached` memoises that emptiness for the whole
-// window - one timeout blanks the page long after the database recovered.
+// The `rpcJson({ required: true })` rule for plain table reads: `rows` hands a failure back as `[]`
+// and `cached` memoises that emptiness, blanking the page long after the database recovered.
 export function requiredRows<T>(name: string, res: QueryResult<T>): T[] {
   if (res.error) {
-    // Logged as well as thrown, like `rpcJson`: callers that degrade gracefully catch the throw,
-    // and without this the read they swallowed would leave no trace at all.
+    // Logged as well as thrown: callers that degrade gracefully swallow the throw.
     console.error(`[data] query "${name}" failed: ${res.error.message}`);
     throw new Error(`query "${name}" failed: ${res.error.message}`);
   }

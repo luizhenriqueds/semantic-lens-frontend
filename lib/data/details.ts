@@ -79,9 +79,8 @@ export const getPropertyDetailText = cached(
   DETAIL_REVALIDATE,
 );
 
-// The base table on a short TTL: crawl-followups moves both columns hourly, and property_list_mv
-// lags them again, so the copy baked into the 6h-cached page runs a day behind. `is_active` rides
-// along because a relisted property must drop its "inactive" banner without waiting for the MV.
+// The base table on a short TTL: crawl-followups moves both columns hourly and property_list_mv
+// lags them again, so the copy baked into the 6h-cached page runs a day behind.
 async function loadFreshness(id: string): Promise<Freshness> {
   const res = await withRetry(() =>
     supabase.from("properties").select("last_seen,is_active").eq("property_id", id).limit(1),

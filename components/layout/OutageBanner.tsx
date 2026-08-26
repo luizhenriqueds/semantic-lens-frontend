@@ -7,9 +7,8 @@ const ENABLED = process.env.NEXT_PUBLIC_OUTAGE_BANNER === "true";
 const KEY = "outage-dismissed";
 
 /**
- * Mount-gated rather than rendered on the server: the sidebar is `position: fixed`, so the banner
- * pays for itself with a `--banner-h` offset that must not be baked into cached HTML. The height
- * itself stays in CSS behind `data-banner`, the same way ThemeInit flips `data-theme`.
+ * Mount-gated: the sidebar is `position: fixed`, so the banner pays for itself with a `--banner-h`
+ * offset that must not be baked into cached HTML. The height stays in CSS behind `data-banner`.
  */
 export default function OutageBanner() {
   const [show, setShow] = useState(false);

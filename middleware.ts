@@ -25,8 +25,7 @@ export const PUBLIC = [
   "/search",
   "/properties",
   "/property",
-  // Serves the public property page's own sections; it gates the paid ones on entitlements itself,
-  // and anonymous resolves to the "anon" plan rather than to no answer.
+  // Serves the public property page's sections; it gates the paid ones on entitlements itself.
   "/api/property",
   "/alerts",
   "/portfolio",

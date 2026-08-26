@@ -1,7 +1,7 @@
 @import "tailwindcss";
 
 /* Theme-independent. OutageBanner sets data-banner while mounted; every fixed/sticky top offset
-   reads the variable, so the height lives here rather than in the component. */
+   reads the variable. */
 :root {
   --banner-h: 0px;
 }
@@ -1409,8 +1409,8 @@ button {
     margin-left: auto;
   }
   /* 16px is load-bearing on a phone: a native select draws its option list at the control's own
-     size, and anything smaller also makes iOS zoom the page on focus. Applied to the whole bar so
-     the one native select does not end up larger than the buttons beside it. */
+     size, and anything smaller makes iOS zoom on focus. Whole bar, so the select matches its
+     neighbours. */
   .filterbar > .searchmini input,
   .filterbar > .ssel .selectish,
   .filterbar > select.selectish,
@@ -1816,10 +1816,8 @@ select.selectish {
 .alertrow .info b {
   font-size: 16px;
 }
-/* A flex line, not inline flow: this row can carry the count chip, whose box is taller than the
-   text beside it, and `vertical-align` centres an inline-flex box on font metrics rather than on
-   the text it sits next to. Roomier margin for the same reason - the chip would crowd the
-   criteria chips above it. */
+/* A flex line, not inline flow: this row carries the count chip, and `vertical-align` centres an
+   inline-flex box on font metrics rather than on the text beside it. */
 .alertrow .info p {
   display: flex;
   align-items: center;
@@ -3713,8 +3711,7 @@ select.selectish {
     order: -1;
     flex: 1 1 100%;
     margin-left: 0;
-    /* The row is full width, so the button has to be justified rather than nudged: left-aligned it
-       reads as a stray control between the count above it and the sort below. */
+    /* The row is already full width, so the button is justified rather than nudged. */
     justify-content: flex-end;
   }
   .viewbar > .selectish {

@@ -259,13 +259,12 @@ async function loadPropertiesByIds(idsJson: string): Promise<Property[]> {
 const cachedByIds = cached(loadPropertiesByIds, "properties-by-ids", SEARCH_REVALIDATE);
 
 // Corpus top-N by a goal's precomputed percentile, already ranked and filtered. `required` so a
-// timeout is not memoised as an empty rail for the whole window; the caller falls through instead.
+// timeout is not memoised as an empty rail; no retry, because the caller falls through anyway and
+// a second attempt only doubles the load that timed out.
 async function loadGoalTop(goal: string, filtersJson: string, limit: number): Promise<Property[]> {
   const data = await rpcJson(
     "goal_top",
     { p_goal: goal, p_filters: JSON.parse(filtersJson), p_limit: limit },
-    // No retry: `required` would imply one, and this is a corpus-wide top-N whose caller falls
-    // through to the other branches anyway - a second attempt only doubles the load that timed out.
     { required: true, timeoutRetries: 0 },
   );
   return ((data ?? []) as any[]).filter(isListableRow).map(mapListRow);

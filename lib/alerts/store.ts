@@ -23,13 +23,17 @@ const store = createClientStore<Alert[]>([], () => api.listAlerts());
 
 /** `initial` comes from a server component that already read the list under the request's cookies. */
 export function useAlerts(initial?: Alert[]) {
-  const alerts = store.useValue();
+  const stored = store.useValue();
 
   useEffect(() => {
     // `listAlerts` returns [] for a failed read as well as an empty one, so an empty seed must
     // never overwrite a list the client already loaded.
     if (initial && (initial.length || !store.get().length)) store.seed(initial);
   }, [initial]);
+
+  // Rendering the store before its seed lands would paint "no alerts" for a frame. Once seeded it
+  // is authoritative, so a delete cannot resurrect a stale prop.
+  const alerts = store.seeded() ? stored : (initial ?? stored);
 
   const add = useCallback(
     async (name: string, freq: string, criteria?: AlertCriteria): Promise<AlertCreateResult> => {

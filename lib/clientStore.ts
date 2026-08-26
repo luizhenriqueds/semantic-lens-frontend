@@ -59,8 +59,8 @@ export function createClientStore<T>(fallback: T, load: () => Promise<T>) {
     read();
   };
 
-  // Server-rendered data for this navigation. It is the newer read, so it also replaces a
-  // hydration that happened on an earlier page before the session had resolved.
+  // Server-rendered data for this navigation - the newer read, so it also replaces a hydration
+  // that happened before the session had resolved.
   let seeded: T | null = null;
   const seed = (next: T) => {
     if (seeded === next) return;
@@ -97,5 +97,6 @@ export function createClientStore<T>(fallback: T, load: () => Promise<T>) {
     else started = false;
   });
 
-  return { get: () => value, set, seed, useValue };
+  // `seed` only runs in an effect, so `seeded` is false on the server and on the hydrating render.
+  return { get: () => value, set, seed, seeded: () => seeded !== null, useValue };
 }

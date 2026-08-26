@@ -682,8 +682,7 @@ function AlertCount({ alert }: { alert: Alert }) {
     }
   };
 
-  // Own element rather than a text node: the row is a flex line, which would strip the spaces
-  // around a bare separator and leave it touching the chip.
+  // Own element: the row is a flex line, which strips the spaces around a bare text separator.
   return (
     <>
       <span aria-hidden="true">·</span>
