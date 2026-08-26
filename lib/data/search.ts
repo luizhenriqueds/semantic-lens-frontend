@@ -3,6 +3,7 @@ import { EMBEDDING_MODEL, embedQuery, rerank } from "@/lib/embed";
 import {
   canonicalQuery,
   escapeLike,
+  FACET_LABEL,
   isPoiCategoryOnly,
   isPureGoal,
   isStructural,
@@ -19,7 +20,6 @@ import { poiPlaceLabel } from "@/lib/pois";
 import type { Poi, Property } from "@/lib/types";
 import { cached, rows, SEARCH_REVALIDATE, ttlCached, withRetry } from "./client";
 import {
-  countProperties,
   getFilterOptionsRaw,
   getGoalTop,
   getPropertiesByIds,
@@ -54,11 +54,19 @@ const rank = (items: Property[], score: (p: Property, i: number) => number): Ran
 // unstable_cache. Without this, "five full scans of the MV" reran on every search.
 const getCities = ttlCached(async () => {
   const { cities } = await getFilterOptionsRaw();
-  return [...new Set(cities.map((c) => c.city).filter(Boolean))];
+  const names = [...new Set(cities.map((c) => c.city).filter(Boolean))];
+  // The catalogue already carries the uf, so parseFacets can read "corumba ms" as one place.
+  const uf = new Map(cities.filter((c) => c.city && c.uf).map((c) => [normalize(c.city), c.uf]));
+  return { names, uf };
 }, 3600 * 1000);
 
+const parse = async (query: string): Promise<Facets> => {
+  const { names, uf } = await getCities();
+  return parseFacets(query, names, uf);
+};
+
 export async function parseQuery(query: string): Promise<Facets> {
-  return parseFacets(canonicalQuery(query), await getCities());
+  return parse(canonicalQuery(query));
 }
 
 const SEARCH_INSTRUCTION =
@@ -168,40 +176,28 @@ const POI_FANOUT = 40;
 export async function searchPoisByName(q: PoiQuery, city: string | null): Promise<Poi[]> {
   const name = normalize(q.name);
 
-  // Relax the guessed category first, then the city, keeping the strongest
-  // disambiguating signal (the city) longest.
-  const attempts: [string | null, string | null][] = [];
-  for (const [cat, c] of [
-    [q.category, city],
-    [null, city],
-    [q.category, null],
-    [null, null],
-  ] as const) {
-    if (!attempts.some(([a, b]) => a === cat && b === c)) attempts.push([cat, c]);
-  }
-
-  // Only the first non-empty attempt is used, so relaxing costs one round trip.
-  const results = await Promise.all(
-    attempts.map(([cat, c]) =>
-      withRetry(() =>
-        supabase.rpc("resolve_pois", {
-          p_name: name,
-          p_category: cat ?? undefined,
-          p_city: c ?? undefined,
-          p_limit: POI_LIMIT,
-        }),
-      ),
-    ),
-  );
-
+  // The category is a pure conjunct in resolve_pois, so the uncategorised result is a superset of
+  // the categorised one - derive it here rather than buy a second round trip. Only relaxing the
+  // city costs one, and only when the city-scoped lookup came back empty.
   let rpcErrored = false;
-  for (const res of results) {
+  const attempt = async (c: string | null): Promise<Poi[] | null> => {
+    const res = await withRetry(() =>
+      supabase.rpc("resolve_pois", { p_name: name, p_city: c ?? undefined, p_limit: POI_LIMIT }),
+    );
     if (res.error) {
       rpcErrored = true;
-      break;
+      return null;
     }
     const pois = rows<any>("resolve_pois", res).map(mapPoi);
-    if (pois.length) return pois;
+    if (!pois.length) return null;
+    const byCat = q.category ? pois.filter((p) => p.category === q.category) : [];
+    return byCat.length ? byCat : pois;
+  };
+
+  for (const c of city ? [city, null] : [null]) {
+    const pois = await attempt(c);
+    if (pois) return pois;
+    if (rpcErrored) break;
   }
   // Genuine miss (no error) → let the caller fall back to category/semantic.
   if (!rpcErrored) return [];
@@ -222,10 +218,10 @@ export async function searchPoisByName(q: PoiQuery, city: string | null): Promis
   return pois;
 }
 
-// How wide the proximity page is sampled; the hits themselves are capped at RESULT_LIMIT.
+// The centre page is capped at CATEGORY_LIMIT and ordered by discount, so a wide radius makes it a
+// sample of the whole city. Tighten until the eligible set fits.
 const CATEGORY_LIMIT = 200;
 const CENTER_LADDER = [1000, 2000, 5000, 15000];
-const POI_LADDER = [500, 1000, 2000, POI_NEAR_M];
 
 function proximityFilters(facets: Facets) {
   return {
@@ -236,28 +232,24 @@ function proximityFilters(facets: Facets) {
   };
 }
 
-// The page is capped at CATEGORY_LIMIT and ordered by discount, so a wide radius
-// makes it a sample of the whole city. Tighten until the eligible set fits.
-async function tightestRadius(
-  ladder: number[],
-  filters: (r: number) => Parameters<typeof countProperties>[0],
-): Promise<number> {
-  const probes = ladder.slice(0, -1);
-  const counts = await Promise.all(probes.map((r) => countProperties(filters(r))));
-  const i = counts.findIndex((c) => c >= CATEGORY_LIMIT);
-  return i === -1 ? ladder[ladder.length - 1] : probes[i];
-}
-
 // Closest to the centre wins, but not at any price: the very closest listings are
 // materially worse deals, so distance and discount weigh the same.
 async function centerProximityHits(facets: Facets): Promise<Ranked> {
   const base = proximityFilters(facets);
-  const radius = await tightestRadius(CENTER_LADDER, (maxCenterM) => ({ ...base, maxCenterM }));
-  const { items } = await getPropertiesPage({
-    filters: { ...base, maxCenterM: radius },
-    sort: "desconto",
-    pageSize: CATEGORY_LIMIT,
-  });
+  // Walked with the page itself: `total` is the same count(*) separate probes were buying, so the
+  // dense case picks the same rung in one read instead of four.
+  let radius = CENTER_LADDER[CENTER_LADDER.length - 1];
+  let items: Property[] = [];
+  for (const r of CENTER_LADDER) {
+    const page = await getPropertiesPage({
+      filters: { ...base, maxCenterM: r },
+      sort: "desconto",
+      pageSize: CATEGORY_LIMIT,
+    });
+    radius = r;
+    items = page.items;
+    if (page.total >= CATEGORY_LIMIT) break;
+  }
   const score = (p: Property) =>
     0.5 * (1 - Math.min(1, p.centerProximity! / radius)) +
     0.5 * Math.min(1, (p.discount ?? 0) / 90);
@@ -268,34 +260,30 @@ async function centerProximityHits(facets: Facets): Promise<Ranked> {
   return rank(ranked, score);
 }
 
-// 83-92% of the corpus is within 5 km of a school/hospital/supermarket, so the
-// category filter alone is nearly a no-op: distance has to drive the ranking.
+// 83-92% of the corpus is within 5 km of a school/hospital/supermarket, so the category filter
+// alone is nearly a no-op: distance has to drive the ranking. `proximidade` does that server-side,
+// which leaves one page as the whole answer. `poiRadiusM` is explicit - toRpcFilters would
+// otherwise default it to a tighter 2 km.
 async function categoryProximityHits(facets: Facets): Promise<Ranked> {
   const cat = facets.poi!.category!;
-  const base = proximityFilters(facets);
-  const radius = await tightestRadius(POI_LADDER, (poiRadiusM) => ({
-    ...base,
-    poiCats: [cat],
-    poiRadiusM,
-  }));
   const { items } = await getPropertiesPage({
-    filters: { ...base, poiCats: [cat], poiRadiusM: radius },
-    sort: "desconto",
-    pageSize: CATEGORY_LIMIT,
+    filters: { ...proximityFilters(facets), poiCats: [cat], poiRadiusM: POI_NEAR_M },
+    sort: "proximidade",
+    pageSize: RESULT_LIMIT,
   });
-  // Copy: `items` may be a cached array.
-  const ranked = [...items]
-    .sort((a, b) => (a.nearestPoi[cat] ?? Infinity) - (b.nearestPoi[cat] ?? Infinity))
-    .slice(0, RESULT_LIMIT);
-  return rank(ranked, (_p, i) => 1 - i / Math.max(1, ranked.length));
+  return rank(items, (_p, i) => 1 - i / Math.max(1, items.length));
 }
 
 // property_id → distance to the nearest of the given POIs, within POI_NEAR_M,
 // via the spatial properties_near_pois RPC.
 async function nearestByPoi(poiIds: number[]): Promise<Map<string, number>> {
   if (!poiIds.length) return new Map();
+  // The RPC has no limit of its own, and the caller discards everything past NEAR_SCAN anyway.
   const res = await withRetry(() =>
-    supabase.rpc("properties_near_pois", { p_poi_ids: poiIds, p_radius_m: POI_NEAR_M }),
+    supabase
+      .rpc("properties_near_pois", { p_poi_ids: poiIds, p_radius_m: POI_NEAR_M })
+      .order("dist_m", { ascending: true })
+      .limit(NEAR_SCAN),
   );
   const near = new Map<string, number>();
   for (const r of rows<any>("properties_near_pois", res)) {
@@ -400,20 +388,26 @@ function noIntent(f: Facets): boolean {
   );
 }
 
+/** "a, b e c" - a note should read as a sentence, not as a list of keys. */
+function listPt(parts: string[]): string {
+  if (parts.length < 2) return parts[0] ?? "";
+  return `${parts.slice(0, -1).join(", ")} e ${parts[parts.length - 1]}`;
+}
+
 // Names the constraints the widening step actually dropped, so the note can't
 // blame the city when it was the price cap that gave way.
 function relaxedNote(f: Facets, keptType: boolean): string {
   const dropped = [
-    f.city && "cidade",
-    f.priceMax != null && "preço máximo",
-    f.bedroomsMin != null && "número de quartos",
-    f.parkingMin != null && "vagas de garagem",
-    f.bathroomsMin != null && "número de banheiros",
-    !keptType && f.type && "tipo de imóvel",
-  ].filter(Boolean);
+    f.city && FACET_LABEL.city,
+    f.priceMax != null && FACET_LABEL.priceMax,
+    f.bedroomsMin != null && FACET_LABEL.bedroomsMin,
+    f.parkingMin != null && FACET_LABEL.parkingMin,
+    f.bathroomsMin != null && FACET_LABEL.bathroomsMin,
+    !keptType && f.type && FACET_LABEL.type,
+  ].filter((s): s is string => Boolean(s));
 
   if (!dropped.length) return "Poucos imóveis para esta busca. Incluímos resultados aproximados.";
-  return `Poucos imóveis atendem a tudo que você pediu. Incluímos resultados fora de: ${dropped.join(", ")}.`;
+  return `Poucos imóveis atendem a tudo que você pediu. Incluímos resultados fora de: ${listPt(dropped)}.`;
 }
 
 const VAGUE_NOTE =
@@ -540,7 +534,9 @@ async function buildPool(embedding: number[] | null, facets: Facets): Promise<Bu
   let keptType = true;
 
   if (byType && pool.length < MIN_POOL) add(byType);
-  if (pool.length < MIN_POOL && (facets.type || hasExtra)) {
+  // Not for a POI query: that caller reads only `pool` and writes its own note, so the corpus-wide
+  // rung buys nothing but noisier reranker input.
+  if (pool.length < MIN_POOL && !facets.poi && (facets.type || hasExtra)) {
     const before = pool.length;
     add(await probe(poolText, NO_FILTERS));
     keptType = pool.length === before;
@@ -600,7 +596,7 @@ async function ftsSearch(facets: Facets): Promise<SearchResult> {
 }
 
 const SIMPLIFIED_NOTE = (dropped: string[]) =>
-  `Sua busca tinha critérios demais. Buscamos sem: ${dropped.join(", ")}.`;
+  `Mostramos resultados sem ${listPt(dropped)} que você pediu.`;
 
 // Nothing an embedding or a pool could match, so neither is worth buying.
 const searchable = (f: Facets): boolean =>
@@ -608,7 +604,7 @@ const searchable = (f: Facets): boolean =>
   f.lexical.split(" ").some((t) => t.length >= 2);
 
 async function runHybridSearch(query: string): Promise<SearchResult> {
-  const { facets, dropped } = simplifyFacets(parseFacets(query, await getCities()));
+  const { facets, dropped } = simplifyFacets(await parse(query));
   if (!searchable(facets)) return EMPTY;
   const res = await runBranches(facets);
   if (!dropped.length) return res;

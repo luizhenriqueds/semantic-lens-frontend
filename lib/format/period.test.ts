@@ -4,10 +4,16 @@ import { periodLabel } from "./period";
 describe("periodLabel", () => {
   it("reports days below the 60-day boundary", () => {
     expect(periodLabel("2026-07-19", "2026-07-30")).toBe("11 dias");
-    expect(periodLabel("2026-06-01", "2026-07-15")).toBe("44 dias");
-    // 59 stays in days, 60 crosses into months.
-    expect(periodLabel("2026-01-01", "2026-03-01")).toBe("59 dias");
+    expect(periodLabel("2026-06-01", "2026-06-30")).toBe("29 dias");
+    // 59 stays in days (capped), 60 crosses into months.
+    expect(periodLabel("2026-01-01", "2026-03-01")).toBe("30 dias");
     expect(periodLabel("2026-01-01", "2026-03-02")).toBe("2 meses");
+  });
+
+  it("caps a day span at 30", () => {
+    expect(periodLabel("2026-06-01", "2026-07-01")).toBe("30 dias");
+    expect(periodLabel("2026-06-01", "2026-07-02")).toBe("30 dias");
+    expect(periodLabel("2026-06-01", "2026-07-15")).toBe("30 dias");
   });
 
   it("reports months up to two years, then years", () => {

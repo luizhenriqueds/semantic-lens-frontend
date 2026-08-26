@@ -144,9 +144,13 @@ async function rpcJson(
 
 type PropertyPage = { items: Property[]; total: number };
 
+/** Wider than `PropertySort`: the search branches pass these two straight to the RPC, and neither
+ *  has a URL param behind it. */
+type RpcSort = PropertySort | "centro" | "proximidade";
+
 async function loadPropertiesPage(
   filtersJson: string,
-  sort: PropertySort,
+  sort: RpcSort,
   page: number,
   pageSize: number,
 ): Promise<PropertyPage> {
@@ -171,7 +175,7 @@ const cachedPage = cached(loadPropertiesPage, "property-page");
 export function getPropertiesPage(
   args: {
     filters?: PropertyFilters;
-    sort?: PropertySort;
+    sort?: RpcSort;
     page?: number;
     pageSize?: number;
   } = {},
@@ -297,6 +301,14 @@ export async function getStructuralList(f: StructuralFilters, limit: number): Pr
   );
   return rows<any>("structural-list", res).map(mapListRow);
 }
+
+// The empty query on /search is a browse, not a search - nobody has asked for a ranking yet, so it
+// is not worth property_list_page's full count(*) and unindexed discount sort.
+export const getBrowseList = cached(
+  (limit: number) => getStructuralList({}, limit),
+  "browse-list",
+  SEARCH_REVALIDATE,
+);
 
 // `auction_within_days` on the list RPC is a window around today and its "leilao" sort
 // ascends, so a page of it is entirely past auctions - hence a direct read for the

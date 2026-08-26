@@ -1,7 +1,7 @@
 import Link from "next/link";
 import PagedCards from "./PagedCards";
 import EmptyState from "@/components/ui/EmptyState";
-import { getPropertiesByIds, getPropertiesPage, hybridSearch, isListable } from "@/lib/data";
+import { getBrowseList, getPropertiesByIds, hybridSearch, isListable } from "@/lib/data";
 import { spreadByLocality } from "@/lib/diversify";
 import { goalFromQuery } from "@/lib/facets";
 import { GOAL_PROFILE } from "@/lib/format";
@@ -41,8 +41,7 @@ export default async function SearchResults({
       items = spreadByLocality(items);
       if (result.fallback && items.length) fallbackNote = result.fallbackNote;
     } else {
-      const browse = await getPropertiesPage({ sort: "desconto", pageSize: BROWSE_LIMIT });
-      items = browse.items;
+      items = await getBrowseList(BROWSE_LIMIT);
     }
   } catch (err) {
     limited = isRateLimitError(err);

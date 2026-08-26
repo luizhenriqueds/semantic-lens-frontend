@@ -5,24 +5,40 @@ import { useEffect, useState } from "react";
 // Roughly tracks the real pipeline, so a slow search reads as progress rather than a stall.
 const STEPS = [
   { at: 0, text: "Entendendo o que você procura…" },
-  { at: 700, text: "Procurando imóveis parecidos…" },
-  { at: 1800, text: "Comparando milhares de anúncios…" },
-  { at: 3200, text: "Ordenando pelos mais relevantes…" },
-  { at: 6000, text: "Quase lá - esta busca está levando um pouco mais que o normal." },
+  { at: 900, text: "Procurando imóveis parecidos…" },
+  { at: 2200, text: "Comparando milhares de anúncios…" },
+  { at: 4000, text: "Ordenando pelos mais relevantes…" },
 ];
 
+// Past the last step there is nothing left to narrate, so the tail rotates: a frozen line reads as
+// a hang, and "quase lá" promised an imminence we cannot know.
+const TAIL = [
+  "Esta busca está levando mais que o normal…",
+  "Ainda buscando - buscas muito específicas demoram um pouco mais.",
+];
+const TAIL_AT = 7000;
+const TAIL_EVERY = 3500;
+
 export default function SearchProgress() {
-  const [step, setStep] = useState(0);
+  const [text, setText] = useState(STEPS[0].text);
 
   useEffect(() => {
-    const timers = STEPS.slice(1).map((s, i) => setTimeout(() => setStep(i + 1), s.at));
+    const timers = STEPS.slice(1).map((s) => setTimeout(() => setText(s.text), s.at));
+    timers.push(
+      setTimeout(() => {
+        let i = 0;
+        setText(TAIL[0]);
+        timers.push(setInterval(() => setText(TAIL[++i % TAIL.length]), TAIL_EVERY));
+      }, TAIL_AT),
+    );
+    // clearTimeout and clearInterval share one id map, so the interval clears here too.
     return () => timers.forEach(clearTimeout);
   }, []);
 
   return (
     <div className="searchloading">
       <span className="spinner" aria-hidden="true" />
-      <span aria-live="polite">{STEPS[step].text}</span>
+      <span aria-live="polite">{text}</span>
     </div>
   );
 }

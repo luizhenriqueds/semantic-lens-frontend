@@ -12,6 +12,9 @@ function dayNumber(iso: string): number | null {
 
 const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`;
 
+// A window in days is read as "recently", so the exact number is false precision past a month.
+const MAX_DAYS = 30;
+
 /** Span between two ISO dates, for "nos últimos {…}". Null when either is unparseable. */
 export function periodLabel(fromIso: string, toIso: string): string | null {
   const from = dayNumber(fromIso);
@@ -19,7 +22,7 @@ export function periodLabel(fromIso: string, toIso: string): string | null {
   if (from == null || to == null) return null;
 
   const days = Math.max(0, to - from);
-  if (days < 60) return plural(Math.max(1, days), "dia", "dias");
+  if (days < 60) return plural(Math.min(MAX_DAYS, Math.max(1, days)), "dia", "dias");
 
   const months = Math.floor(days / 30);
   if (months < 24) return plural(months, "mês", "meses");

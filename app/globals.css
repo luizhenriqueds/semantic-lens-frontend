@@ -74,10 +74,10 @@ button {
 }
 
 /* ---------- shell ---------- */
+/* Padding, not a grid column: the rail below is out of flow, so a track would go to `.main`. */
 .app {
-  display: grid;
-  grid-template-columns: 248px 1fr;
   min-height: 100vh;
+  padding-left: 248px;
 }
 .sidebar {
   background: var(--surface);
@@ -85,11 +85,11 @@ button {
   display: flex;
   flex-direction: column;
   padding: 20px 16px;
-  position: sticky;
+  /* Fixed, not sticky: Safari drops the sticky rail mid-scroll and it rides off the top. */
+  position: fixed;
   top: 0;
-  /* Stretched to the row's full height, Safari reads the sticky box as having nowhere to travel and
-     the rail scrolls off with the page on tablets. */
-  align-self: start;
+  left: 0;
+  width: 248px;
   height: 100vh;
   height: 100dvh;
   overflow-y: auto;
@@ -256,10 +256,13 @@ button {
   border-radius: 11px;
   padding: 0 14px;
   height: 46px;
-  width: 340px;
+  /* Shrinkable, so a narrow topbar takes the width from here before it takes it from the name. */
+  flex: 0 1 340px;
+  min-width: 0;
   max-width: 40vw;
 }
 .topsearch input {
+  min-width: 0;
   border: 0;
   background: none;
   flex: 1;
@@ -4567,10 +4570,11 @@ select.selectish {
    rail instead of hiding it — the nav stays one tap away and the content gets the width. */
 @media (min-width: 921px) and (max-width: 1180px) {
   .app {
-    grid-template-columns: 74px 1fr;
+    padding-left: 74px;
   }
   .sidebar {
     padding: 20px 12px;
+    width: 74px;
   }
   .brand {
     justify-content: center;
@@ -4591,7 +4595,7 @@ select.selectish {
 
 @media (max-width: 920px) {
   .app {
-    grid-template-columns: 1fr;
+    padding-left: 0;
   }
   .sidebar {
     display: none;
@@ -6859,11 +6863,13 @@ select.selectish {
 }
 .usermenu {
   position: relative;
+  min-width: 0;
 }
 .userbadge {
   display: flex;
   align-items: center;
   gap: 9px;
+  min-width: 0;
   height: 46px;
   padding: 0 11px 0 8px;
   background: var(--surface);
@@ -7327,6 +7333,13 @@ select.selectish {
 .usermenu-item:hover svg,
 .usermenu-signout:hover svg {
   color: var(--primary);
+}
+/* Here the badge competes with the search box and the breadcrumb; a tighter cap degrades to a
+   short name rather than two letters and an ellipsis. */
+@media (min-width: 641px) and (max-width: 1180px) {
+  .usermenu-email {
+    max-width: 96px;
+  }
 }
 @media (max-width: 640px) {
   .usermenu-email,

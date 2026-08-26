@@ -1,5 +1,6 @@
 export {
   isListable,
+  getBrowseList,
   getPropertiesPage,
   countProperties,
   countMatched,
