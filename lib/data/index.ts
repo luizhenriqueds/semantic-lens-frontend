@@ -36,6 +36,7 @@ export { getRegions, getRegion, getRegionLabel } from "./regions";
 export {
   getScoreExplain,
   getPriceHistory,
+  getChangeLog,
   getRecommendations,
   getPropertyDetailText,
   getFreshness,

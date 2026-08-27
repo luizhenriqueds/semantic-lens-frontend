@@ -1,7 +1,10 @@
 import { supabase } from "@/lib/supabase";
+import { PROPERTY_CHANGE_KINDS } from "@/lib/types";
 import type {
   Freshness,
   PriceHistoryPoint,
+  PropertyChange,
+  PropertyChangeKindLog,
   Recommendation,
   ScoreExplain,
   ScoreTerm,
@@ -136,6 +139,22 @@ async function loadPriceHistory(id: string): Promise<PriceHistoryPoint[]> {
 }
 
 export const getPriceHistory = cached(loadPriceHistory, "price-history", DETAIL_REVALIDATE);
+
+// `changed_on` is the crawl's observation date, not one of the re-dated price-history points.
+async function loadChangeLog(id: string): Promise<PropertyChange[]> {
+  const res = await withRetry(() =>
+    supabase
+      .from("property_change_log")
+      .select("change_kind,changed_on")
+      .eq("property_id", id)
+      .order("changed_on", { ascending: true }),
+  );
+  return rows<any>("property-change-log", res)
+    .filter((c) => c.changed_on && PROPERTY_CHANGE_KINDS.includes(c.change_kind))
+    .map((c) => ({ kind: c.change_kind as PropertyChangeKindLog, date: String(c.changed_on) }));
+}
+
+export const getChangeLog = cached(loadChangeLog, "property-change-log", DETAIL_REVALIDATE);
 
 async function loadRecommendations(id: string): Promise<Recommendation[]> {
   const res = await withRetry(() =>

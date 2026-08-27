@@ -8,6 +8,7 @@ import ScoreBreakdown from "@/app/(public)/property/[id]/_components/ScoreBreakd
 import PropertyMarket from "@/components/market/PropertyMarket";
 import RegionScoreBars from "@/components/region/RegionScoreBars";
 import {
+  getChangeLog,
   getMarketComparables,
   getPriceHistory,
   getPropertyById,
@@ -34,9 +35,10 @@ export default async function PropertyReportPage({ params }: { params: Promise<{
 
   // Awaited together, never streamed: a Suspense boundary here would let AutoPrint fire while
   // skeletons were still on screen.
-  const [explain, history, region, market, pois] = await Promise.all([
+  const [explain, history, changes, region, market, pois] = await Promise.all([
     getScoreExplain(p.id),
     getPriceHistory(p.id),
+    getChangeLog(p.id),
     p.h3 ? getRegion(p.h3) : Promise.resolve(null),
     getMarketComparables(p.uf, p.city, p.neighborhood, p.propertyType, p.area),
     getPropertyPois(p.id),
@@ -149,7 +151,7 @@ export default async function PropertyReportPage({ params }: { params: Promise<{
 
       {history.length >= 2 && (
         <section className="report-section">
-          <PriceHistory points={history} />
+          <PriceHistory points={history} changes={changes} />
         </section>
       )}
 

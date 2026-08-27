@@ -21,3 +21,10 @@ export type PriceHistoryPoint = {
   discount: number | null;
   modality: string | null;
 };
+
+/** Superset of the `CHANGE_KINDS` filter vocabulary: `relisted` is shown on the detail page only. */
+export const PROPERTY_CHANGE_KINDS = ["modality", "payment", "price_drop", "relisted"] as const;
+
+export type PropertyChangeKindLog = (typeof PROPERTY_CHANGE_KINDS)[number];
+
+export type PropertyChange = { kind: PropertyChangeKindLog; date: string };

@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import * as data from "@/lib/data/alerts";
-import { countMatched, hybridSearch, RESULT_LIMIT } from "@/lib/data";
+import { countMatched } from "@/lib/data";
 import { isAnyCriteria } from "@/lib/alerts/criteria";
 import { resolveQueryCriteria } from "@/lib/alerts/resolve";
 import { getEntitlements } from "@/lib/entitlements/server";
@@ -24,16 +24,6 @@ export async function countAlertMatches(criteria: AlertCriteria): Promise<number
 export async function resolveAlertQuery(query: string): Promise<ResolvedAlertQuery> {
   await requireUser();
   return resolveQueryCriteria(query);
-}
-
-export async function countDescriptionMatches(
-  query: string,
-): Promise<{ count: number; capped: boolean }> {
-  await requireUser();
-  const q = query.trim();
-  if (!q) return { count: 0, capped: false };
-  const { hits } = await hybridSearch(q);
-  return { count: hits.length, capped: hits.length >= RESULT_LIMIT };
 }
 
 // AlertsBell renders on every page, anon ones included.
