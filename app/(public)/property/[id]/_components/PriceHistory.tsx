@@ -1,28 +1,35 @@
 import { money, periodLabel } from "@/lib/format";
-import type { PriceHistoryPoint } from "@/lib/types";
+import type { PriceHistoryPoint, PropertyChange, PropertyChangeKindLog } from "@/lib/types";
 
 const W = 640;
 const H = 200;
 const PAD = { top: 24, right: 16, bottom: 28, left: 16 };
-// Above this many transitions, the middle ones collapse behind a toggle.
+// Above this many timeline entries, the middle ones collapse behind a toggle.
 const COLLAPSE_ABOVE = 5;
 
+// A bare `YYYY-MM-DD` parses as UTC midnight, which renders as the day before in a negative offset.
 function fmt(iso: string): string {
-  const d = new Date(iso);
+  const d = new Date(/^\d{4}-\d{2}-\d{2}$/.test(iso) ? `${iso}T00:00:00` : iso);
   if (isNaN(d.getTime())) return iso;
   return d.toLocaleDateString("pt-BR", { day: "2-digit", month: "short", year: "2-digit" });
 }
 
-type Transition = { modality: string; date: string; saleValue: number };
+type Entry = { date: string; label: string; detail: string };
 
-function TimelineRow({ t, now }: { t: Transition; now?: boolean }) {
+// price_drop and modality are left out: the chart and the transitions below already carry them.
+const CHANGE_COPY: Partial<Record<PropertyChangeKindLog, Omit<Entry, "date">>> = {
+  relisted: { label: "Reanunciado", detail: "voltou a ser ofertado pela Caixa" },
+  payment: { label: "Mudou a forma de pagamento", detail: "passou a aceitar financiamento/FGTS" },
+};
+
+function TimelineRow({ e, now }: { e: Entry; now?: boolean }) {
   return (
     <li className={`phist-timeline-item${now ? " now" : ""}`}>
       <span className="phist-timeline-dot" aria-hidden="true" />
       <div className="phist-timeline-body">
-        <span className="phist-timeline-label">{t.modality}</span>
+        <span className="phist-timeline-label">{e.label}</span>
         <span className="phist-timeline-meta">
-          {fmt(t.date)} · {money(t.saleValue)}
+          {fmt(e.date)} · {e.detail}
         </span>
       </div>
     </li>
@@ -31,7 +38,13 @@ function TimelineRow({ t, now }: { t: Transition; now?: boolean }) {
 
 // Renders the historical listing price for a property that was published more
 // than once. Only shown when there are at least two distinct price points.
-export default function PriceHistory({ points }: { points: PriceHistoryPoint[] }) {
+export default function PriceHistory({
+  points,
+  changes,
+}: {
+  points: PriceHistoryPoint[];
+  changes: PropertyChange[];
+}) {
   const pts = points.filter(
     (p): p is PriceHistoryPoint & { saleValue: number } => p.saleValue != null,
   );
@@ -81,13 +94,19 @@ export default function PriceHistory({ points }: { points: PriceHistoryPoint[] }
   const stroke = stable ? "var(--primary-soft)" : down ? "var(--good)" : "var(--warn)";
 
   // Distinct modalities in order, keeping the date/price of the announcement that introduced each.
-  const transitions = pts.reduce<Transition[]>((acc, p) => {
-    if (p.modality && p.modality !== acc[acc.length - 1]?.modality) {
-      acc.push({ modality: p.modality, date: p.date, saleValue: p.saleValue });
+  const transitions = pts.reduce<Entry[]>((acc, p) => {
+    if (p.modality && p.modality !== acc[acc.length - 1]?.label) {
+      acc.push({ date: p.date, label: p.modality, detail: money(p.saleValue) });
     }
     return acc;
   }, []);
-  const middleTransitions = transitions.slice(1, -1);
+
+  const logged = changes.flatMap((c) => {
+    const copy = CHANGE_COPY[c.kind];
+    return copy ? [{ date: c.date, ...copy }] : [];
+  });
+  const entries = [...transitions, ...logged].sort((a, b) => a.date.localeCompare(b.date));
+  const middle = entries.slice(1, -1);
 
   return (
     <div className="infoblock">
@@ -171,33 +190,31 @@ export default function PriceHistory({ points }: { points: PriceHistoryPoint[] }
         </text>
       </svg>
 
-      {transitions.length > 1 && (
+      {entries.length > 1 && (
         <div className="phist-mod">
-          <span className="phist-mod-lbl">Mudança de modalidade</span>
+          <span className="phist-mod-lbl">Mudanças do anúncio</span>
           <ol className="phist-timeline">
-            <TimelineRow t={transitions[0]} />
-            {middleTransitions.length > 0 &&
-              (transitions.length > COLLAPSE_ABOVE ? (
+            <TimelineRow e={entries[0]} />
+            {middle.length > 0 &&
+              (entries.length > COLLAPSE_ABOVE ? (
                 <li className="phist-timeline-item phist-timeline-toggle">
                   <details>
                     <summary>
                       <span className="phist-timeline-dot" aria-hidden="true" />
-                      <span className="phist-timeline-label">
-                        +{middleTransitions.length} mudanças
-                      </span>
+                      <span className="phist-timeline-label">+{middle.length} mudanças</span>
                       <span className="phist-timeline-chevron" aria-hidden="true" />
                     </summary>
                     <ol className="phist-timeline-nested">
-                      {middleTransitions.map((t, i) => (
-                        <TimelineRow key={i} t={t} />
+                      {middle.map((e, i) => (
+                        <TimelineRow key={i} e={e} />
                       ))}
                     </ol>
                   </details>
                 </li>
               ) : (
-                middleTransitions.map((t, i) => <TimelineRow key={i} t={t} />)
+                middle.map((e, i) => <TimelineRow key={i} e={e} />)
               ))}
-            <TimelineRow t={transitions[transitions.length - 1]} now />
+            <TimelineRow e={entries[entries.length - 1]} now />
           </ol>
         </div>
       )}

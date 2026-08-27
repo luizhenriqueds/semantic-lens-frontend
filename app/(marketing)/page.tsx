@@ -154,6 +154,7 @@ const PLAN_CARDS: {
       },
       { text: "Alerta de novas oportunidades por Whatsapp (breve)" },
       { lead: "Relatórios e exportação", text: "buscas, filtros e análises em CSV ou PDF" },
+      { lead: "Acesso antecipado", text: "a novas funcionalidades", joiner: " " },
     ],
   },
 ];

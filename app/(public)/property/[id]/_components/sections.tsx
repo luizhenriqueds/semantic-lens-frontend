@@ -3,7 +3,13 @@ import ScoreBreakdown from "./ScoreBreakdown";
 import ScoreWeights from "./ScoreWeights";
 import NearbyPoisGate from "./NearbyPoisGate";
 import RegionPanel from "@/components/region/RegionPanel";
-import { getPriceHistory, getPropertyPois, getRegion, getScoreExplain } from "@/lib/data";
+import {
+  getChangeLog,
+  getPriceHistory,
+  getPropertyPois,
+  getRegion,
+  getScoreExplain,
+} from "@/lib/data";
 import type { Property } from "@/lib/types";
 
 // Each section owns its query and streams in independently, so the slowest one no longer holds up
@@ -36,5 +42,6 @@ export async function RegionSlot({ p, heading }: { p: Property; heading: string 
 }
 
 export async function PriceHistorySlot({ id }: { id: string }) {
-  return <PriceHistory points={await getPriceHistory(id)} />;
+  const [points, changes] = await Promise.all([getPriceHistory(id), getChangeLog(id)]);
+  return <PriceHistory points={points} changes={changes} />;
 }

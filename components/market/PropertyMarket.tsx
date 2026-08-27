@@ -1,4 +1,4 @@
-import { fmtDay, money, moneyShort } from "@/lib/format";
+import { money, moneyShort } from "@/lib/format";
 import { marketQuality, moneyM2 } from "@/lib/market";
 import type { MarketStats } from "@/lib/types";
 
@@ -115,7 +115,6 @@ export default function PropertyMarket({
           Os {stats.sampleSize ?? 0} anúncio{stats.sampleSize === 1 ? "" : "s"} encontrados neste
           bairro têm preços muito parecidos entre si, então não é possível estimar com segurança se
           este imóvel está acima ou abaixo do mercado.
-          {fmtDay(stats.computedAt) && <> Dados coletados em {fmtDay(stats.computedAt)}.</>}
         </div>
       </div>
     );
@@ -234,7 +233,6 @@ export default function PropertyMarket({
         Baseado em {stats.sampleSize ?? 0} anúncio{stats.sampleSize === 1 ? "" : "s"} de{" "}
         {stats.propertyType?.toLowerCase() ?? "imóveis"}{" "}
         {basis === "comps" ? "de porte similar " : ""}à venda no bairro (fonte: portais de imóveis).
-        {fmtDay(stats.computedAt) && <> Dados coletados em {fmtDay(stats.computedAt)}.</>}
       </div>
     </div>
   );

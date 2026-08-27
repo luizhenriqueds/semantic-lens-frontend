@@ -22,12 +22,10 @@ import {
   useAlerts,
 } from "@/lib/alerts";
 import { FREQS, freqOptions } from "@/lib/alerts/cadence";
-import { requestCount, seedCriteriaCount, useAlertCount } from "@/lib/alerts/counts";
 import { SCORE_DIMS, SCORE_LABEL, titleCase } from "@/lib/format";
 import {
   IconArrow,
   IconBell,
-  IconEye,
   IconLock,
   IconPencil,
   IconPlus,
@@ -160,9 +158,7 @@ export default function AlertsClient({
     const t = setTimeout(() => {
       countAlertMatches(preview)
         .then((n) => {
-          if (cancelled) return;
-          setDraftCount(n);
-          if (n != null) seedCriteriaCount(preview, n);
+          if (!cancelled) setDraftCount(n);
         })
         .catch(() => {});
     }, 300);
@@ -564,10 +560,7 @@ export default function AlertsClient({
                     ))}
                   </div>
                 )}
-                <p>
-                  {a.freq}
-                  <AlertCount alert={a} />
-                </p>
+                <p>{a.freq}</p>
               </div>
               <div className="aactions">
                 <Link
@@ -647,46 +640,6 @@ export default function AlertsClient({
         }}
         onCancel={() => setConfirm(null)}
       />
-    </>
-  );
-}
-
-function AlertCount({ alert }: { alert: Alert }) {
-  const state = useAlertCount(alert);
-  if (!alert.on) return null;
-
-  const body = () => {
-    switch (state.status) {
-      case "idle":
-      case "error":
-        return (
-          <button className="countbtn" type="button" onClick={() => requestCount(alert)}>
-            <IconEye width={14} height={14} strokeWidth={1.7} />
-            {state.status === "error" ? "Tentar contar de novo" : "Ver correspondências"}
-          </button>
-        );
-      case "loading":
-        return <SkeletonText width={148} />;
-      case "slow":
-        return <span className="amuted">contagem demorando - abra o alerta para ver</span>;
-      case "ready":
-        return (
-          <span>
-            <b style={{ color: "var(--primary)" }}>
-              {state.value}
-              {state.capped ? "+" : ""}
-            </b>{" "}
-            {state.value === 1 ? "imóvel corresponde" : "imóveis correspondem"} hoje
-          </span>
-        );
-    }
-  };
-
-  // Own element: the row is a flex line, which strips the spaces around a bare text separator.
-  return (
-    <>
-      <span aria-hidden="true">·</span>
-      {body()}
     </>
   );
 }
