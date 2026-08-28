@@ -98,6 +98,7 @@ const CHANGE_LABEL: Record<PropertyChangeKind, string> = {
   payment: "Passou a aceitar financiamento/FGTS",
   modality: "Mudou de modalidade",
   price_drop: "Baixou de preço",
+  relisted: "Imóvel ofertado novamente",
 };
 
 const PRAZOS: { days: number; label: string }[] = [
