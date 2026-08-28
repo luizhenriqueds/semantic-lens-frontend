@@ -1,10 +1,10 @@
 import { supabase } from "@/lib/supabase";
-import { PROPERTY_CHANGE_KINDS } from "@/lib/types";
+import { CHANGE_KINDS } from "@/lib/types";
 import type {
   Freshness,
   PriceHistoryPoint,
   PropertyChange,
-  PropertyChangeKindLog,
+  PropertyChangeKind,
   Recommendation,
   ScoreExplain,
   ScoreTerm,
@@ -150,8 +150,8 @@ async function loadChangeLog(id: string): Promise<PropertyChange[]> {
       .order("changed_on", { ascending: true }),
   );
   return rows<any>("property-change-log", res)
-    .filter((c) => c.changed_on && PROPERTY_CHANGE_KINDS.includes(c.change_kind))
-    .map((c) => ({ kind: c.change_kind as PropertyChangeKindLog, date: String(c.changed_on) }));
+    .filter((c) => c.changed_on && CHANGE_KINDS.includes(c.change_kind))
+    .map((c) => ({ kind: c.change_kind as PropertyChangeKind, date: String(c.changed_on) }));
 }
 
 export const getChangeLog = cached(loadChangeLog, "property-change-log", DETAIL_REVALIDATE);

@@ -1,5 +1,5 @@
 import { money, periodLabel } from "@/lib/format";
-import type { PriceHistoryPoint, PropertyChange, PropertyChangeKindLog } from "@/lib/types";
+import type { PriceHistoryPoint, PropertyChange, PropertyChangeKind } from "@/lib/types";
 
 const W = 640;
 const H = 200;
@@ -17,7 +17,7 @@ function fmt(iso: string): string {
 type Entry = { date: string; label: string; detail: string };
 
 // price_drop and modality are left out: the chart and the transitions below already carry them.
-const CHANGE_COPY: Partial<Record<PropertyChangeKindLog, Omit<Entry, "date">>> = {
+const CHANGE_COPY: Partial<Record<PropertyChangeKind, Omit<Entry, "date">>> = {
   relisted: { label: "Reanunciado", detail: "voltou a ser ofertado pela Caixa" },
   payment: { label: "Mudou a forma de pagamento", detail: "passou a aceitar financiamento/FGTS" },
 };

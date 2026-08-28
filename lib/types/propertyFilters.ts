@@ -3,7 +3,7 @@ import type { Scores } from "./property";
 
 export type PropertySort = "leilao" | "investimento" | "desconto" | "score" | "menor" | "maior";
 
-export const CHANGE_KINDS = ["modality", "payment", "price_drop"] as const;
+export const CHANGE_KINDS = ["modality", "payment", "price_drop", "relisted"] as const;
 
 export type PropertyChangeKind = (typeof CHANGE_KINDS)[number];
 
@@ -29,7 +29,6 @@ export type PropertyFilters = {
   minInvestment?: number;
   /** Facade grade from the vision model, 0-100. Needs `min_visual_score` on the RPC. */
   minVisualScore?: number;
-  /** Listings whose modality moved, or that started accepting financing/FGTS. */
   changeKind?: PropertyChangeKind;
   changedWithinDays?: number;
   scoreKey?: keyof Scores;
