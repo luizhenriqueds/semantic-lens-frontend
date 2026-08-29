@@ -34,6 +34,7 @@ import { toRpcFilters } from "@/lib/filters/contract";
 import { requiredPlan, VIEW_FEATURE } from "@/lib/entitlements";
 import type { Feature } from "@/lib/entitlements";
 import type { AnalysisData, ProximityData } from "@/lib/facets/analysis";
+import { CHANGE_KINDS, EMPTY_FILTER_OPTIONS } from "@/lib/types";
 import type {
   AlertCriteriaSet,
   Cluster,
@@ -49,6 +50,8 @@ import {
   IconArrow,
   IconBell,
   IconBuilding,
+  IconCalendar,
+  IconInfo,
   IconLock,
   IconSearch,
   IconSliders,
@@ -248,7 +251,7 @@ function ModalityFilter({
 
 export default function PropertiesClient({
   clusters,
-  filterOptions,
+  filterOptions: catalogue,
   filters,
   sort,
   page,
@@ -266,7 +269,7 @@ export default function PropertiesClient({
   exitTo,
 }: {
   clusters: Cluster[];
-  filterOptions: FilterOptions;
+  filterOptions: FilterOptions | null;
   filters: PropertyFilters;
   sort: PropertySort;
   page: number;
@@ -282,7 +285,7 @@ export default function PropertiesClient({
   analysis?: AnalysisData;
   proximity?: ProximityData;
   calendar?: {
-    counts: Record<string, number>;
+    counts: Record<string, number> | null;
     day: string | null;
     dayItems: Property[];
     dayTotal: number;
@@ -344,6 +347,8 @@ export default function PropertiesClient({
     [setParams, exitTo, router],
   );
 
+  const filterOptions = catalogue ?? EMPTY_FILTER_OPTIONS;
+
   // Display only, and only when the name is unambiguous: a city in several states really does
   // mean "todos" here.
   const impliedUf = useMemo(() => {
@@ -372,9 +377,10 @@ export default function PropertiesClient({
   const scoreMin = filters.scoreMin ?? 0;
   const financiamento = !!filters.financing;
   const fgts = !!filters.fgts;
-  const changeKind = filters.changeKind ?? null;
+  const changeKinds = filters.changeKinds ?? [];
   const modalidade = filters.modalities ?? [];
   const prazoLeilao = filters.auctionWithinDays ?? 0;
+  const prazoOferta = filters.firstSeenWithinDays ?? 0;
   const range = filters.range ?? null;
 
   const [qInput, setQInput] = useState(filters.q ?? "");
@@ -428,6 +434,15 @@ export default function PropertiesClient({
   const setPreco = (v: number) => {
     setPrecoInput(v ? String(v) : "");
     patch({ max_price: v ? String(v) : null });
+  };
+  const toggleChangeKind = (kind: PropertyChangeKind) => {
+    const next = changeKinds.includes(kind)
+      ? changeKinds.filter((k) => k !== kind)
+      : [...changeKinds, kind];
+    patch({
+      change_kinds: next.join(",") || null,
+      changed_within_days: next.length ? String(CHANGE_WINDOW_DAYS) : null,
+    });
   };
   const toggleCat = (c: string) => {
     const next = poiCats.includes(c) ? poiCats.filter((x) => x !== c) : [...poiCats, c];
@@ -607,11 +622,17 @@ export default function PropertiesClient({
         clear: () => patch({ financing: null }),
       });
     if (fgts) f.push({ key: "fgts", label: "Aceita FGTS", clear: () => patch({ fgts: null }) });
-    if (changeKind)
+    if (prazoOferta > 0)
       f.push({
-        key: "mudou",
-        label: CHANGE_LABEL[changeKind],
-        clear: () => patch({ change_kind: null, changed_within_days: null }),
+        key: "oferta",
+        label: `Ofertado há ${prazoOferta} dias ou menos`,
+        clear: () => patch({ first_seen_within_days: null }),
+      });
+    for (const kind of changeKinds)
+      f.push({
+        key: `mudou-${kind}`,
+        label: CHANGE_LABEL[kind],
+        clear: () => toggleChangeKind(kind),
       });
     return f;
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -625,7 +646,9 @@ export default function PropertiesClient({
   const retornoCount = [minDesconto > 0, minInvest > 0, minVisual > 0, scoreKey !== "none"].filter(
     Boolean,
   ).length;
-  const leilaoCount = [prazoLeilao > 0, financiamento, fgts, !!changeKind].filter(Boolean).length;
+  const leilaoCount =
+    [prazoLeilao > 0, prazoOferta > 0, financiamento, fgts].filter(Boolean).length +
+    changeKinds.length;
 
   const ADVANCED_NULL: Record<string, string | null> = {
     range_dim: null,
@@ -646,8 +669,10 @@ export default function PropertiesClient({
     financing: null,
     fgts: null,
     auction_within_days: null,
+    first_seen_within_days: null,
     cluster_id: null,
     change_kind: null,
+    change_kinds: null,
     changed_within_days: null,
   };
 
@@ -775,6 +800,16 @@ export default function PropertiesClient({
           </button>
         )}
       </div>
+
+      {!catalogue && (
+        <div className="searchnote">
+          <IconInfo width={15} height={15} strokeWidth={1.8} />
+          <span>
+            Não foi possível carregar as opções de filtro agora. A lista abaixo continua funcionando
+            - recarregue a página para tentar de novo.
+          </span>
+        </div>
+      )}
 
       {lockedFilter && (
         <div className="searchnote lockednote">
@@ -920,6 +955,26 @@ export default function PropertiesClient({
                     ))}
                   </div>
 
+                  <div className="flabel">Primeira oferta</div>
+                  <div className="fchiprow">
+                    <Chip
+                      active={!prazoOferta}
+                      onClick={() => patch({ first_seen_within_days: null })}
+                    >
+                      Qualquer data
+                    </Chip>
+                    {PRAZOS.map((pr) => (
+                      <Chip
+                        key={pr.days}
+                        active={prazoOferta === pr.days}
+                        onClick={() => patch({ first_seen_within_days: String(pr.days) })}
+                      >
+                        {pr.days} dias
+                      </Chip>
+                    ))}
+                  </div>
+                  <p className="fhint">Quando o imóvel foi ofertado pela primeira vez.</p>
+
                   <div className="flabel">Pagamento</div>
                   <label className={`checkitem${financiamento ? " on" : ""}`}>
                     <input
@@ -941,23 +996,18 @@ export default function PropertiesClient({
                   <div className="flabel">Mudou recentemente</div>
                   <div className="fchiprow">
                     <Chip
-                      active={!changeKind}
-                      onClick={() => patch({ change_kind: null, changed_within_days: null })}
+                      active={!changeKinds.length}
+                      onClick={() => patch({ change_kinds: null, changed_within_days: null })}
                     >
                       Qualquer
                     </Chip>
-                    {Object.entries(CHANGE_LABEL).map(([key, label]) => (
+                    {CHANGE_KINDS.map((kind) => (
                       <Chip
-                        key={key}
-                        active={changeKind === key}
-                        onClick={() =>
-                          patch({
-                            change_kind: key,
-                            changed_within_days: String(CHANGE_WINDOW_DAYS),
-                          })
-                        }
+                        key={kind}
+                        active={changeKinds.includes(kind)}
+                        onClick={() => toggleChangeKind(kind)}
                       >
-                        {label}
+                        {CHANGE_LABEL[kind]}
                       </Chip>
                     ))}
                   </div>
@@ -1269,7 +1319,8 @@ export default function PropertiesClient({
               />
             )
           ) : view === "calendar" ? (
-            calendar && (
+            calendar &&
+            (calendar.counts ? (
               <AuctionCalendar
                 counts={calendar.counts}
                 day={calendar.day}
@@ -1280,7 +1331,11 @@ export default function PropertiesClient({
                 onSelectDay={(d) => setParams({ day: d, page: null })}
                 onPageChange={goTo}
               />
-            )
+            ) : (
+              <EmptyState icon={<IconCalendar />} title="Não foi possível carregar o calendário">
+                A consulta das datas de leilão falhou. Recarregue a página para tentar de novo.
+              </EmptyState>
+            ))
           ) : list && list.items.length ? (
             <>
               <div className="wlist">

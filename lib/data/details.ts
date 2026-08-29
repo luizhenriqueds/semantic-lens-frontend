@@ -58,13 +58,17 @@ export const getScoreExplain = cached(
 
 // Heavy text kept out of property_list_mv, fetched per-id on the detail page.
 // `last_seen` rides along: it is the day the batch last found the listing on Caixa.
-async function loadPropertyDetailText(
-  id: string,
-): Promise<{ description: string | null; visualNote: string | null; lastSeen: string | null }> {
+async function loadPropertyDetailText(id: string): Promise<{
+  description: string | null;
+  visualNote: string | null;
+  lastSeen: string | null;
+  deedUrl: string | null;
+  auctioneer: string | null;
+}> {
   const res = await withRetry(() =>
     supabase
       .from("properties")
-      .select("canonical_description,visual_note,last_seen")
+      .select("canonical_description,visual_note,last_seen,deed_source_url,auctioneer_name")
       .eq("property_id", id)
       .limit(1),
   );
@@ -73,6 +77,8 @@ async function loadPropertyDetailText(
     description: row?.canonical_description || null,
     visualNote: row?.visual_note || null,
     lastSeen: row?.last_seen || null,
+    deedUrl: row?.deed_source_url || null,
+    auctioneer: row?.auctioneer_name || null,
   };
 }
 

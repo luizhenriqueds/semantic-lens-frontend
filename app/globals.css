@@ -2332,6 +2332,44 @@ select.selectish {
 .backbtn:hover {
   color: var(--primary);
 }
+.dtop {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 18px;
+}
+.dtop .backbtn {
+  margin-bottom: 0;
+}
+.sharebtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 38px;
+  padding: 0 14px;
+  border-radius: 11px;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  color: var(--ink-soft);
+  font-family: inherit;
+  font-size: 14.5px;
+  font-weight: 600;
+  text-decoration: none;
+  cursor: pointer;
+}
+.sharebtn:hover {
+  border-color: var(--primary-soft);
+  color: var(--primary);
+}
+.sharebtn svg {
+  width: 17px;
+  height: 17px;
+  flex: none;
+}
+.btn.sharecta {
+  justify-content: center;
+}
 .detailgrid {
   display: grid;
   grid-template-columns: 1.5fr 1fr;
@@ -2619,6 +2657,15 @@ select.selectish {
   font-size: 14px;
   color: var(--ink-soft);
   margin-top: 14px;
+}
+.pricecard .auctioneer {
+  font-size: 13.5px;
+  color: var(--ink-soft);
+  margin-top: 6px;
+}
+.pricecard .auctioneer b {
+  color: var(--ink);
+  font-weight: 600;
 }
 .pricecard .cta {
   display: flex;
@@ -3891,6 +3938,7 @@ select.selectish {
   border: 1px solid var(--line);
   border-radius: 16px;
   padding: 18px;
+  margin-top: 20px;
 }
 .calhead {
   display: flex;
@@ -3933,20 +3981,23 @@ select.selectish {
   text-align: center;
   font-size: 12px;
   font-weight: 700;
-  color: var(--ink-faint);
+  color: var(--ink-soft);
   padding-bottom: 4px;
 }
 .calcell {
-  position: relative;
   min-width: 0;
   aspect-ratio: 1;
   border: 1px solid var(--line-soft);
   border-radius: 10px;
   background: var(--surface-2);
-  color: var(--ink-soft);
+  color: var(--ink);
   font: inherit;
-  padding: 6px 8px;
-  text-align: left;
+  padding: 6px;
+  display: grid;
+  align-content: center;
+  justify-items: center;
+  row-gap: 4px;
+  text-align: center;
   cursor: default;
 }
 .calcell.empty {
@@ -3957,8 +4008,9 @@ select.selectish {
   font-size: 13px;
   font-weight: 600;
 }
+/* Not opacity: it fades the border and fill too, which washes the whole grid out. */
 .calcell.past {
-  opacity: 0.4;
+  color: var(--ink-faint);
 }
 .calcell.has {
   cursor: pointer;
@@ -3971,9 +4023,6 @@ select.selectish {
   box-shadow: 0 0 0 2px var(--primary-soft);
 }
 .calcount {
-  position: absolute;
-  right: 6px;
-  bottom: 6px;
   min-width: 20px;
   height: 20px;
   padding: 0 6px;
@@ -4053,17 +4102,12 @@ select.selectish {
   .calcell {
     padding: 0;
     border-radius: 8px;
-    display: grid;
-    align-content: center;
-    justify-items: center;
     row-gap: 2px;
-    text-align: center;
   }
   .calcell .dnum {
     font-size: 12.5px;
   }
   .calcount {
-    position: static;
     min-width: 16px;
     height: 16px;
     padding: 0 5px;
@@ -4712,6 +4756,13 @@ select.selectish {
   .content {
     --gutter: 14px;
     padding: 18px var(--gutter) 34px;
+  }
+  /* The price card carries the labelled button; here the mark alone keeps the row on one line. */
+  .sharebtn .txt {
+    display: none;
+  }
+  .sharebtn {
+    padding: 0 12px;
   }
   .topbar {
     padding: 12px 14px;

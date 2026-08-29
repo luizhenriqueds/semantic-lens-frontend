@@ -8,6 +8,7 @@ import AvailabilityNote from "./_components/AvailabilityNote";
 import CheckedOn from "./_components/CheckedOn";
 import InactiveNote from "./_components/InactiveNote";
 import SaveButton from "./_components/SaveButton";
+import ShareButton from "./_components/ShareButton";
 import ScoreBars from "./_components/ScoreBars";
 import VisualScore from "./_components/VisualScore";
 import PropertyRanks from "./_components/PropertyRanks";
@@ -26,6 +27,8 @@ import JsonLd from "@/components/seo/JsonLd";
 import { getPropertyById, getPropertyDetailText, isListable } from "@/lib/data";
 import { breadcrumbLd, realEstateListingLd } from "@/lib/seo/jsonLd";
 import { slugify } from "@/lib/seo/slug";
+import { abs } from "@/lib/seo/site";
+import { shareText } from "@/lib/share";
 import Hint from "@/components/ui/Hint";
 import {
   fmtDate,
@@ -39,7 +42,7 @@ import {
   showDiscount,
 } from "@/lib/format";
 import { addressLine } from "@/lib/geo";
-import { IconPin } from "@/lib/icons";
+import { IconDoc, IconPin } from "@/lib/icons";
 
 // Cached, which is why this route sits under (public): one sitemap crawl is ~30k requests, and each
 // was a full dynamic render. Keep in step with DETAIL_REVALIDATE - next takes the shortest
@@ -77,18 +80,24 @@ export async function generateMetadata({
   const note =
     p.scores.investment != null ? ` Nota de Investimento ${p.scores.investment}/100.` : "";
 
+  const heading = `${p.title} em ${where} — leilão da Caixa${price}`;
+  const description = `${p.propertyType} ${[size, rooms].filter(Boolean).join(", ")} em ${where}, ${
+    p.modality ?? "leilão"
+  } da Caixa${price}${off}.${note} Veja região, comparação de mercado e o porquê da nota.`;
+
   return {
-    title: `${p.title} em ${where} — leilão da Caixa${price}`,
-    description: `${p.propertyType} ${[size, rooms].filter(Boolean).join(", ")} em ${where}, ${
-      p.modality ?? "leilão"
-    } da Caixa${price}${off}.${note} Veja região, comparação de mercado e o porquê da nota.`,
+    title: heading,
+    description,
     alternates: { canonical: `/property/${id}` },
     openGraph: {
       url: `/property/${id}`,
       type: "article",
-      title: `${p.title} em ${where} — leilão da Caixa${price}`,
-      images: p.image ? [p.image] : undefined,
+      title: heading,
+      // No `images` key: opengraph-image.tsx supplies it, and next skips that convention when
+      // this object merely has the property - even set to undefined.
     },
+    // The root layout sets twitter.title, which would otherwise put the site title on every listing.
+    twitter: { card: "summary_large_image", title: heading, description },
     // Sold and unscored listings stay out of the index.
     robots: { index: isListable(p) && !p.inactive, follow: true },
   };
@@ -109,6 +118,8 @@ export default async function PropertyPage({ params }: { params: Promise<{ id: s
       : p.title;
 
   const data = fmtDate(p.auctionDate);
+  const share = shareText(p, heading);
+  const shareUrl = abs(`/property/${p.id}`);
   const discPct = showDiscount(p) ? p.discountPercentile : null;
   // A property awaiting its first scoring batch still renders; the ranking blocks just stay out.
   const scored = Object.values(p.scores).some((v) => v != null);
@@ -129,7 +140,10 @@ export default async function PropertyPage({ params }: { params: Promise<{ id: s
           ]),
         ]}
       />
-      <BackButton />
+      <div className="dtop">
+        <BackButton />
+        <ShareButton title={heading} text={share} url={shareUrl} compact />
+      </div>
 
       <div className="dhead">
         <div className="loc">
@@ -264,6 +278,11 @@ export default async function PropertyPage({ params }: { params: Promise<{ id: s
                 <CheckedOn id={p.id} initial={text.lastSeen} variant="inline" />
               )}
             </div>
+            {text.auctioneer && (
+              <div className="auctioneer">
+                Leiloeiro: <b>{titleCase(text.auctioneer)}</b>
+              </div>
+            )}
             {!data && <AvailabilityNote id={p.id} initial={text.lastSeen} />}
             <div className="cta">
               <SaveButton id={p.id} propertyLabel={heading} />
@@ -278,6 +297,19 @@ export default async function PropertyPage({ params }: { params: Promise<{ id: s
                   Ver anúncio original
                 </a>
               )}
+              {text.deedUrl && (
+                <a
+                  className="btn ghost"
+                  href={text.deedUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  style={{ justifyContent: "center" }}
+                >
+                  <IconDoc aria-hidden />
+                  Ver matrícula (PDF)
+                </a>
+              )}
+              <ShareButton title={heading} text={share} url={shareUrl} />
             </div>
           </div>
 

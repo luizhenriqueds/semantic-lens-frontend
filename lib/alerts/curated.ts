@@ -41,7 +41,7 @@ const CATALOGUE = [
     minRole: "professional",
     title: "Imóveis que mudaram de modalidade ofertada",
     why: "mudaram de modalidade nos últimos 30 dias - a maioria com redução de preço",
-    href: "/properties?change_kind=modality&changed_within_days=30&min_investment=60&sort=investment",
+    href: "/properties?change_kinds=modality&changed_within_days=30&min_investment=60&sort=investment",
   },
   {
     slug: "price-drop",

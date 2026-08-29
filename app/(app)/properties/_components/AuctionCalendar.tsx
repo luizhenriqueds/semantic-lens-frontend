@@ -96,7 +96,14 @@ export default function AuctionCalendar({
     return new Date(base.getFullYear(), base.getMonth(), 1);
   }, [byDay, today]);
 
+  // Re-keyed on the first month with auctions, so a filter edit moves the grid to the remaining
+  // results instead of stranding it on an empty month.
   const [month, setMonth] = useState(firstMonth);
+  const [monthKey, setMonthKey] = useState(firstMonth.getTime());
+  if (monthKey !== firstMonth.getTime()) {
+    setMonthKey(firstMonth.getTime());
+    setMonth(firstMonth);
+  }
 
   const minMonth = new Date(today.getFullYear(), today.getMonth(), 1);
   const canPrev = month > minMonth;
@@ -132,6 +139,19 @@ export default function AuctionCalendar({
       (_, i) => new Date(month.getFullYear(), month.getMonth(), i + 1),
     ),
   ];
+  // Pad the last row so the grid keeps a straight bottom edge.
+  cells.push(...Array.from({ length: (7 - (cells.length % 7)) % 7 }, () => null));
+
+  if (byDay.size === 0) {
+    return (
+      <div className="calwrap">
+        <EmptyState icon={<IconCalendar />} title="Nenhum leilão no calendário">
+          Os imóveis filtrados não têm praças futuras marcadas. Ajuste os filtros para ver outras
+          datas.
+        </EmptyState>
+      </div>
+    );
+  }
 
   return (
     <div className="calwrap">
@@ -187,13 +207,6 @@ export default function AuctionCalendar({
           );
         })}
       </div>
-
-      {byDay.size === 0 && (
-        <EmptyState icon={<IconCalendar />} title="Nenhum leilão no calendário">
-          Os imóveis filtrados não têm praças futuras marcadas. Ajuste os filtros para ver outras
-          datas.
-        </EmptyState>
-      )}
 
       {pendingDay ? (
         <DayLoading label={dayLabel(pendingDay)} />

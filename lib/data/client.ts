@@ -15,6 +15,8 @@ export const DETAIL_REVALIDATE = 21_600;
 // catalogue is cities and ranges: it moves far slower than the listings do.
 export const CATALOGUE_REVALIDATE = 21_600;
 
+export const IS_BUILD = process.env.NEXT_PHASE === "phase-production-build";
+
 export function num(v: unknown): number | null {
   if (v == null) return null;
   const n = Number(v);

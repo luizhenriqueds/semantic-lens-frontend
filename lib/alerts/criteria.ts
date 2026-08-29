@@ -24,12 +24,14 @@ const CRITERIA_KEYS = [
   "poi_radius_m",
   "max_center_m",
   "change_kind",
+  "change_kinds",
   "changed_within_days",
   "score_key",
   "score_min",
   "financing",
   "fgts",
   "auction_within_days",
+  "first_seen_within_days",
 ] as const satisfies readonly (keyof AlertCriteriaSet)[];
 
 type Unlisted = Exclude<keyof AlertCriteriaSet, (typeof CRITERIA_KEYS)[number]>;

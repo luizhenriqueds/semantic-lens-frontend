@@ -34,7 +34,8 @@ export type PropertiesQuery = {
 
 export type PropertiesViewData = {
   clusters: Cluster[];
-  filterOptions: FilterOptions;
+  /** `null` when the catalogue read failed, so the bar can say so instead of offering no options. */
+  filterOptions: FilterOptions | null;
   filters: PropertyFilters;
   sort: PropertySort;
   page: number;
@@ -46,7 +47,8 @@ export type PropertiesViewData = {
   analysis?: AnalysisData;
   proximity?: ProximityData;
   calendar?: {
-    counts: Awaited<ReturnType<typeof getAuctionCalendar>>;
+    /** `null` when the read failed - distinct from a month with no auctions. */
+    counts: Awaited<ReturnType<typeof getAuctionCalendar>> | null;
     day: string | null;
     dayItems: Property[];
     dayTotal: number;
@@ -73,7 +75,7 @@ export async function loadPropertiesView(
   const [clusters, filterOptions, h3Label, list, analysis, proximity, calendar, map] =
     await Promise.all([
       getClusters(),
-      getFilterOptions(),
+      getFilterOptions().catch(() => null),
       filters.h3 ? getRegionLabel(filters.h3) : Promise.resolve(null),
       view === "list" ? getPropertiesPage({ filters, sort, page }) : Promise.resolve(undefined),
       view === "analysis" ? getAnalysis(filters) : Promise.resolve(undefined),
@@ -84,7 +86,7 @@ export async function loadPropertiesView(
       view === "calendar"
         ? (async () => {
             const [counts, dayPage] = await Promise.all([
-              getAuctionCalendar(filters),
+              getAuctionCalendar(filters).catch(() => null),
               day ? getAuctionDayPage(day, filters, sort, page) : Promise.resolve(null),
             ]);
             return {

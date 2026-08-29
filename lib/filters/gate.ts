@@ -20,9 +20,11 @@ const FREE = new Set(
     "maxPrice",
     "minArea",
     "auctionWithinDays",
+    "firstSeenWithinDays",
     "financing",
     "fgts",
     "changeKind",
+    "changeKinds",
     "changedWithinDays",
   ].flatMap((k) => [k, k.replace(/[A-Z]/g, (c) => `_${c.toLowerCase()}`)]),
 );

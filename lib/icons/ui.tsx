@@ -179,3 +179,18 @@ export const IconPrinter = (p: P) => (
     <path d="M7 14h10v7H7z" />
   </svg>
 );
+export const IconDoc = (p: P) => (
+  <svg {...base(p)} strokeLinejoin="round">
+    <path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z" />
+    <path d="M14 3v5h5" />
+    <path d="M9 13h6M9 17h6" />
+  </svg>
+);
+export const IconShare = (p: P) => (
+  <svg {...base(p)} strokeLinecap="round" strokeLinejoin="round">
+    <circle cx="18" cy="5" r="3" />
+    <circle cx="6" cy="12" r="3" />
+    <circle cx="18" cy="19" r="3" />
+    <path d="m8.6 10.5 6.8-4M8.6 13.5l6.8 4" />
+  </svg>
+);

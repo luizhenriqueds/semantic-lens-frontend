@@ -17,7 +17,8 @@ const OPEN_ADVANCED: PropertyFilters = {
   financing: true,
   fgts: true,
   auctionWithinDays: 7,
-  changeKind: "modality",
+  firstSeenWithinDays: 30,
+  changeKinds: ["modality", "price_drop"],
   changedWithinDays: 30,
 };
 

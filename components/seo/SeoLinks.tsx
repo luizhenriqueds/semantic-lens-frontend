@@ -1,12 +1,14 @@
 import Link from "next/link";
 import { getFilterOptions } from "@/lib/data";
+import { EMPTY_FILTER_OPTIONS } from "@/lib/types";
 import { LANDING_GROUPS, landingsIn } from "@/lib/seo/landings";
 import { resolveLandingFilters } from "@/lib/seo/resolve";
 
 /** Internal-link block for the landing footer, every SEO page and the 404. Landings whose
  *  catalogue value is gone from the base are dropped rather than shipped as dead links. */
 export default async function SeoLinks({ className = "" }: { className?: string }) {
-  const options = await getFilterOptions();
+  // Rendered into every route's payload, so it must never fail the page.
+  const options = await getFilterOptions().catch(() => EMPTY_FILTER_OPTIONS);
 
   const groups = LANDING_GROUPS.map((g) => ({
     ...g,
