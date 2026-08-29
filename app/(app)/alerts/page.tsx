@@ -1,5 +1,6 @@
 import AlertsClient from "./_components/AlertsClient";
 import { getClusters, getFilterOptions } from "@/lib/data";
+import { EMPTY_FILTER_OPTIONS } from "@/lib/types";
 import { listAlerts } from "@/lib/data/alerts";
 import { getUser } from "@/lib/supabase/server";
 
@@ -8,7 +9,7 @@ export default async function AlertsPage() {
   // page instead of after a round trip that may resolve before the session does.
   const { supabase, user } = await getUser();
   const [options, clusters, alerts] = await Promise.all([
-    getFilterOptions(),
+    getFilterOptions().catch(() => EMPTY_FILTER_OPTIONS),
     getClusters(),
     user ? listAlerts(supabase) : [],
   ]);

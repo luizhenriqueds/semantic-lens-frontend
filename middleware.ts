@@ -124,6 +124,6 @@ export async function middleware(request: NextRequest) {
 // is never charged for robots.txt or a sitemap fetch either.
 export const config = {
   matcher: [
-    "/((?!_next/static|_next/image|favicon\\.ico|robots\\.txt|sitemap|manifest\\.webmanifest|opengraph-image|twitter-image|apple-icon|icon|.*\\.(?:svg|png|jpg|jpeg|gif|webp|avif|ico)$).*)",
+    "/((?!_next/static|_next/image|favicon\\.ico|robots\\.txt|sitemap|manifest\\.webmanifest|.*opengraph-image|.*twitter-image|apple-icon|icon|.*\\.(?:svg|png|jpg|jpeg|gif|webp|avif|ico)$).*)",
   ],
 };

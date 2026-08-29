@@ -53,7 +53,8 @@ const rank = (items: Property[], score: (p: Property, i: number) => number): Ran
 // (every search calls it), and unstable_cache skips the read when nested inside another
 // unstable_cache. Without this, "five full scans of the MV" reran on every search.
 const getCities = ttlCached(async () => {
-  const { cities } = await getFilterOptionsRaw();
+  // Facet parsing is an enhancement; a failed catalogue read must not fail the search itself.
+  const cities = (await getFilterOptionsRaw().catch(() => null))?.cities ?? [];
   const names = [...new Set(cities.map((c) => c.city).filter(Boolean))];
   // The catalogue already carries the uf, so parseFacets can read "corumba ms" as one place.
   const uf = new Map(cities.filter((c) => c.city && c.uf).map((c) => [normalize(c.city), c.uf]));

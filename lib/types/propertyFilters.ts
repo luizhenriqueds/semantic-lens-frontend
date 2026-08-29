@@ -29,13 +29,16 @@ export type PropertyFilters = {
   minInvestment?: number;
   /** Facade grade from the vision model, 0-100. Needs `min_visual_score` on the RPC. */
   minVisualScore?: number;
-  changeKind?: PropertyChangeKind;
+  /** OR across kinds: a property matching any of them matches. */
+  changeKinds?: PropertyChangeKind[];
   changedWithinDays?: number;
   scoreKey?: keyof Scores;
   scoreMin?: number;
   financing?: boolean;
   fgts?: boolean;
   auctionWithinDays?: number;
+  /** Days since the property was first offered for sale. */
+  firstSeenWithinDays?: number;
   includeInactive?: boolean;
   ids?: string[];
 };
@@ -48,6 +51,16 @@ export type FilterOptions = {
   poiCategories: string[];
   /** Whether the list RPC honours `min_visual_score` - probed, see getFilterOptions. */
   visualScore: boolean;
+};
+
+/** For callers that would rather render a reduced surface than fail. */
+export const EMPTY_FILTER_OPTIONS: FilterOptions = {
+  ufs: [],
+  cities: [],
+  types: [],
+  modalities: [],
+  poiCategories: [],
+  visualScore: false,
 };
 
 export type MapPoint = {

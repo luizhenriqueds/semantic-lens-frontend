@@ -85,7 +85,7 @@ const LEGACY_PARAMS: Record<string, string> = {
   desconto: "min_discount",
   invest: "min_investment",
   fachada: "min_visual_score",
-  mudou: "change_kind",
+  mudou: "change_kinds",
   dias: "changed_within_days",
   goal: "score_key",
   goalMin: "score_min",
@@ -162,9 +162,12 @@ export function parsePropertySearchParams(raw: SP): PropertiesQuery {
   if (minInvestment) filters.minInvestment = minInvestment;
   const minVisualScore = posInt(one(sp.min_visual_score));
   if (minVisualScore) filters.minVisualScore = Math.min(100, minVisualScore);
-  const changeKind = one(sp.change_kind);
-  if (changeKind && CHANGE_KIND_SET.has(changeKind)) {
-    filters.changeKind = changeKind as PropertyChangeKind;
+  // `change_kind` is the pre-multi-select param, still carried by saved alerts and shared links.
+  const changeKinds = (list(one(sp.change_kinds)) ?? list(one(sp.change_kind)) ?? []).filter((k) =>
+    CHANGE_KIND_SET.has(k),
+  ) as PropertyChangeKind[];
+  if (changeKinds.length) {
+    filters.changeKinds = changeKinds;
     filters.changedWithinDays = posInt(one(sp.changed_within_days)) ?? CHANGE_WINDOW_DAYS;
   }
   // Threshold optional, as in the RPC contract: alerts saved from a goal carry no `score_min`.
@@ -178,6 +181,8 @@ export function parsePropertySearchParams(raw: SP): PropertiesQuery {
   if (one(sp.fgts) === "1") filters.fgts = true;
   const auctionWithinDays = posInt(one(sp.auction_within_days));
   if (auctionWithinDays) filters.auctionWithinDays = auctionWithinDays;
+  const firstSeenWithinDays = posInt(one(sp.first_seen_within_days));
+  if (firstSeenWithinDays) filters.firstSeenWithinDays = firstSeenWithinDays;
 
   const viewRaw = one(sp.view) ?? "";
   const sortRaw = one(sp.sort) ?? "";

@@ -62,13 +62,13 @@ const CHANGE_INVEST_MIN = 60;
 
 const changePool = (kind: PropertyChangeKind): Pool => ({
   filters: {
-    changeKind: kind,
+    changeKinds: [kind],
     changedWithinDays: CHANGE_WINDOW_DAYS,
     minInvestment: CHANGE_INVEST_MIN,
   },
   sort: "score",
   pageSize: 40,
-  href: `/properties?change_kind=${kind}&changed_within_days=${CHANGE_WINDOW_DAYS}&min_investment=${CHANGE_INVEST_MIN}&sort=score`,
+  href: `/properties?change_kinds=${kind}&changed_within_days=${CHANGE_WINDOW_DAYS}&min_investment=${CHANGE_INVEST_MIN}&sort=score`,
 });
 
 export const MODALITY_CHANGE = changePool("modality");

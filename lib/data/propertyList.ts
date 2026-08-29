@@ -487,19 +487,30 @@ export function getMapPoints(
 
 type RawFilterOptions = Omit<FilterOptions, "visualScore">;
 
+let lastGoodFilterOptions: RawFilterOptions | null = null;
+
 async function loadFilterOptions(): Promise<RawFilterOptions> {
-  const data = await rpcJson("property_filter_options", {});
-  return {
-    ufs: data?.ufs ?? [],
-    cities: data?.cities ?? [],
-    types: data?.types ?? [],
-    modalities: data?.modalities ?? [],
-    poiCategories: data?.poi_categories ?? [],
-  };
+  try {
+    const data = await rpcJson("property_filter_options", {}, { required: true });
+    const options: RawFilterOptions = {
+      ufs: data.ufs ?? [],
+      cities: data.cities ?? [],
+      types: data.types ?? [],
+      modalities: data.modalities ?? [],
+      poiCategories: data.poi_categories ?? [],
+    };
+    // The RPC answers 200 with empty lists when its own MV is unpopulated.
+    if (!options.ufs.length) throw new Error('rpc "property_filter_options" returned no ufs');
+    lastGoodFilterOptions = options;
+    return options;
+  } catch (e) {
+    if (!lastGoodFilterOptions) throw e;
+    return lastGoodFilterOptions;
+  }
 }
 
-// Five full scans of the MV on every search, but it only changes when the batch refreshes it.
-// The search path takes this one directly: it needs the city list, not the flag below.
+// Cached for a whole catalogue window, so a failed read must throw rather than resolve to empty
+// lists. See docs/degradation.md.
 export const getFilterOptionsRaw = cached(
   loadFilterOptions,
   "filter-options",
@@ -618,7 +629,11 @@ export function getProximity(filters: PropertyFilters): Promise<ProximityData> {
 }
 
 async function loadAuctionCalendar(filtersJson: string): Promise<Record<string, number>> {
-  const data = await rpcJson("auction_calendar", { p_filters: JSON.parse(filtersJson) });
+  const data = await rpcJson(
+    "auction_calendar",
+    { p_filters: JSON.parse(filtersJson) },
+    { required: true },
+  );
   const out: Record<string, number> = {};
   // `d` may be a full timestamp; the calendar keys by day, so bucket to YYYY-MM-DD.
   for (const r of (data ?? []) as { d: string; n: number }[]) {

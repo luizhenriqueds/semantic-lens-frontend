@@ -39,8 +39,8 @@ export function toRpcFilters(f: PropertyFilters = {}): RpcFilters {
   if (f.minDiscount) out.min_discount = f.minDiscount;
   if (f.minInvestment) out.min_investment = f.minInvestment;
   if (f.minVisualScore) out.min_visual_score = f.minVisualScore;
-  if (f.changeKind) {
-    out.change_kind = f.changeKind;
+  if (f.changeKinds?.length) {
+    out.change_kinds = f.changeKinds;
     if (f.changedWithinDays) out.changed_within_days = f.changedWithinDays;
   }
   if (f.scoreKey) out.score_key = f.scoreKey;
@@ -48,6 +48,7 @@ export function toRpcFilters(f: PropertyFilters = {}): RpcFilters {
   if (f.financing) out.financing = true;
   if (f.fgts) out.fgts = true;
   if (f.auctionWithinDays) out.auction_within_days = f.auctionWithinDays;
+  if (f.firstSeenWithinDays) out.first_seen_within_days = f.firstSeenWithinDays;
   if (f.includeInactive) out.include_inactive = true;
   if (f.ids) out.ids = f.ids;
   return out;

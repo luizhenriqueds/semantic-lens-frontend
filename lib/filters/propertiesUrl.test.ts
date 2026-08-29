@@ -107,6 +107,29 @@ describe("legacy params", () => {
   it("prefers the contract key when a link carries both", () => {
     expect(parse("tipo=Casa&type=Apartamento").filters).toEqual({ type: "Apartamento" });
   });
+
+  it("reads a single-kind change link saved before multi-select", () => {
+    expect(parse("change_kind=price_drop").filters).toEqual({
+      changeKinds: ["price_drop"],
+      changedWithinDays: 30,
+    });
+  });
+});
+
+describe("change kinds", () => {
+  it("takes several kinds and drops the ones outside the contract", () => {
+    expect(parse("change_kinds=price_drop,nope,relisted&changed_within_days=15").filters).toEqual({
+      changeKinds: ["price_drop", "relisted"],
+      changedWithinDays: 15,
+    });
+  });
+
+  it("round-trips through the RPC contract as an array", () => {
+    expect(toRpcFilters(parse("change_kinds=modality,payment").filters)).toEqual({
+      change_kinds: ["modality", "payment"],
+      changed_within_days: 30,
+    });
+  });
 });
 
 describe("sort", () => {

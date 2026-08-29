@@ -48,13 +48,16 @@ export type AlertCriteriaSet = {
   poi_cats?: string[];
   poi_radius_m?: number;
   max_center_m?: number;
+  /** Kept for criteria persisted before `change_kinds`; the RPC still honours it. */
   change_kind?: PropertyChangeKind;
+  change_kinds?: PropertyChangeKind[];
   changed_within_days?: number;
   score_key?: keyof Scores;
   score_min?: number;
   financing?: boolean;
   fgts?: boolean;
   auction_within_days?: number;
+  first_seen_within_days?: number;
 };
 
 /** OR-of-ANDs: a property matching any branch matches the alert. */
