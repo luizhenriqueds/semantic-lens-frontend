@@ -1,6 +1,7 @@
 import "server-only";
 import { countProperties, getFilterOptions } from "@/lib/data";
-import { withRetry } from "@/lib/data/client";
+import { IS_BUILD, withRetry } from "@/lib/data/client";
+import { EMPTY_FILTER_OPTIONS } from "@/lib/types";
 import { listableMv } from "@/lib/data/propertyList";
 import { SEO_LANDINGS } from "./landings";
 import { allCityLandings } from "./resolve";
@@ -24,7 +25,11 @@ export async function sitemapUrls(): Promise<string[]> {
 /** The curated registry plus a page for every city in the catalogue - city facets are what these
  *  SERPs rank, and there are far more cities than the footer can carry. */
 export async function landingPaths(): Promise<string[]> {
-  const options = await getFilterOptions();
+  // The build has no database; at request time a failure throws so ISR keeps the last good sitemap.
+  const options = await getFilterOptions().catch((e) => {
+    if (!IS_BUILD) throw e;
+    return EMPTY_FILTER_OPTIONS;
+  });
   const slugs = [
     ...SEO_LANDINGS.map((l) => l.slug),
     ...allCityLandings(options).map((l) => l.slug),
