@@ -8,3 +8,4 @@ next-env.d.ts
 .design-experiments/
 .husky/
 .agents/
+.mkt-campaigns/
