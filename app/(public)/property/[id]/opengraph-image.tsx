@@ -1,11 +1,12 @@
 import { ImageResponse } from "next/og";
-import { getPropertyById } from "@/lib/data";
+import { loadPropertyById } from "@/lib/data";
 import { fmtDate, money, showDiscount, titleCase } from "@/lib/format";
 import { SITE_NAME, SITE_TAGLINE } from "@/lib/seo/site";
 import type { Property } from "@/lib/types";
 
 export const runtime = "nodejs";
-export const revalidate = 21_600;
+// Paired with the uncached read below, which is what lets this TTL stand. See docs/property-share.md.
+export const revalidate = 604_800;
 export const alt = `Imóvel de leilão da Caixa no ${SITE_NAME}`;
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
@@ -207,9 +208,16 @@ function Card({ p, photo }: { p: Property; photo: string | null }) {
   );
 }
 
+// Required, or the route is never cached. See docs/property-share.md.
+export function generateStaticParams() {
+  return [];
+}
+
+export const dynamicParams = true;
+
 export default async function PropertyOgImage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const p = await getPropertyById(id);
+  const p = await loadPropertyById(id);
   if (!p) return new ImageResponse(<Fallback />, size);
   const photo = await embeddablePhoto(p.image);
   return new ImageResponse(<Card p={p} photo={photo} />, size);

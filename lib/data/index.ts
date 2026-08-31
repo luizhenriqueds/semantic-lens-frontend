@@ -9,6 +9,7 @@ export {
   getMatchedForExport,
   getPropertiesByIds,
   getPropertyById,
+  loadPropertyById,
   getPropertyImage,
   getUpcomingAuctions,
   getAuctionDayPage,

@@ -423,7 +423,7 @@ type PropertyDetail = Property & { discountPercentile: number | null };
 
 // Unlike every list read, this one does not require a score: a relisted property sits unscored in
 // the MV until the next batch, and 404ing its page is worse than rendering it without the rankings.
-async function loadPropertyById(id: string): Promise<PropertyDetail | null> {
+export async function loadPropertyById(id: string): Promise<PropertyDetail | null> {
   const res = await withRetry(() =>
     supabase
       .from("property_list_mv")
