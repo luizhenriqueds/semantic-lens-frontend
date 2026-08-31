@@ -76,9 +76,24 @@ single child, and the error names no component. Same for a literal beside an exp
 (`Avaliação {money(v)}`). Every text child in the card is precomposed into a string for this
 reason.
 
-**Runtime is `nodejs`, not `edge`**: `getPropertyById` is `cached()` over supabase-js, the same
-stack every other server component uses, and Node gives us `Buffer`. Reusing that cached read means
-a scraper's separate hit on the image route resolves from the data cache rather than Postgres.
+**Runtime is `nodejs`, not `edge`**: the read is supabase-js, the same stack every other server
+component uses, and Node gives us `Buffer`.
+
+**`generateStaticParams` is what makes the route cached at all.** Without it a dynamic segment is
+served on demand and never written to the cache, so `revalidate` is inert — as it was when this
+first shipped, and every scraper fetch re-rendered the PNG. Meta, Google, Slack and Telegram all
+re-scrape the same URL repeatedly, so that was one Node invocation and one Satori render per scrape
+across ~30k listings. `app/(public)/property/[id]/page.tsx` carries the same three lines for the
+same reason.
+
+**The read is `loadPropertyById`, not `getPropertyById`.** Next takes the shortest `revalidate` in
+a route's tree, so going through `cached()` would silently cap this route at `DETAIL_REVALIDATE`
+(6h) and rewrite a ~478 KB PNG four times a day per crawled listing. Reading uncached lets the 7-day
+TTL stand — and costs fewer Postgres reads than the cap did, since the render now runs about once a
+week per listing. `/sitemap/1.xml` keeps its 24h TTL by avoiding `cached()` for the same reason,
+while `/sitemap/0.xml` and `/robots.txt` are both capped by reads they inherit.
+
+A card can lag its listing by a week; the link it wraps always opens the live page.
 
 **The middleware matcher needed widening.** Its negative lookahead anchored `opengraph-image` at
 position 1, so it excluded the root card but not `/property/<id>/opengraph-image-<hash>` — every
