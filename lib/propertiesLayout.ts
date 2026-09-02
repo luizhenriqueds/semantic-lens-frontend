@@ -4,7 +4,7 @@ export type PropertiesLayout = (typeof PROPERTIES_LAYOUTS)[number];
 
 export const DEFAULT_PROPERTIES_LAYOUT: PropertiesLayout = "cards";
 
-const KEY = "matricula-properties-layout";
+const KEY = "semantic-lens-properties-layout";
 
 export function readPropertiesLayout(): PropertiesLayout {
   try {
