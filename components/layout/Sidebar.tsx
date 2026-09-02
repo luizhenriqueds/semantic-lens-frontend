@@ -4,12 +4,10 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import BrandLogo from "@/components/brand/BrandLogo";
 import NavLink from "@/components/layout/NavLink";
-import { NAV } from "@/components/layout/navItems";
+import { isNavActive, NAV } from "@/components/layout/navItems";
 
 export default function Sidebar() {
   const path = usePathname();
-  const isActive = (href: string) =>
-    href === "/dashboard" ? path === "/dashboard" : path.startsWith(href);
 
   return (
     <aside className="sidebar">
@@ -27,7 +25,7 @@ export default function Sidebar() {
       <div className="navlabel">Menu</div>
       {/* title + aria-label carry the name when the tablet rail hides .txt */}
       {NAV.map((item) => (
-        <NavLink key={item.href} item={item} active={isActive(item.href)} />
+        <NavLink key={item.href} item={item} active={isNavActive(path, item.href)} />
       ))}
 
       <div className="spacer" />

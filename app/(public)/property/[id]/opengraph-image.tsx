@@ -1,5 +1,5 @@
 import { ImageResponse } from "next/og";
-import { loadPropertyById } from "@/lib/data";
+import { loadPropertyById, loadPropertyPhoto } from "@/lib/data";
 import { fmtDate, money, showDiscount, titleCase } from "@/lib/format";
 import { SITE_NAME, SITE_TAGLINE } from "@/lib/seo/site";
 import type { Property } from "@/lib/types";
@@ -29,9 +29,12 @@ const PHOTO_WIDTH = 400;
 
 const clip = (s: string, n: number) => (s.length > n ? `${s.slice(0, n - 1).trimEnd()}…` : s);
 
-// Fetched rather than handed to Satori as a URL: a dead Caixa photo would throw and 500 the route.
+// The local Supabase stack serves the bucket over plain http; production is https either way.
+const LOOPBACK = /^http:\/\/(127\.0\.0\.1|localhost)[:/]/;
+
+// Fetched rather than handed to Satori as a URL: a dead photo would throw and 500 the route.
 async function embeddablePhoto(src: string | null): Promise<string | null> {
-  if (!src || !src.startsWith("https://")) return null;
+  if (!src || !(src.startsWith("https://") || LOOPBACK.test(src))) return null;
   try {
     const res = await fetch(src, {
       signal: AbortSignal.timeout(PHOTO_TIMEOUT_MS),
@@ -39,11 +42,18 @@ async function embeddablePhoto(src: string | null): Promise<string | null> {
     });
     const type = (res.headers.get("content-type") ?? "").split(";")[0];
     // A missing photo comes back as a 200 HTML error page, so res.ok is not enough.
-    if (!res.ok || !type.startsWith("image/")) return null;
+    if (!res.ok || !type.startsWith("image/")) {
+      console.warn(`[og] photo rejected (${res.status} ${type || "no type"}): ${src}`);
+      return null;
+    }
     const buf = await res.arrayBuffer();
-    if (!buf.byteLength || buf.byteLength > PHOTO_MAX_BYTES) return null;
+    if (!buf.byteLength || buf.byteLength > PHOTO_MAX_BYTES) {
+      console.warn(`[og] photo ${buf.byteLength} bytes, out of range: ${src}`);
+      return null;
+    }
     return `data:${type};base64,${Buffer.from(buf).toString("base64")}`;
-  } catch {
+  } catch (err) {
+    console.warn(`[og] photo fetch failed: ${src}`, err);
     return null;
   }
 }
@@ -118,16 +128,12 @@ function Card({ p, photo }: { p: Property; photo: string | null }) {
   return (
     <div style={{ width: "100%", height: "100%", display: "flex", background: BG }}>
       {photo && (
-        <div
-          style={{
-            width: PHOTO_WIDTH,
-            height: "100%",
-            flex: "none",
-            display: "flex",
-            backgroundImage: `url(${photo})`,
-            backgroundSize: "cover",
-            backgroundPosition: "center",
-          }}
+        <img
+          src={photo}
+          alt=""
+          width={PHOTO_WIDTH}
+          height={size.height}
+          style={{ flex: "none", objectFit: "cover" }}
         />
       )}
       <div
@@ -219,6 +225,6 @@ export default async function PropertyOgImage({ params }: { params: Promise<{ id
   const { id } = await params;
   const p = await loadPropertyById(id);
   if (!p) return new ImageResponse(<Fallback />, size);
-  const photo = await embeddablePhoto(p.image);
+  const photo = await embeddablePhoto(await loadPropertyPhoto(id).catch(() => null));
   return new ImageResponse(<Card p={p} photo={photo} />, size);
 }

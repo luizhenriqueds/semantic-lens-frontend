@@ -21,7 +21,10 @@ export default async function GroupsPage() {
     );
   }
 
-  const [clusters, clusterStats] = await Promise.all([getClusters(), getClusterStatsAll()]);
+  const [clusters, clusterStats] = await Promise.all([
+    getClusters(),
+    getClusterStatsAll().catch(() => ({})),
+  ]);
   return (
     <section className="view">
       <div className="pagehead">

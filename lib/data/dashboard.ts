@@ -2,7 +2,7 @@ import { cache } from "react";
 import { supabase } from "@/lib/supabase";
 import { titleCase } from "@/lib/format";
 import type { ProfileKey, Scores } from "@/lib/types";
-import { cached, num, rows, withRetry } from "./client";
+import { cached, num, requiredRows, rows, withRetry } from "./client";
 import { listableMv } from "./propertyList";
 
 export type MarketBucket = { label: string; n: number; sub?: string };
@@ -98,17 +98,19 @@ async function loadTopOpps(): Promise<MarketOpp[]> {
 
 async function loadDashboard(): Promise<MarketDashboard | null> {
   const [res, opp] = await Promise.all([
-    supabase
-      .from("market_dashboard_mv")
-      .select("data,computed_at")
-      .order("computed_at", { ascending: false })
-      .limit(1),
+    withRetry(() =>
+      supabase
+        .from("market_dashboard_mv")
+        .select("data,computed_at")
+        .order("computed_at", { ascending: false })
+        .limit(1),
+    ),
     loadTopOpps(),
   ]);
-  const row = rows<{ data: Omit<MarketDashboard, "computedAt">; computed_at: string | null }>(
-    "market_dashboard_mv",
-    res,
-  )[0];
+  const row = requiredRows<{
+    data: Omit<MarketDashboard, "computedAt">;
+    computed_at: string | null;
+  }>("market_dashboard_mv", res)[0];
   if (!row?.data) return null;
   // Fall back to the MV's own picks if the filtered query came back empty.
   return { ...row.data, opp: opp.length ? opp : row.data.opp, computedAt: row.computed_at ?? null };
@@ -116,3 +118,7 @@ async function loadDashboard(): Promise<MarketDashboard | null> {
 
 // Two dashboard sections read this; `cache` keeps it to one lookup per request.
 export const getMarketDashboard = cache(cached(loadDashboard, "market-dashboard"));
+
+// For callers that are one section of a larger page. See docs/degradation.md.
+export const getMarketDashboardSafe = (): Promise<MarketDashboard | null> =>
+  getMarketDashboard().catch(() => null);

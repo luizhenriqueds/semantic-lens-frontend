@@ -1,6 +1,6 @@
 import { supabase } from "@/lib/supabase";
 import type { Cluster, ProfileKey } from "@/lib/types";
-import { cached, CLUSTER_RUN, rows, withRetry } from "./client";
+import { cached, CLUSTER_RUN, requiredRows, withRetry } from "./client";
 
 async function loadClusters(): Promise<Cluster[]> {
   const res = await withRetry(() =>
@@ -11,7 +11,7 @@ async function loadClusters(): Promise<Cluster[]> {
       .neq("cluster_id", -1)
       .order("size", { ascending: false }),
   );
-  return rows<any>("clusters", res).map((c) => ({
+  return requiredRows<any>("clusters", res).map((c) => ({
     clusterId: c.cluster_id,
     label: c.label ?? "Coleção",
     description: c.description ?? null,

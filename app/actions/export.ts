@@ -120,5 +120,5 @@ export async function exportAlertMatchesCsv(
 // Labelled like every screen is, so a collection-filtered file is not named "coleção".
 async function criteriaLabel(c: AlertCriteria): Promise<string | null> {
   if (!hasAnyCriteria(c)) return null;
-  return describeCriteria(c, criteriaLabels(await getClusters()));
+  return describeCriteria(c, criteriaLabels(await getClusters().catch(() => [])));
 }
