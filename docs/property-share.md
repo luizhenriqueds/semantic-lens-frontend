@@ -37,6 +37,18 @@ the preview was often a bare link.
 `openGraph` object merely _has_ an `images` property — the check is
 `!source?.openGraph?.hasOwnProperty('images')`, so `images: undefined` still suppresses the card.
 
+**The photo comes from the storage bucket, not from `image_url`.** `property_list_mv.image_url` is a
+Caixa hotlink: fine for a browser, useless to a renderer, because Caixa refuses the server-side
+fetch from production (the same reason `PropertyPhoto` sets `unoptimized`). Every card shipped
+without a photo until this was found — 40 KB where a card with a panel is several hundred. The batch
+re-hosts each photo in the bucket and `properties.image_path` points at that copy, which is what
+`loadPropertyPhoto` resolves through `resolveSampleImageUrl`; it falls back to `image_source_url`
+for a listing the batch has not mirrored yet. That read is deliberately **uncached**, like
+`loadPropertyById` beside it: an `unstable_cache` in this tree caps the route's revalidate to its
+own TTL, and this route's whole point is a 7-day one.
+
+Failures are logged. The bare `catch {}` this replaced is how a photoless card shipped unnoticed.
+
 **The photo is fetched, not handed to Satori as a URL.** A 404 makes `ImageResponse` throw, which
 500s the route and yields no card at all — strictly worse than the unreliable preview it replaces.
 So: bounded timeout, reject anything that is not `image/*` (a missing photo comes back as a 200
@@ -66,8 +78,8 @@ curl -so /dev/null -w '%{size_download} bytes\n' "<og image url>"
 
 **Satori constraints.** No CSS variables — colours are literals mirroring the dark theme so this
 card and `app/opengraph-image.tsx` read as siblings. Explicit `display: flex` on any div with more
-than one child. Truncation in JS, since `line-clamp` support is unreliable. `backgroundImage`
-rather than `<img>`. No custom font: a font buffer is a per-render cost across ~30k listings, and
+than one child. Truncation in JS, since `line-clamp` support is unreliable. No custom font: a font
+buffer is a per-render cost across ~30k listings, and
 the built-in face covers Portuguese diacritics.
 
 The one that costs an afternoon: **a number child counts as an element, not text.**
@@ -75,6 +87,10 @@ The one that costs an afternoon: **a number child counts as an element, not text
 single child, and the error names no component. Same for a literal beside an expression
 (`Avaliação {money(v)}`). Every text child in the card is precomposed into a string for this
 reason.
+
+The photo panel is an `<img>` with `objectFit: cover`, not a `backgroundImage`: satori tiles
+`background-size: cover` rather than scaling to it, which showed up as a grid of repeated thumbnails
+the first time a photo actually reached the card.
 
 **Runtime is `nodejs`, not `edge`**: the read is supabase-js, the same stack every other server
 component uses, and Node gives us `Buffer`.

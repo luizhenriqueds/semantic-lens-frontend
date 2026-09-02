@@ -5,5 +5,5 @@ import type { Property } from "@/lib/types";
  *  the row is flagged, not hidden. Silent on an inactive row - `Inativo` already says more. */
 export default function AuctionFlag({ p }: { p: Property }) {
   if (p.inactive || !auctionPassed(p, new Date())) return null;
-  return <span className="pastflag">Leilão já ocorreu</span>;
+  return <span className="pastflag">Leilão encerrado</span>;
 }

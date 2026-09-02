@@ -10,6 +10,8 @@ import { PROFILE_SHORT, SCORE_LABEL } from "@/lib/format/scores";
 import { IconBuilding } from "@/lib/icons";
 import type { ProfileKey, Scores } from "@/lib/types";
 
+export const maxDuration = 20;
+
 export default async function MarketPage() {
   const ent = await getEntitlements();
   if (!ent.can("market")) {

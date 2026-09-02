@@ -8,7 +8,7 @@ import {
   clusterStatsFor,
   getClusters,
   getClusterStatsAll,
-  getMarketDashboard,
+  getMarketDashboardSafe,
   getPropertiesByIds,
   getPropertiesPage,
   getRecommendations,
@@ -71,12 +71,12 @@ const railItems = (pool: readonly Property[], rail: string, seed: number, now: D
   byInvestment(seededPick(stillOpen(pool, now), RAIL_SIZE, rail, seed));
 
 export async function MarketSlot() {
-  const d = await getMarketDashboard();
+  const d = await getMarketDashboardSafe();
   return d ? <InsightStrip d={d} /> : null;
 }
 
 export async function CitiesSlot({ seed }: { seed: number }) {
-  const d = await getMarketDashboard();
+  const d = await getMarketDashboardSafe();
   if (!d) return null;
   return (
     <CityGrid
@@ -284,7 +284,10 @@ export async function SavedRailSlot({
 
 // Ranked by the group's average investment score - /groups keeps its own ordering.
 export async function CollectionsSlot() {
-  const [clusters, stats] = await Promise.all([getClusters(), getClusterStatsAll()]);
+  const [clusters, stats] = await Promise.all([
+    getClusters().catch(() => []),
+    getClusterStatsAll().catch(() => ({})),
+  ]);
   const picked = [...clusters]
     .sort(
       (a, b) =>

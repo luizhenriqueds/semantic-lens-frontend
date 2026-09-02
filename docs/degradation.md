@@ -61,6 +61,37 @@ from a filter that genuinely matches no future auctions. Now `{ required: true }
 reason, and `proximity` hides itself because a dozen counts for two charts are never worth the
 whole view.
 
+## `market_dashboard_mv`
+
+The read that produced "Painel indisponível" on `/market` while the database was healthy again. It
+was the only read in `dashboard.ts` with no `withRetry` at all, and it went through `rows`, so a
+timeout resolved to `null` — indistinguishable from an MV the batch has not populated yet — and
+`cached` pinned that `null` for the whole 120 s window, for every visitor in every region.
+
+Now `withRetry` + `requiredRows`. "Painel indisponível" survives, but only for its true meaning: the
+read succeeded and the MV is empty. A failure throws, so:
+
+- `/market` lets it reach the route error boundary, whose "Tentar novamente" calls `router.refresh()`
+  — the next request can succeed instead of waiting out a TTL.
+- `MarketSlot` and `CitiesSlot` on `/dashboard` use `getMarketDashboardSafe`. They sit in Suspense
+  boundaries with no error boundary of their own, so a throw would take the whole home page down for
+  an optional strip.
+
+## `cluster_stats_all` and `clusters`
+
+Both swallowed the same way, and together they produced the "0 imóveis" collection cards. `clusters`
+is now `requiredRows` and `cluster_stats_all` is `rpcJson({ required: true })`, so neither emptiness
+is memoised. Callers:
+
+- `loadPropertiesView`, `/alerts`, `/alerts/[id]` and the CSV filename catch `clusters` to `[]` —
+  they use it for the cluster filter and for labels, and neither is worth the page.
+- `/groups` lets `clusters` throw (with no clusters there is no page) but catches the stats to `{}`.
+- `CollectionsSlot` catches both, for the same reason `MarketSlot` does.
+
+`CollectionCard` also had to change. `clusterStatsFor` never returns `undefined` — it returns
+`EMPTY_CLUSTER_STATS` — so its `stats ? stats.count : c.size` fallback was dead code and the card
+rendered `0` while the real size sat unused on `c.size`. It now falls back on a zero count too.
+
 ## The RPC behind it
 
 `auction_calendar` was the last RPC still calling `property_list_matched(p_filters)` — a plpgsql

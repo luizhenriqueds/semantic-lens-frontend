@@ -866,7 +866,9 @@ button {
   transition:
     transform 0.15s ease,
     border-color 0.15s ease;
-  display: block;
+  /* Column, so .pbody can fill the stretched grid track - see .pgrid .pcard .pricebox. */
+  display: flex;
+  flex-direction: column;
 }
 .pcard:hover {
   transform: translateY(-3px);
@@ -919,6 +921,7 @@ button {
 }
 .pphoto {
   height: 152px;
+  flex: none;
   background: var(--surface-2);
   position: relative;
   border-bottom: 1px solid var(--line);
@@ -961,6 +964,10 @@ button {
 }
 .pbody {
   padding: 16px 18px;
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
 }
 .pbody h3 {
   font-size: 17px;
@@ -989,6 +996,13 @@ button {
   align-items: flex-end;
   justify-content: space-between;
   margin-top: 14px;
+}
+/* Grid cards share a row height, so the price and the footer under it are pinned to the bottom and
+   stay in step whatever the title wraps to or the AuctionFlag adds. `auto` eats the slack, so the
+   padding is what guarantees the gap. Rails are independent cards and keep the plain margin. */
+.pgrid .pcard .pricebox {
+  margin-top: auto;
+  padding-top: 14px;
 }
 .pricebox .now {
   font-size: 22px;
@@ -2539,6 +2553,8 @@ select.selectish {
 .pastflag {
   display: inline-flex;
   align-items: center;
+  /* .pbody is a flex column, which would otherwise stretch this pill to the card's full width. */
+  align-self: flex-start;
   gap: 6px;
   margin-top: 6px;
   padding: 3px 9px;
@@ -3752,10 +3768,34 @@ select.selectish {
   border-radius: 7px;
   cursor: pointer;
 }
-.viewtoggle button.on {
+.viewtoggle button.on,
+.layouttoggle button.on {
   background: var(--surface);
   color: var(--primary);
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+}
+.layouttoggle {
+  display: inline-flex;
+  gap: 2px;
+  margin-left: auto;
+  padding: 2px;
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  border-radius: 9px;
+}
+/* It takes over the sort's `margin-left: auto`, so the two stay side by side on the right. */
+.viewbar > .layouttoggle ~ .selectish {
+  margin-left: 0;
+}
+.layouttoggle button {
+  display: flex;
+  align-items: center;
+  border: none;
+  background: transparent;
+  color: var(--ink-faint);
+  padding: 5px 9px;
+  border-radius: 7px;
+  cursor: pointer;
 }
 .lmap {
   height: 260px;
@@ -6099,6 +6139,9 @@ select.selectish {
   font-size: 12.5px;
   color: var(--ink-faint);
   margin: 11px 0 0;
+}
+.flabel + .fhint {
+  margin: -3px 0 8px;
 }
 .fchiprow {
   display: flex;

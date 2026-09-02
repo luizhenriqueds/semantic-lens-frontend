@@ -5,15 +5,13 @@ import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import BrandLogo from "@/components/brand/BrandLogo";
 import NavLink from "@/components/layout/NavLink";
-import { NAV } from "@/components/layout/navItems";
+import { isNavActive, NAV } from "@/components/layout/navItems";
 import { IconClose, IconMenu } from "@/lib/icons";
 import { useScrollLock } from "@/lib/useScrollLock";
 
 export default function MobileNav() {
   const [open, setOpen] = useState(false);
   const path = usePathname();
-  const isActive = (href: string) =>
-    href === "/dashboard" ? path === "/dashboard" : path.startsWith(href);
 
   useEffect(() => setOpen(false), [path]);
   useScrollLock(open);
@@ -51,7 +49,7 @@ export default function MobileNav() {
             <NavLink
               key={item.href}
               item={item}
-              active={isActive(item.href)}
+              active={isNavActive(path, item.href)}
               onNavigate={() => setOpen(false)}
             />
           ))}

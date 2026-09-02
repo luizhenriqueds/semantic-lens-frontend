@@ -448,6 +448,21 @@ async function loadPropertyImage(id: string): Promise<string | null> {
 
 export const getPropertyImage = cached(loadPropertyImage, "property-image");
 
+// The bucket copy, not the MV's Caixa hotlink, and uncached like loadPropertyById above it: the
+// renderer cannot fetch Caixa and an unstable_cache here would cap the OG route's revalidate.
+// See docs/property-share.md.
+export async function loadPropertyPhoto(id: string): Promise<string | null> {
+  const res = await withRetry(() =>
+    supabase
+      .from("properties")
+      .select("image_path,image_source_url")
+      .eq("property_id", id)
+      .limit(1),
+  );
+  const row = rows<any>("property-photo", res)[0];
+  return resolveSampleImageUrl(row?.image_path ?? null, row?.image_source_url ?? null);
+}
+
 async function loadMapPoints(filtersJson: string): Promise<{ points: MapPoint[]; total: number }> {
   // The unfiltered view is the widest read the app makes and the one that times out: `required`
   // keeps `cached` from memoising that failure as an empty map, and no retry piles onto a slow DB.
@@ -674,7 +689,7 @@ export function resolveSampleImageUrl(path: string | null, fallback: string | nu
 }
 
 async function loadClusterStats(): Promise<Record<number, ClusterStats>> {
-  const data = await rpcJson("cluster_stats_all", {});
+  const data = await rpcJson("cluster_stats_all", {}, { required: true });
   const out: Record<number, ClusterStats> = {};
   for (const r of (data ?? []) as any[]) {
     const rawImages = (r.sample_images ?? []) as {

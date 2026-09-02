@@ -5,7 +5,8 @@ import { moneyShort, PROFILE_LABEL } from "@/lib/format";
 import ClusterThumb from "./ClusterThumb";
 
 export default function CollectionCard({ c, stats }: { c: Cluster; stats?: ClusterStats }) {
-  const count = stats ? stats.count : c.size;
+  // Guarded on count, not on `stats`: clusterStatsFor returns a zeroed default, never undefined.
+  const count = stats && stats.count > 0 ? stats.count : c.size;
   const hasRange =
     stats && stats.minPrice != null && stats.maxPrice != null && stats.minPrice !== stats.maxPrice;
 

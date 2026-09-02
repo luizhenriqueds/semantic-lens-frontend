@@ -186,6 +186,20 @@ export const IconDoc = (p: P) => (
     <path d="M9 13h6M9 17h6" />
   </svg>
 );
+export const IconGrid = (p: P) => (
+  <svg {...base(p)} strokeLinejoin="round">
+    <rect x="3.5" y="3.5" width="7" height="7" rx="1.5" />
+    <rect x="13.5" y="3.5" width="7" height="7" rx="1.5" />
+    <rect x="3.5" y="13.5" width="7" height="7" rx="1.5" />
+    <rect x="13.5" y="13.5" width="7" height="7" rx="1.5" />
+  </svg>
+);
+export const IconRows = (p: P) => (
+  <svg {...base(p)} strokeLinejoin="round">
+    <rect x="3.5" y="4.5" width="17" height="6" rx="1.5" />
+    <rect x="3.5" y="13.5" width="17" height="6" rx="1.5" />
+  </svg>
+);
 export const IconShare = (p: P) => (
   <svg {...base(p)} strokeLinecap="round" strokeLinejoin="round">
     <circle cx="18" cy="5" r="3" />

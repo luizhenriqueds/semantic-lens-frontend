@@ -11,6 +11,7 @@ import { usePlan } from "@/components/plan/PlanProvider";
 import UpgradeWall from "@/components/plan/UpgradeWall";
 import EmptyState from "@/components/ui/EmptyState";
 import Pagination from "@/components/ui/Pagination";
+import PropertyCard from "@/components/property/PropertyCard";
 import PropertyRow from "@/components/property/PropertyRow";
 import ExportButton from "@/components/export/ExportButton";
 import SearchableSelect from "@/components/ui/SearchableSelect";
@@ -51,12 +52,20 @@ import {
   IconBell,
   IconBuilding,
   IconCalendar,
+  IconGrid,
   IconInfo,
   IconLock,
+  IconRows,
   IconSearch,
   IconSliders,
   POI_ICON,
 } from "@/lib/icons";
+import {
+  DEFAULT_PROPERTIES_LAYOUT,
+  readPropertiesLayout,
+  writePropertiesLayout,
+  type PropertiesLayout,
+} from "@/lib/propertiesLayout";
 import { MAX_NEAR_M, POI_LABEL, POI_ORDER } from "@/lib/pois";
 import { useScrollLock } from "@/lib/useScrollLock";
 import {
@@ -104,11 +113,15 @@ const CHANGE_LABEL: Record<PropertyChangeKind, string> = {
   relisted: "Imóvel ofertado novamente",
 };
 
+const LAYOUTS: { key: PropertiesLayout; label: string; Icon: typeof IconGrid }[] = [
+  { key: "cards", label: "Ver em cartões", Icon: IconGrid },
+  { key: "rows", label: "Ver em lista", Icon: IconRows },
+];
+
 const PRAZOS: { days: number; label: string }[] = [
   { days: 7, label: "Próximos 7 dias" },
   { days: 15, label: "Próximos 15 dias" },
   { days: 30, label: "Próximos 30 dias" },
-  { days: 60, label: "Próximos 60 dias" },
 ];
 
 function Chip({
@@ -711,6 +724,15 @@ export default function PropertiesClient({
   // A locked view falls back to the list server-side; its own tab stays selected.
   const activeView = lockedView ?? view;
 
+  // Read after mount: localStorage is not there for the server pass, and reading it during render
+  // would mismatch hydration.
+  const [layout, setLayoutState] = useState<PropertiesLayout>(DEFAULT_PROPERTIES_LAYOUT);
+  useEffect(() => setLayoutState(readPropertiesLayout()), []);
+  const setLayout = (next: PropertiesLayout) => {
+    setLayoutState(next);
+    writePropertiesLayout(next);
+  };
+
   const calDayOpen = !!calendar?.day && (calendar?.dayItems.length ?? 0) > 0;
   const mapProperties = useMemo(() => (map ? map.points.map(mapPointToProperty) : []), [map]);
 
@@ -956,6 +978,7 @@ export default function PropertiesClient({
                   </div>
 
                   <div className="flabel">Primeira oferta</div>
+                  <p className="fhint">Quando o imóvel foi ofertado pela primeira vez.</p>
                   <div className="fchiprow">
                     <Chip
                       active={!prazoOferta}
@@ -973,7 +996,6 @@ export default function PropertiesClient({
                       </Chip>
                     ))}
                   </div>
-                  <p className="fhint">Quando o imóvel foi ofertado pela primeira vez.</p>
 
                   <div className="flabel">Pagamento</div>
                   <label className={`checkitem${financiamento ? " on" : ""}`}>
@@ -1256,6 +1278,23 @@ export default function PropertiesClient({
             );
           })}
         </div>
+        {activeView === "list" && (
+          <div className="layouttoggle">
+            {LAYOUTS.map((l) => (
+              <button
+                key={l.key}
+                type="button"
+                className={layout === l.key ? "on" : ""}
+                aria-label={l.label}
+                aria-pressed={layout === l.key}
+                title={l.label}
+                onClick={() => setLayout(l.key)}
+              >
+                <l.Icon width={17} height={17} strokeWidth={1.6} />
+              </button>
+            ))}
+          </div>
+        )}
         {(activeView === "list" || (activeView === "calendar" && calDayOpen)) && (
           <select
             className="selectish"
@@ -1338,11 +1377,19 @@ export default function PropertiesClient({
             ))
           ) : list && list.items.length ? (
             <>
-              <div className="wlist">
-                {list.items.map((p) => (
-                  <PropertyRow key={p.id} p={p} poiCats={poiCats} poiRadius={poiRadius} />
-                ))}
-              </div>
+              {layout === "cards" ? (
+                <div className="pgrid">
+                  {list.items.map((p) => (
+                    <PropertyCard key={p.id} p={p} />
+                  ))}
+                </div>
+              ) : (
+                <div className="wlist">
+                  {list.items.map((p) => (
+                    <PropertyRow key={p.id} p={p} poiCats={poiCats} poiRadius={poiRadius} />
+                  ))}
+                </div>
+              )}
               <Pagination
                 page={page}
                 total={list.total}

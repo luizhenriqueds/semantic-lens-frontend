@@ -74,7 +74,7 @@ export async function loadPropertiesView(
 
   const [clusters, filterOptions, h3Label, list, analysis, proximity, calendar, map] =
     await Promise.all([
-      getClusters(),
+      getClusters().catch(() => []),
       getFilterOptions().catch(() => null),
       filters.h3 ? getRegionLabel(filters.h3) : Promise.resolve(null),
       view === "list" ? getPropertiesPage({ filters, sort, page }) : Promise.resolve(undefined),

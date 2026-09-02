@@ -10,7 +10,7 @@ export default async function AlertsPage() {
   const { supabase, user } = await getUser();
   const [options, clusters, alerts] = await Promise.all([
     getFilterOptions().catch(() => EMPTY_FILTER_OPTIONS),
-    getClusters(),
+    getClusters().catch(() => []),
     user ? listAlerts(supabase) : [],
   ]);
   return (

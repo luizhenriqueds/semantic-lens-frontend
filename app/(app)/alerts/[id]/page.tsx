@@ -29,7 +29,7 @@ export default async function AlertPage({
   const listable = criteria && !isAnyCriteria(criteria) ? criteria : null;
   const [list, clusters] = await Promise.all([
     listable ? getMatchedPage(listable, sort, page) : null,
-    criteria ? getClusters() : [],
+    criteria ? getClusters().catch(() => []) : [],
   ]);
 
   const labels = criteriaLabels(clusters);
