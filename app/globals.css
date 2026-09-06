@@ -1520,6 +1520,23 @@ select.selectish {
   border-color: var(--primary-soft);
   transform: translateY(-2px);
 }
+.wcard.skel,
+.wcard.skel:hover {
+  cursor: default;
+  pointer-events: none;
+  border-color: var(--line);
+  transform: none;
+}
+.wphoto-sk {
+  aspect-ratio: auto;
+  height: 120px;
+  border-radius: 11px;
+}
+.wcol-sk {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
 .wcardlink {
   position: absolute;
   inset: 0;
