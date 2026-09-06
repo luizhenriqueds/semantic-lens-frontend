@@ -68,7 +68,7 @@ async function fetchPool(pool: Pool): Promise<Property[]> {
 
 // Filtered before the pick, so the rail still draws a full RAIL_SIZE from what is left.
 const railItems = (pool: readonly Property[], rail: string, seed: number, now: Date): Property[] =>
-  byInvestment(seededPick(stillOpen(pool, now), RAIL_SIZE, rail, seed));
+  byInvestment(seededPick(stillOpen(pool, now), RAIL_SIZE, rail, seed, { preferImages: true }));
 
 export async function MarketSlot() {
   const d = await getMarketDashboardSafe();

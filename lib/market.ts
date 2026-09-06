@@ -17,6 +17,20 @@ export function marketQuality(stats: MarketStats | null | undefined): MarketQual
   return p25 != null && p75 != null && p75 > p25 ? "ok" : "thin";
 }
 
+// A R$/m² this far off the neighbourhood median means the source area or price is wrong,
+// not that the deal is extraordinary.
+export const MAX_M2_DEVIATION = 10;
+
+export function isAreaImplausible(
+  pricePerM2: number | null | undefined,
+  neighborhoodM2: number | null | undefined,
+): boolean {
+  if (pricePerM2 == null || pricePerM2 <= 0 || neighborhoodM2 == null || neighborhoodM2 <= 0)
+    return false;
+  const ratio = pricePerM2 / neighborhoodM2;
+  return ratio >= MAX_M2_DEVIATION || ratio <= 1 / MAX_M2_DEVIATION;
+}
+
 export function normKey(s: string | null | undefined): string {
   return (s ?? "").normalize("NFD").replace(/[̀-ͯ]/g, "").trim().toLowerCase();
 }

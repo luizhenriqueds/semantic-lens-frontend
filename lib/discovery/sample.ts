@@ -4,6 +4,13 @@ import type { Property } from "@/lib/types";
 import { railSeed, seededShuffle } from "./seed";
 
 const byCity = (p: Property) => p.city;
+const hasPhoto = (p: Property) => Boolean(p.image);
+
+type PickOptions = {
+  exclude?: ReadonlySet<string>;
+  maxPerCity?: number;
+  preferImages?: boolean;
+};
 
 // Shuffle first - the pool arrives sorted, so its head would be the same every day.
 // `spreadByLocality` defers a city's surplus instead of dropping it, so a pool that is
@@ -13,11 +20,15 @@ export function seededPick(
   n: number,
   rail: string,
   seed: number,
-  { exclude, maxPerCity = 2 }: { exclude?: ReadonlySet<string>; maxPerCity?: number } = {},
+  { exclude, maxPerCity = 2, preferImages = false }: PickOptions = {},
 ): Property[] {
   const candidates = exclude?.size ? pool.filter((p) => !exclude.has(p.id)) : pool.slice();
   const shuffled = seededShuffle(candidates, railSeed(seed, rail));
-  return spreadByLocality(shuffled, maxPerCity, byCity).slice(0, n);
+  // Partition, not filter: photoless listings stay on as filler so a thin pool still fills the rail.
+  const ordered = preferImages
+    ? [...shuffled.filter(hasPhoto), ...shuffled.filter((p) => !hasPhoto(p))]
+    : shuffled;
+  return spreadByLocality(ordered, maxPerCity, byCity).slice(0, n);
 }
 
 // After the pick, so the seed and the diversity cap still choose *which* listings appear.

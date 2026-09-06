@@ -1,5 +1,5 @@
 import { money, moneyShort } from "@/lib/format";
-import { marketQuality, moneyM2 } from "@/lib/market";
+import { isAreaImplausible, marketQuality, moneyM2 } from "@/lib/market";
 import type { MarketStats } from "@/lib/types";
 
 type Mark = {
@@ -87,7 +87,12 @@ export default function PropertyMarket({
   }
 
   const med = stats.priceMedian;
-  const propM2 = lance != null && area != null && area > 0 ? lance / area : null;
+  const rawM2 = lance != null && area != null && area > 0 ? lance / area : null;
+  // Everything derived from a bogus area reads null instead, so the benchmark falls back to
+  // the median and the per-m² figures drop out.
+  const suspectArea = isAreaImplausible(rawM2, stats.priceM2Median);
+  const safeArea = suspectArea ? null : area;
+  const propM2 = suspectArea ? null : rawM2;
   // Degenerate sample: show only the raw references, no derived comparisons.
   if (quality === "thin") {
     return (
@@ -119,7 +124,7 @@ export default function PropertyMarket({
       </div>
     );
   }
-  const { value: compareValue, label: marketLabel, basis } = marketBenchmark(stats, area);
+  const { value: compareValue, label: marketLabel, basis } = marketBenchmark(stats, safeArea);
 
   const belowPct =
     compareValue != null && compareValue > 0 && lance != null
@@ -143,8 +148,8 @@ export default function PropertyMarket({
       : null;
 
   const areaDelta =
-    area != null && stats.areaMedian != null && stats.areaMedian > 0
-      ? Math.round(((area - stats.areaMedian) / stats.areaMedian) * 100)
+    safeArea != null && stats.areaMedian != null && stats.areaMedian > 0
+      ? Math.round(((safeArea - stats.areaMedian) / stats.areaMedian) * 100)
       : null;
 
   const marks: Mark[] = [];
@@ -227,6 +232,12 @@ export default function PropertyMarket({
                   : "Este imóvel está na faixa intermediária de preço por m² do bairro."}
             </div>
           )}
+        </div>
+      )}
+      {suspectArea && (
+        <div className="rnote">
+          A área informada para este imóvel destoa demais dos anúncios do bairro, então o
+          comparativo por m² foi omitido. Confira a matrícula antes de considerar a área.
         </div>
       )}
       <div className="rnote">
