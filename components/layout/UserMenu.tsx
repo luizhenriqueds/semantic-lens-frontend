@@ -15,7 +15,7 @@ export default function UserMenu({ account }: { account: Account }) {
   const ref = useRef<HTMLDivElement>(null);
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
-  const { plan, trial, atLeast } = usePlan();
+  const { plan, trial, atLeast, isAdmin } = usePlan();
 
   const { name, email, initials } = account;
 
@@ -75,7 +75,10 @@ export default function UserMenu({ account }: { account: Account }) {
             </div>
           </div>
           <div className="usermenu-plan">
-            <span className="chip on">{plan.label}</span>
+            <span className="usermenu-tags">
+              <span className="chip on">{plan.label}</span>
+              {isAdmin && <span className="chip hot">Admin</span>}
+            </span>
             {trial.endsAt ? (
               <small>teste até {fmtDay(trial.endsAt)}</small>
             ) : (

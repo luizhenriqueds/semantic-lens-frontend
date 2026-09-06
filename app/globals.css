@@ -125,6 +125,9 @@ button {
 /* Padding, not a grid column: the rail below is out of flow, so a track would go to `.main`. */
 .app {
   min-height: 100vh;
+  /* svh, not vh: `vh` is the URL-bar-hidden height, so a short page outgrows the viewport and
+     the browser bounces between hiding and showing the bar. */
+  min-height: 100svh;
   padding-left: 248px;
   padding-top: var(--banner-h);
 }
@@ -1516,6 +1519,23 @@ select.selectish {
 .wcard:hover {
   border-color: var(--primary-soft);
   transform: translateY(-2px);
+}
+.wcard.skel,
+.wcard.skel:hover {
+  cursor: default;
+  pointer-events: none;
+  border-color: var(--line);
+  transform: none;
+}
+.wphoto-sk {
+  aspect-ratio: auto;
+  height: 120px;
+  border-radius: 11px;
+}
+.wcol-sk {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
 }
 .wcardlink {
   position: absolute;
@@ -7143,6 +7163,12 @@ select.selectish {
   gap: 10px;
   padding: 10px 16px;
   border-bottom: 1px solid var(--line-soft);
+}
+.usermenu-tags {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
 }
 .usermenu-plan a {
   font-size: 12.5px;
